@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 v3.0 (Multi-Device Live Sync)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 v3.1 (Anti-Collision Live Sync)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS (xlsx) CDN -->
@@ -12,15 +12,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
-        body {
-            font-family: 'Inter', 'Noto Sans KR', sans-serif;
-        }
-        .font-mono-num {
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .pulse-red {
-            animation: pulse 1.5s infinite;
-        }
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; }
+        .font-mono-num { font-family: 'JetBrains Mono', monospace; }
+        .pulse-red { animation: pulse 1.5s infinite; }
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(0.95); }
@@ -45,17 +39,16 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v3.0 Live Sync
+                                v3.1 Live Sync
                             </span>
                         </h1>
-                        <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 다중 기기(스마트폰/태블릿/PC) 공수 트래킹 & 엑셀 연동 시스템</p>
+                        <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 다중 기기 공수 트래킹 & 엑셀 연동 시스템</p>
                     </div>
                 </div>
 
                 <div class="md:hidden flex items-center gap-2">
                     <span id="cloud-status-badge-mobile" class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                        제조2팀
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>제조2팀
                     </span>
                     <button id="btn-open-firebase-modal-mobile" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs">
                         <i class="fa-solid fa-gear"></i>
@@ -68,18 +61,15 @@
                     <i class="fa-solid fa-industry text-emerald-400"></i>
                     <span class="font-bold hidden sm:inline">라인/룸 코드:</span>
                 </div>
-                <input type="text" id="roomInput" value="제조2팀" 
-                    class="bg-slate-900 border border-indigo-700/80 text-emerald-300 font-mono-num text-xs sm:text-sm px-3 py-1.5 rounded-lg w-28 sm:w-36 focus:outline-none focus:border-emerald-400 transition-colors uppercase font-bold text-center tracking-wider">
-                <button id="btnJoinRoom" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 shadow-md shadow-indigo-600/30">
+                <input type="text" id="roomInput" value="제조2팀" class="bg-slate-900 border border-indigo-700/80 text-emerald-300 font-mono-num text-xs sm:text-sm px-3 py-1.5 rounded-lg w-28 sm:w-36 focus:outline-none focus:border-emerald-400 transition-colors uppercase font-bold text-center tracking-wider">
+                <button id="btnJoinRoom" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 active:scale-95">
                     <i class="fa-solid fa-right-to-bracket"></i> 접속
                 </button>
-                <button id="btnCopyLink" title="초대 링크 복사" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition-colors flex items-center gap-1">
-                    <i class="fa-solid fa-share-nodes"></i>
-                    <span class="hidden sm:inline text-[11px]">공유</span>
+                <button id="btnCopyLink" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition-colors flex items-center gap-1">
+                    <i class="fa-solid fa-share-nodes"></i><span class="hidden sm:inline text-[11px]">공유</span>
                 </button>
                 <button id="btn-open-firebase-modal" class="bg-slate-800 hover:bg-indigo-900 text-indigo-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg border border-indigo-700/50 transition-colors flex items-center gap-1">
-                    <i class="fa-solid fa-cloud"></i>
-                    <span class="hidden sm:inline text-[11px]">클라우드 설정</span>
+                    <i class="fa-solid fa-cloud"></i><span class="hidden sm:inline text-[11px]">클라우드 설정</span>
                 </button>
             </div>
 
@@ -89,7 +79,6 @@
                     <span>실시간 연동 가동중 (제조2팀)</span>
                 </span>
             </div>
-
         </div>
     </header>
 
@@ -109,7 +98,7 @@
             </div>
             
             <div class="flex items-center gap-2 w-full md:w-auto">
-                <button id="btn-load-demo" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition border border-slate-200 flex items-center gap-1.5 whitespace-nowrap active:scale-95">
+                <button id="btn-load-demo" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition border border-slate-200 flex items-center gap-1.5 active:scale-95">
                     <i class="fa-solid fa-database text-indigo-600"></i> 테스트 데모 세팅
                 </button>
                 <div id="drop-zone" class="w-full md:w-auto flex-1 max-w-md border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl flex items-center justify-center py-2 px-4 cursor-pointer transition bg-slate-50/50 hover:bg-indigo-50/30">
@@ -128,8 +117,7 @@
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col space-y-5">
                 <div class="flex flex-col space-y-2 pb-3 border-b border-slate-100">
                     <h3 class="text-md font-bold text-slate-900 flex items-center gap-1.5">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                        공정 시간 체크인 (Check-In)
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span> 공정 시간 체크인 (Check-In)
                     </h3>
                     <div id="status-panel" class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-emerald-400">
                         현재 대기 상태 (준비 완료)
@@ -143,109 +131,83 @@
                             <i class="fa-solid fa-user-gear"></i> 작업자 관리
                         </button>
                     </div>
-                    <div id="worker-grid" class="grid grid-cols-3 gap-2">
-                        <!-- Dynamic worker buttons -->
-                    </div>
+                    <div id="worker-grid" class="grid grid-cols-3 gap-2"></div>
                 </div>
 
                 <div class="space-y-2">
-                    <label class="block text-xs font-bold text-slate-600">2단계. 제작 장비 선택 (생산계획 연동 / 중복 선택 가능)</label>
-                    
+                    <label class="block text-xs font-bold text-slate-600">2단계. 제작 장비 선택 (다중 선택 가능)</label>
                     <div class="grid grid-cols-3 gap-2">
-                        <select id="select-division-filter" class="col-span-1 px-2 py-2.5 border border-slate-300 rounded-xl text-xs font-extrabold bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-indigo-700">
+                        <select id="select-division-filter" class="col-span-1 px-2 py-2.5 border border-slate-300 rounded-xl text-xs font-extrabold bg-white text-indigo-700 focus:ring-2 focus:ring-indigo-500">
                             <option value="">사업부 전체</option>
                         </select>
                         <div class="relative col-span-2">
-                            <input type="text" id="equipment-search" placeholder="장비명, S/N 등으로 검색..." 
-                                   class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-medium bg-slate-50/50">
-                            <span class="absolute right-3 top-2.5 text-slate-400">
-                                <i class="fa-solid fa-magnifying-glass"></i>
-                            </span>
+                            <input type="text" id="equipment-search" placeholder="장비명, S/N 등으로 검색..." class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
+                            <span class="absolute right-3 top-2.5 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
                         </div>
                     </div>
-
-                    <select id="select-equipment" class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <select id="select-equipment" class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold bg-white focus:ring-2 focus:ring-indigo-500">
                         <option value="">장비 모델을 먼저 로드하세요...</option>
                     </select>
-
-                    <div id="equipment-selected-list-container" class="space-y-2 mt-2">
-                        <!-- Selected equipments cards rendered here -->
-                    </div>
+                    <div id="equipment-selected-list-container" class="space-y-2 mt-2"></div>
                 </div>
 
                 <div class="space-y-3">
                     <label class="block text-xs font-bold text-slate-600">3단계. 투입 공정 선택</label>
-                    
                     <div class="space-y-1">
                         <span class="text-[10px] font-bold text-slate-400 block">기본 조립 공정</span>
                         <div class="grid grid-cols-1">
-                            <button type="button" onclick="selectProcess('취부')" id="btn-proc-chwibu" class="py-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1.5">
-                                🛠️ 취부 작업
-                            </button>
+                            <button type="button" onclick="selectProcess('취부')" class="py-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1.5">🛠️ 취부 작업</button>
                         </div>
                     </div>
-
                     <div class="space-y-1">
                         <span class="text-[10px] font-bold text-slate-400 block">결선 세부 공정</span>
                         <div class="grid grid-cols-2 gap-2">
-                            <button type="button" onclick="selectProcess('결선(정면)')" id="btn-proc-wiring-front" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1">
-                                ⚡ 결선(정면)
-                            </button>
-                            <button type="button" onclick="selectProcess('결선(좌면)')" id="btn-proc-wiring-left" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1">
-                                ⚡ 결선(좌면)
-                            </button>
-                            <button type="button" onclick="selectProcess('결선(우면)')" id="btn-proc-wiring-right" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1">
-                                ⚡ 결선(우면)
-                            </button>
-                            <button type="button" onclick="selectProcess('최종결선')" id="btn-proc-wiring-final" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1">
-                                🏆 최종결선
-                            </button>
+                            <button type="button" onclick="selectProcess('결선(정면)')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">⚡ 결선(정면)</button>
+                            <button type="button" onclick="selectProcess('결선(좌면)')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">⚡ 결선(좌면)</button>
+                            <button type="button" onclick="selectProcess('결선(우면)')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">⚡ 결선(우면)</button>
+                            <button type="button" onclick="selectProcess('최종결선')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">🏆 최종결선</button>
                         </div>
                     </div>
-
                     <div class="space-y-1">
                         <span class="text-[10px] font-bold text-slate-400 block">BOX 세부 공정</span>
                         <div class="grid grid-cols-2 gap-2">
-                            <button type="button" onclick="selectProcess('BOX 준비작업')" id="btn-proc-box-prep" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1">
-                                📦 BOX 준비작업
-                            </button>
-                            <button type="button" onclick="selectProcess('BOX 결선')" id="btn-proc-box-wiring" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1">
-                                📦 BOX 결선
-                            </button>
+                            <button type="button" onclick="selectProcess('BOX 준비작업')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">📦 BOX 준비작업</button>
+                            <button type="button" onclick="selectProcess('BOX 결선')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">📦 BOX 결선</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="pt-2">
                     <button id="btn-punch-in" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 transition active:scale-98 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play"></i>
-                        해당 공정 시작 (Time Start)
+                        <i class="fa-solid fa-play"></i> 해당 공정 시작 (Time Start)
                     </button>
                 </div>
             </div>
 
-            <!-- Column 2 & 3: Live Active Work Progress Board -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 lg:col-span-2 flex flex-col justify-between">
                 <div>
-                    <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
                         <h3 class="text-md font-bold text-slate-900 flex items-center gap-1.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 pulse-red"></span>
-                            현재 실시간 진행 중인 공정 현황 (Active Jobs)
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 pulse-red"></span> 현재 실시간 진행 중인 공정 현황 (Active Jobs)
                         </h3>
-                        <span id="currentRoomTag" class="text-xs bg-indigo-50 border border-indigo-200 font-mono text-indigo-700 font-bold px-2.5 py-0.5 rounded-md">
-                            ROOM: 제조2팀
-                        </span>
+                        <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+                            <button id="btn-pause-all" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-[11px] font-bold transition flex items-center gap-1 border border-amber-200 shadow-sm active:scale-95">
+                                <i class="fa-solid fa-pause"></i> 일괄 정지
+                            </button>
+                            <button id="btn-resume-all" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[11px] font-bold transition flex items-center gap-1 border border-emerald-200 shadow-sm active:scale-95">
+                                <i class="fa-solid fa-play"></i> 일괄 재개
+                            </button>
+                            <span id="currentRoomTag" class="text-xs bg-indigo-50 border border-indigo-200 font-mono text-indigo-700 font-bold px-2.5 py-0.5 rounded-md hidden sm:inline-block ml-1">ROOM: 제조2팀</span>
+                        </div>
                     </div>
                     
                     <div id="sync-indicator-card" class="mt-3 mb-4 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2.5">
-                        <i class="fa-solid fa-arrows-rotate text-emerald-600 animate-spin"></i>
-                        <span><strong>실시간 다중 기기 동기화 활성:</strong> 여러 대의 장비를 묶어 작업자 한 명당 하나의 현황 카드로 관리됩니다.</span>
+                        <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+                        <span><strong>안전한 데이터 동기화 활성:</strong> 데이터 유실(덮어쓰기)을 방지하는 트랜잭션 엔진이 가동 중입니다.</span>
                     </div>
 
                     <div id="active-tasks-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="col-span-full py-8 text-center text-slate-400 text-xs italic">
-                            현재 활성화된 작업이 없습니다. 작업자, 장비, 공정을 지정하고 시작해 보세요!
-                        </div>
+                        <div class="col-span-full py-8 text-center text-slate-400 text-xs italic">현재 활성화된 작업이 없습니다.</div>
                     </div>
                 </div>
 
@@ -254,232 +216,144 @@
                     <span class="text-slate-400">화면은 실시간 클라우드 소켓으로 동기화됩니다.</span>
                 </div>
             </div>
-
         </section>
 
         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div class="p-6 border-b border-slate-200 bg-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
                     <h4 class="text-md font-bold text-slate-900">오늘의 공정 완료 이력 현황 (Total Work Logs)</h4>
-                    <p class="text-xs text-slate-500 mt-1">기록기 가동 이후 정상 완료(Punch-out) 처리된 실측 작업 일보 양식입니다.</p>
+                    <p class="text-xs text-slate-500 mt-1">기록기 가동 이후 정상 완료 처리된 실측 작업 양식입니다.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                     <div class="flex items-center gap-1.5">
                         <span class="text-xs font-bold text-slate-500 whitespace-nowrap">사업부 필터:</span>
-                        <select id="log-division-filter" class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 text-indigo-700">
+                        <select id="log-division-filter" class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold bg-white text-indigo-700 focus:ring-2 focus:ring-indigo-500">
                             <option value="">사업부 전체</option>
                         </select>
                     </div>
-
                     <button id="btn-export-logs" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-file-excel"></i>
-                        작업 완료 일보 엑셀 다운로드
+                        <i class="fa-solid fa-file-excel"></i> 월별 통계 엑셀 다운로드
                     </button>
-                    <button id="btn-clear-logs" class="px-3 py-2 bg-white hover:bg-rose-50 border border-slate-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-semibold transition">
-                        로그 초기화
-                    </button>
+                    <button id="btn-clear-logs" class="px-3 py-2 bg-white hover:bg-rose-50 border border-slate-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-semibold transition">로그 초기화</button>
                 </div>
             </div>
-
             <div class="overflow-x-auto flex-1 custom-scrollbar">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
                             <th class="py-3 px-4 w-12 text-center">No.</th>
                             <th class="py-3 px-4">작업자</th>
-                            <th class="py-3 px-4">작업 장비 목록 (여러 대 동시 묶음 표기)</th>
+                            <th class="py-3 px-4">작업 장비 목록 (여러 대 묶음 표기)</th>
                             <th class="py-3 px-4 text-center">공정 유형</th>
                             <th class="py-3 px-4 text-center">시작 시각</th>
                             <th class="py-3 px-4 text-center">종료 시각</th>
-                            <th class="py-3 px-4 text-right">소요 시간 (실제 작업량)</th>
-                            <th class="py-3 px-4 text-center">상태 / 관리</th>
+                            <th class="py-3 px-4 text-right">소요 시간</th>
+                            <th class="py-3 px-4 text-center">관리</th>
                         </tr>
                     </thead>
                     <tbody id="log-table-body" class="divide-y divide-slate-100 text-xs font-mono-num">
-                        <tr id="empty-log-tr">
-                            <td colspan="8" class="py-8 text-center text-slate-400 italic">완료된 공정 기록이 존재하지 않습니다.</td>
-                        </tr>
+                        <tr id="empty-log-tr"><td colspan="8" class="py-8 text-center text-slate-400 italic">완료된 공정 기록이 존재하지 않습니다.</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
-
     </main>
 
-    <!-- Modal Notification UI -->
+    <!-- Notification Modal -->
     <div id="custom-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
             <h3 id="modal-title" class="text-md font-bold text-slate-900 mb-2">알림</h3>
-            <p id="modal-body" class="text-xs text-slate-500 leading-relaxed mb-4 whitespace-pre-line">내용이 들어갑니다.</p>
+            <p id="modal-body" class="text-xs text-slate-500 leading-relaxed mb-4 whitespace-pre-line">내용</p>
             <div class="flex justify-end">
-                <button onclick="closeModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">
-                    확인
-                </button>
+                <button onclick="closeModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">확인</button>
             </div>
         </div>
     </div>
 
-    <!-- Custom Confirmation Modal -->
+    <!-- Confirm Modal -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
-            <h3 id="confirm-title" class="text-md font-bold text-slate-900 mb-2">작업 확인</h3>
-            <p id="confirm-body" class="text-xs text-slate-500 leading-relaxed mb-4">내용이 들어갑니다.</p>
+            <h3 id="confirm-title" class="text-md font-bold text-slate-900 mb-2">확인</h3>
+            <p id="confirm-body" class="text-xs text-slate-500 leading-relaxed mb-4">내용</p>
             <div class="flex justify-end gap-2">
-                <button onclick="closeConfirmModal(false)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
-                    취소
-                </button>
-                <button id="btn-confirm-action" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition">
-                    실행
-                </button>
+                <button onclick="closeConfirmModal(false)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">취소</button>
+                <button id="btn-confirm-action" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition">실행</button>
             </div>
         </div>
     </div>
 
-    <!-- Worker Management Modal -->
+    <!-- Worker Modal -->
     <div id="worker-modal" class="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-md font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-users-gear text-indigo-600"></i> 작업자 명단 관리
-                </h3>
-                <button onclick="closeWorkerModal()" class="text-slate-400 hover:text-slate-600 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <h3 class="text-md font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-users-gear text-indigo-600"></i> 작업자 명단 관리</h3>
+                <button onclick="closeWorkerModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-
             <div class="flex gap-2">
-                <input type="text" id="new-worker-input" placeholder="새 작업자 이름 입력..." 
-                       class="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-bold bg-slate-50">
-                <button id="btn-add-worker" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition whitespace-nowrap active:scale-95 shadow-sm">
-                    <i class="fa-solid fa-plus"></i> 추가
-                </button>
+                <input type="text" id="new-worker-input" placeholder="새 작업자 이름 입력..." class="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+                <button id="btn-add-worker" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm"><i class="fa-solid fa-plus"></i> 추가</button>
             </div>
-
             <div class="space-y-1">
                 <span class="text-[11px] font-bold text-slate-500 block">등록된 작업자 목록 (<span id="cnt-workers-num">0</span>명)</span>
-                <div id="worker-manage-list" class="max-h-56 overflow-y-auto custom-scrollbar border border-slate-200 rounded-xl p-2.5 grid grid-cols-2 gap-2 bg-slate-50/50">
-                    <!-- Dynamic worker management list -->
-                </div>
+                <div id="worker-manage-list" class="max-h-56 overflow-y-auto custom-scrollbar border border-slate-200 rounded-xl p-2.5 grid grid-cols-2 gap-2 bg-slate-50/50"></div>
             </div>
-
             <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
-                <button id="btn-reset-workers" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold transition flex items-center gap-1">
-                    <i class="fa-solid fa-rotate-left text-slate-500"></i> 기본 10명 복원
-                </button>
-                <button onclick="closeWorkerModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition">
-                    완료
-                </button>
+                <button id="btn-reset-workers" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold flex items-center gap-1"><i class="fa-solid fa-rotate-left"></i> 복원</button>
+                <button onclick="closeWorkerModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold">완료</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase Config Setup Modal -->
+    <!-- Firebase Modal -->
     <div id="firebase-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-md font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-arrow-up text-indigo-600"></i> Firebase 클라우드 실시간 연동 설정
-                </h3>
-                <button id="btn-close-firebase-modal" class="text-slate-400 hover:text-slate-600 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <h3 class="text-md font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up text-indigo-600"></i> Firebase 클라우드 설정</h3>
+                <button id="btn-close-firebase-modal" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-
-            <p class="text-xs text-slate-600 leading-relaxed">
-                스마트폰, 태블릿, PC 등 **여러 기기 간 동시간 실시간 연동**을 사용하려면 본인의 Firebase 프로젝트 설정(Config JSON)을 입력하세요.<br>
-                미입력 시 안전하게 **로컬 오프라인 모드**로 작동합니다.
-            </p>
-
+            <p class="text-xs text-slate-600 leading-relaxed">동시간 실시간 연동을 사용하려면 Config JSON을 입력하세요. 미입력 시 오프라인 모드로 작동합니다.</p>
             <div class="space-y-1.5">
-                <label class="block text-xs font-bold text-slate-700">Firebase Config JSON 객체 붙여넣기:</label>
-                <textarea id="firebase-config-input" rows="6" placeholder='{
-  "apiKey": "AIzaSy...",
-  "authDomain": "my-project.firebaseapp.com",
-  "projectId": "my-project",
-  "storageBucket": "my-project.appspot.com",
-  "messagingSenderId": "123456789",
-  "appId": "1:123456789:web:abcdef"
-}' class="w-full p-3 font-mono-num text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50"></textarea>
+                <textarea id="firebase-config-input" rows="6" placeholder='{ "apiKey": "AIzaSy..." }' class="w-full p-3 font-mono-num text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-slate-50"></textarea>
             </div>
-
             <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
-                <button id="btn-clear-firebase-config" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl font-bold transition">
-                    설정 초기화
-                </button>
+                <button id="btn-clear-firebase-config" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl font-bold transition">설정 초기화</button>
                 <div class="flex gap-2">
-                    <button id="btn-cancel-firebase-modal" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">
-                        취소
-                    </button>
-                    <button id="btn-save-firebase-config" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition shadow-md shadow-indigo-200">
-                        저장 및 즉시 연동
-                    </button>
+                    <button id="btn-cancel-firebase-modal" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">취소</button>
+                    <button id="btn-save-firebase-config" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition shadow-md">저장 및 연동</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification Overlay -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 (Multi-Device Live Sync Engine Enabled)</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 (Anti-Collision Live Sync Enabled)</p>
         </div>
     </footer>
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // Default Firebase Configuration
-        let firebaseConfig = {
-            apiKey: "demo-key",
-            authDomain: "demo.firebaseapp.com",
-            projectId: "demo-project",
-            storageBucket: "demo.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
-        };
-
+        let firebaseConfig = { apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo-project", storageBucket: "demo.appspot.com", messagingSenderId: "123456789", appId: "1:123456789:web:abcdef" };
         const savedCustomConfig = localStorage.getItem('custom_firebase_config');
-        if (savedCustomConfig) {
-            try {
-                firebaseConfig = JSON.parse(savedCustomConfig);
-            } catch(e) {
-                console.warn("Custom firebase config parse error", e);
-            }
-        } else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            try {
-                firebaseConfig = JSON.parse(__firebase_config);
-            } catch (e) {
-                console.warn("Falling back to default firebase config", e);
-            }
-        }
+        if (savedCustomConfig) { try { firebaseConfig = JSON.parse(savedCustomConfig); } catch(e) {} }
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-process-time-tracker';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
+        const appId = 'smart-process-time-tracker';
         let app, auth, db;
         let currentUser = null;
         let currentRoomId = '제조2팀';
         let unsubscribeRoom = null;
         let isCloudAvailable = false;
 
-        const defaultWorkers = [
-            '김정식', '장동훈', '강권모', '장혜정', 
-            '디아나', '아나스타샤', '홍새힘', '김하은',
-            '김지우', '안드레이'
-        ];
-
-        const demoPlanData = [
+        const defaultWorkers = ['김정식', '장동훈', '강권모', '장혜정', '디아나', '아나스타샤', '홍새힘', '김하은', '김지우', '안드레이'];
+        const demoPlanData = [ 
             { id: 'demo_1', division: 'ACM', cskSn: 'DTLR-TDS-260511', equipment: 'DTLR-TDS-KLEAA', deliveryDate: '2026-07-02' },
-            { id: 'demo_2', division: 'ACM', cskSn: 'LTD040D-260512', equipment: 'LTD040D-02BC012', deliveryDate: '2026-07-10' },
-            { id: 'demo_3', division: 'ACM', cskSn: 'LAR004D-260513', equipment: 'LAR004D-3BC2', deliveryDate: '2026-07-15' },
-            { id: 'demo_4', division: 'ACM', cskSn: 'LTD040D-260514', equipment: 'LTD040D-02BC002', deliveryDate: '2026-07-20' },
-            { id: 'demo_5', division: 'ACM', cskSn: 'LTD040D-260515', equipment: 'LTD040D-02BC011', deliveryDate: '2026-07-25' },
-            { id: 'demo_6', division: 'Abatement', cskSn: 'IFUDC2HC2110-2605131', equipment: 'iFOREST-D', deliveryDate: '2026-07-02' },
-            { id: 'demo_7', division: 'Abatement', cskSn: 'IFUDCBHCB110-2605133', equipment: 'iFOREST-D', deliveryDate: '2026-07-05' }
+            { id: 'demo_2', division: 'Abatement', cskSn: 'ABT-260512', equipment: 'ABT-MODEL-X', deliveryDate: '2026-07-15' },
+            { id: 'demo_3', division: 'ACM', cskSn: 'DTLR-TDS-260801', equipment: 'DTLR-TDS-KLEAA', deliveryDate: '2026-08-01' }
         ];
 
         let activeWorkersList = [...defaultWorkers];
@@ -492,113 +366,249 @@
         let runningTasks = [];
         let completedLogs = [];
 
-        function closeModal() {
-            document.getElementById('custom-modal').classList.add('hidden');
-        }
-        window.closeModal = closeModal;
-
-        function closeConfirmModal(result) {
+        window.closeModal = () => document.getElementById('custom-modal').classList.add('hidden');
+        window.closeConfirmModal = (result) => { 
             document.getElementById('confirm-modal').classList.add('hidden');
-            if (result && typeof confirmCallback === 'function') {
-                confirmCallback();
-            }
+            if (result && confirmCallback) confirmCallback();
             confirmCallback = null;
-        }
-        window.closeConfirmModal = closeConfirmModal;
-
-        function openWorkerModal() {
-            renderWorkerManageList();
-            document.getElementById('worker-modal').classList.remove('hidden');
-            document.getElementById('new-worker-input').focus();
-        }
-        window.openWorkerModal = openWorkerModal;
-
-        function closeWorkerModal() {
-            document.getElementById('worker-modal').classList.add('hidden');
-        }
-        window.closeWorkerModal = closeWorkerModal;
-
-        function openFirebaseModal() {
-            const input = document.getElementById('firebase-config-input');
-            const saved = localStorage.getItem('custom_firebase_config');
-            if (saved) {
-                input.value = saved;
-            } else if (firebaseConfig && firebaseConfig.apiKey !== 'demo-key') {
-                input.value = JSON.stringify(firebaseConfig, null, 2);
-            } else {
-                input.value = '';
-            }
-            document.getElementById('firebase-modal').classList.remove('hidden');
-        }
-        window.openFirebaseModal = openFirebaseModal;
-
-        function closeFirebaseModal() {
-            document.getElementById('firebase-modal').classList.add('hidden');
-        }
-        window.closeFirebaseModal = closeFirebaseModal;
-
-        function showMessage(title, body) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-body').innerText = body;
-            document.getElementById('custom-modal').classList.remove('hidden');
-        }
-
-        function showConfirm(title, body, callback) {
-            document.getElementById('confirm-title').innerText = title;
-            document.getElementById('confirm-body').innerText = body;
-            confirmCallback = callback;
-            document.getElementById('confirm-modal').classList.remove('hidden');
-        }
-
-        function showToast(msg, icon = 'fa-circle-info') {
+        };
+        window.openWorkerModal = () => { renderWorkerManageList(); document.getElementById('worker-modal').classList.remove('hidden'); document.getElementById('new-worker-input').focus(); };
+        window.closeWorkerModal = () => document.getElementById('worker-modal').classList.add('hidden');
+        window.openFirebaseModal = () => document.getElementById('firebase-modal').classList.remove('hidden');
+        window.closeFirebaseModal = () => document.getElementById('firebase-modal').classList.add('hidden');
+        
+        function showMessage(title, body) { document.getElementById('modal-title').innerText = title; document.getElementById('modal-body').innerText = body; document.getElementById('custom-modal').classList.remove('hidden'); }
+        function showConfirm(title, body, callback) { document.getElementById('confirm-title').innerText = title; document.getElementById('confirm-body').innerText = body; confirmCallback = callback; document.getElementById('confirm-modal').classList.remove('hidden'); }
+        function showToast(msg, icon = 'fa-circle-info') { 
             const container = document.getElementById('toastContainer');
             if (!container) return;
             const toast = document.createElement('div');
             toast.className = `pointer-events-auto bg-slate-900 border border-slate-700 text-slate-100 text-xs px-3.5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 transform transition-all duration-300 translate-y-4 opacity-0 z-50 font-bold`;
             toast.innerHTML = `<i class="fa-solid ${icon} text-emerald-400"></i> <span>${msg}</span>`;
             container.appendChild(toast);
-
             setTimeout(() => { toast.classList.remove('translate-y-4', 'opacity-0'); }, 10);
-            setTimeout(() => {
-                toast.classList.add('translate-y-4', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            setTimeout(() => { toast.classList.add('translate-y-4', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+        function playSound(freq = 800, duration = 0.08) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'sine'; osc.frequency.value = freq; gain.gain.value = 0.08; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + duration); } catch (e) {} }
+
+        function getRoomDocRef(roomId) {
+            const safeRoom = roomId.trim().toUpperCase().replace(/[^A-Z0-9_-가-힣]/g, '') || '제조2팀';
+            return doc(db, 'artifacts', appId, 'public', 'data', 'rooms', safeRoom);
         }
 
-        function playSound(freq = 800, duration = 0.08) {
+        async function saveRoomState(isMetaUpdate = false) {
             try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = freq;
-                gain.gain.value = 0.08;
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + duration);
+                localStorage.setItem('activeWorkersList', JSON.stringify(activeWorkersList));
+                localStorage.setItem(`room_${currentRoomId}_data`, JSON.stringify({ runningTasks, completedLogs, planEquipments, activeWorkersList }));
             } catch (e) {}
+            if (isMetaUpdate && currentUser && db && isCloudAvailable) {
+                try { await setDoc(getRoomDocRef(currentRoomId), { planEquipments, activeWorkersList, updatedAt: Date.now() }, { merge: true }); } catch(e) {}
+            }
         }
+
+        async function updateTaskInCloudSecurely(actionType, payload) {
+            if (!currentUser || !db || !isCloudAvailable) {
+                if (actionType === 'PUNCH_IN') runningTasks.unshift(payload);
+                else if (actionType === 'PAUSE_TOGGLE') {
+                    const t = runningTasks.find(x => x.id === payload.id);
+                    if(t) { t.paused = payload.paused; t.pausedAt = payload.pausedAt; t.totalPausedDuration = payload.totalPausedDuration; }
+                }
+                else if (actionType === 'PAUSE_ALL') {
+                    runningTasks.forEach(task => { if (!task.paused) { task.paused = true; task.pausedAt = payload.timestamp; } });
+                }
+                else if (actionType === 'RESUME_ALL') {
+                    runningTasks.forEach(task => {
+                        if (task.paused) { task.totalPausedDuration += (payload.timestamp - task.pausedAt); task.paused = false; task.pausedAt = null; }
+                    });
+                }
+                else if (actionType === 'PUNCH_OUT') {
+                    runningTasks = runningTasks.filter(x => x.id !== payload.taskId);
+                    completedLogs.unshift(payload.finishedJob);
+                }
+                else if (actionType === 'DELETE_LOG') completedLogs = completedLogs.filter(x => x.id !== payload.id);
+                else if (actionType === 'CLEAR_LOGS') completedLogs = [];
+                
+                renderActiveTasks(); renderCompletedLogs(); saveRoomState();
+                return;
+            }
+
+            const roomRef = getRoomDocRef(currentRoomId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const sfDoc = await transaction.get(roomRef);
+                    let currentData = sfDoc.exists() ? sfDoc.data() : {};
+                    let currentRunning = currentData.runningTasks || [];
+                    let currentLogs = currentData.completedLogs || [];
+
+                    if (actionType === 'PUNCH_IN') currentRunning.unshift(payload);
+                    else if (actionType === 'PAUSE_TOGGLE') {
+                        const idx = currentRunning.findIndex(x => x.id === payload.id);
+                        if (idx > -1) { currentRunning[idx].paused = payload.paused; currentRunning[idx].pausedAt = payload.pausedAt; currentRunning[idx].totalPausedDuration = payload.totalPausedDuration; }
+                    } 
+                    else if (actionType === 'PAUSE_ALL') {
+                        currentRunning.forEach(task => { if (!task.paused) { task.paused = true; task.pausedAt = payload.timestamp; } });
+                    }
+                    else if (actionType === 'RESUME_ALL') {
+                        currentRunning.forEach(task => {
+                            if (task.paused) { task.totalPausedDuration += (payload.timestamp - task.pausedAt); task.paused = false; task.pausedAt = null; }
+                        });
+                    }
+                    else if (actionType === 'PUNCH_OUT') {
+                        const idx = currentRunning.findIndex(x => x.id === payload.taskId);
+                        if (idx > -1) currentRunning.splice(idx, 1);
+                        currentLogs.unshift(payload.finishedJob);
+                    } 
+                    else if (actionType === 'DELETE_LOG') { currentLogs = currentLogs.filter(x => x.id !== payload.id); } 
+                    else if (actionType === 'CLEAR_LOGS') { currentLogs = []; }
+
+                    if (sfDoc.exists()) {
+                        transaction.update(roomRef, { runningTasks: currentRunning, completedLogs: currentLogs, updatedAt: Date.now() });
+                    } else {
+                        transaction.set(roomRef, { runningTasks: currentRunning, completedLogs: currentLogs, updatedAt: Date.now() });
+                    }
+                });
+            } catch (e) {
+                console.error(e); showToast("네트워크 지연으로 작업 처리에 실패했습니다. 다시 시도해주세요.", "fa-triangle-exclamation");
+            }
+        }
+
+        async function triggerPunchIn() {
+            if (!selectedWorker || selectedEquipments.length === 0 || !selectedProcess) {
+                showMessage('입력 오류', '작업자, 대상 장비, 투입 공정을 모두 선택해 주십시오.'); return;
+            }
+
+            let duplicatedItems = [];
+            selectedEquipments.forEach(item => {
+                const exists = runningTasks.find(t => t.worker === selectedWorker && t.process === selectedProcess && (t.equipments||[]).some(eq => eq.id === item.id));
+                if (exists) duplicatedItems.push(`[${item.division || 'ACM'}] ${item.equipment}`);
+            });
+            if (duplicatedItems.length > 0) {
+                showMessage('중복 경고', `${selectedWorker}님은 이미 해당 장비를 작업 중입니다:\n${duplicatedItems.join('\n')}`); return;
+            }
+
+            const timestamp = new Date().getTime();
+            const newTask = {
+                id: 'task_' + timestamp + '_' + Math.random().toString(36).substr(2, 5),
+                worker: selectedWorker, process: selectedProcess, startTime: timestamp,
+                paused: false, pausedAt: null, totalPausedDuration: 0,
+                equipments: selectedEquipments.map(item => ({ id: item.id, equipment: item.equipment, division: item.division, cskSn: item.cskSn, deliveryDate: item.deliveryDate }))
+            };
+            
+            await updateTaskInCloudSecurely('PUNCH_IN', newTask);
+
+            selectedWorker = ''; selectedProcess = ''; selectedEquipments = [];
+            document.getElementById('equipment-search').value = '';
+            filterEquipments(); renderWorkers(); selectProcess(''); renderSelectedEquipmentsList(); updateStatusText();
+            playSound(1000, 0.1); showToast("공정이 시작되었습니다.", "fa-play");
+        }
+
+        window.triggerTogglePause = async function(taskId) {
+            const task = runningTasks.find(t => t.id === taskId);
+            if (!task) return;
+            const now = new Date().getTime();
+            let updatedPayload = { id: task.id, paused: task.paused, pausedAt: task.pausedAt, totalPausedDuration: task.totalPausedDuration || 0 };
+
+            if (!task.paused) {
+                updatedPayload.paused = true; updatedPayload.pausedAt = now;
+                playSound(500, 0.1); showToast(`${task.worker} 작업 일시정지됨`, "fa-pause");
+            } else {
+                updatedPayload.totalPausedDuration += (now - task.pausedAt);
+                updatedPayload.paused = false; updatedPayload.pausedAt = null;
+                playSound(900, 0.1); showToast(`${task.worker} 작업 재개됨`, "fa-play");
+            }
+            await updateTaskInCloudSecurely('PAUSE_TOGGLE', updatedPayload);
+        };
+
+        window.triggerPauseAll = async function() {
+            if (runningTasks.length === 0) return;
+            const hasPlaying = runningTasks.some(t => !t.paused);
+            if (!hasPlaying) { showToast("모든 작업이 이미 일시정지 상태입니다.", "fa-circle-info"); return; }
+            await updateTaskInCloudSecurely('PAUSE_ALL', { timestamp: Date.now() });
+            playSound(500, 0.1); showToast("현재 진행 중인 모든 작업이 일괄 정지되었습니다.", "fa-pause");
+        };
+
+        window.triggerResumeAll = async function() {
+            if (runningTasks.length === 0) return;
+            const hasPaused = runningTasks.some(t => t.paused);
+            if (!hasPaused) { showToast("모든 작업이 이미 진행 중인 상태입니다.", "fa-circle-info"); return; }
+            await updateTaskInCloudSecurely('RESUME_ALL', { timestamp: Date.now() });
+            playSound(900, 0.1); showToast("일시정지된 모든 작업이 일괄 재개되었습니다.", "fa-play");
+        };
+
+        window.triggerPunchOut = async function(taskId) {
+            const task = runningTasks.find(t => t.id === taskId);
+            if (!task) return;
+            const now = new Date().getTime();
+            const totalPaused = task.totalPausedDuration || 0;
+            let elapsedMs = task.paused ? (task.pausedAt - task.startTime - totalPaused) : (now - task.startTime - totalPaused);
+            if (elapsedMs < 0) elapsedMs = 0;
+            const elapsedHours = parseFloat((elapsedMs / (1000 * 60 * 60)).toFixed(4));
+            const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
+
+            const finishedJob = {
+                id: 'log_' + new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5),
+                worker: task.worker, process: task.process,
+                startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
+                endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
+                elapsedMinutes: elapsedMinutes, elapsedHours: elapsedHours,
+                date: new Date().toISOString().split('T')[0],
+                equipments: task.equipments && task.equipments.length > 0 ? task.equipments : [{ division: task.division||'ACM', equipment: task.equipment||'미지정', cskSn: task.cskSn||'-', deliveryDate: task.deliveryDate||'-' }]
+            };
+
+            await updateTaskInCloudSecurely('PUNCH_OUT', { taskId: taskId, finishedJob: finishedJob });
+            playSound(1200, 0.2); showToast(`${finishedJob.worker}님 완료 처리 성공!`, "fa-check");
+        };
+
+        window.triggerDeleteLog = function(logId) {
+            showConfirm('이력 삭제', `작업 이력을 삭제하시겠습니까?`, async () => {
+                await updateTaskInCloudSecurely('DELETE_LOG', { id: logId });
+                showToast("작업 이력이 삭제되었습니다.", "fa-trash");
+            });
+        };
 
         function renderWorkers() {
             const grid = document.getElementById('worker-grid');
             if (!grid) return;
             grid.innerHTML = '';
-            
             activeWorkersList.forEach(w => {
                 const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.id = `btn-worker-${w}`;
-                btn.innerText = w;
-                
-                if (selectedWorker === w) {
-                    btn.className = "py-2.5 border-2 border-indigo-600 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black shadow-sm text-center transition";
-                } else {
-                    btn.className = "py-2.5 border border-slate-200 bg-white text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-50 hover:border-slate-300 transition active:scale-95 text-center";
-                }
-                
-                btn.onclick = () => selectWorker(w);
+                btn.type = 'button'; btn.innerText = w;
+                btn.className = selectedWorker === w ? "py-2.5 border-2 border-indigo-600 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black shadow-sm transition" : "py-2.5 border border-slate-200 bg-white text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-50 transition active:scale-95";
+                btn.onclick = () => { selectedWorker = w; renderWorkers(); updateStatusText(); };
                 grid.appendChild(btn);
+            });
+        }
+
+        function updateStatusText() {
+            const span = document.getElementById('status-panel');
+            if (selectedWorker || selectedProcess) { span.innerText = `[대기] 작업자: ${selectedWorker || '미선택'} | 공정: ${selectedProcess || '미선택'}`; span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400"; } 
+            else { span.innerText = "현재 대기 상태 (준비 완료)"; span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-emerald-400"; }
+        }
+        window.selectProcess = (p) => { selectedProcess = p; updateStatusText(); };
+
+        window.deleteWorkerName = async function(name) {
+            activeWorkersList = activeWorkersList.filter(w => w !== name);
+            if (selectedWorker === name) { selectedWorker = ''; updateStatusText(); }
+            renderWorkers(); renderWorkerManageList(); await saveRoomState(true);
+            showToast(`작업자 '${name}'님이 삭제되었습니다.`, "fa-trash");
+        };
+
+        async function handleAddWorker() {
+            const input = document.getElementById('new-worker-input');
+            const name = input.value.trim();
+            if (!name) { showMessage('입력 오류', '추가할 작업자 이름을 입력해 주세요.'); return; }
+            if (activeWorkersList.includes(name)) { showMessage('중복 오류', `'${name}'님은 이미 등록되어 있습니다.`); return; }
+            activeWorkersList.push(name); input.value = '';
+            renderWorkers(); renderWorkerManageList(); await saveRoomState(true);
+            showToast(`새 작업자 '${name}'님이 추가되었습니다.`, "fa-user-plus");
+        }
+
+        async function handleResetWorkers() {
+            showConfirm('작업자 명단 복원', '제조2팀 기본 10명 명단으로 초기화하시겠습니까?', async () => {
+                activeWorkersList = [...defaultWorkers];
+                if (!activeWorkersList.includes(selectedWorker)) { selectedWorker = ''; updateStatusText(); }
+                renderWorkers(); renderWorkerManageList(); await saveRoomState(true);
+                showToast('기본 명단으로 초기화되었습니다.', 'fa-rotate-left');
             });
         }
 
@@ -606,747 +616,79 @@
             const container = document.getElementById('worker-manage-list');
             const countSpan = document.getElementById('cnt-workers-num');
             if (!container) return;
-            container.innerHTML = '';
-            countSpan.innerText = activeWorkersList.length;
-
-            if (activeWorkersList.length === 0) {
-                container.innerHTML = `<div class="col-span-full py-4 text-center text-slate-400 text-xs italic">등록된 작업자가 없습니다.</div>`;
-                return;
-            }
-
+            container.innerHTML = ''; countSpan.innerText = activeWorkersList.length;
+            if (activeWorkersList.length === 0) { container.innerHTML = `<div class="col-span-full py-4 text-center text-slate-400 text-xs italic">등록된 작업자가 없습니다.</div>`; return; }
             activeWorkersList.forEach(w => {
                 const item = document.createElement('div');
                 item.className = "flex justify-between items-center bg-white px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm";
-                item.innerHTML = `
-                    <span class="truncate">${w}</span>
-                    <button type="button" onclick="deleteWorkerName('${w}')" class="text-slate-400 hover:text-rose-600 transition p-1" title="작업자 삭제">
-                        <i class="fa-solid fa-trash-can text-xs"></i>
-                    </button>
-                `;
+                item.innerHTML = `<span class="truncate">${w}</span><button type="button" onclick="deleteWorkerName('${w}')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
                 container.appendChild(item);
             });
-        }
-
-        function selectWorker(name) {
-            selectedWorker = name;
-            renderWorkers();
-            updateStatusText();
-        }
-
-        window.deleteWorkerName = async function(name) {
-            activeWorkersList = activeWorkersList.filter(w => w !== name);
-            if (selectedWorker === name) {
-                selectedWorker = '';
-                updateStatusText();
-            }
-            renderWorkers();
-            renderWorkerManageList();
-            await saveRoomState(true);
-            showToast(`작업자 '${name}'님이 삭제되었습니다.`, "fa-trash");
-        };
-
-        async function handleAddWorker() {
-            const input = document.getElementById('new-worker-input');
-            const name = input.value.trim();
-            if (!name) {
-                showMessage('입력 오류', '추가할 작업자의 이름을 입력해 주세요.');
-                return;
-            }
-            if (activeWorkersList.includes(name)) {
-                showMessage('중복 오류', `'${name}'님은 이미 등록된 작업자입니다.`);
-                return;
-            }
-
-            activeWorkersList.push(name);
-            input.value = '';
-            renderWorkers();
-            renderWorkerManageList();
-            await saveRoomState(true);
-            showToast(`새 작업자 '${name}'님이 추가되었습니다.`, "fa-user-plus");
-        }
-
-        async function handleResetWorkers() {
-            showConfirm('작업자 명단 복원', '제조2팀 기본 10명 명단으로 초기화하시겠습니까?', async () => {
-                activeWorkersList = [...defaultWorkers];
-                if (!activeWorkersList.includes(selectedWorker)) {
-                    selectedWorker = '';
-                    updateStatusText();
-                }
-                renderWorkers();
-                renderWorkerManageList();
-                await saveRoomState(true);
-                showToast('기본 작업자 명단으로 초기화되었습니다.', 'fa-rotate-left');
-            });
-        }
-
-        window.selectProcess = function(processName) {
-            selectedProcess = processName;
-            
-            const list = ['취부', '결선(정면)', '결선(좌면)', '결선(우면)', '최종결선', 'BOX 준비작업', 'BOX 결선'];
-            const ids = { 
-                '취부': 'btn-proc-chwibu', 
-                '결선(정면)': 'btn-proc-wiring-front', 
-                '결선(좌면)': 'btn-proc-wiring-left', 
-                '결선(우면)': 'btn-proc-wiring-right', 
-                '최종결선': 'btn-proc-wiring-final', 
-                'BOX 준비작업': 'btn-proc-box-prep', 
-                'BOX 결선': 'btn-proc-box-wiring' 
-            };
-
-            list.forEach(p => {
-                const el = document.getElementById(ids[p]);
-                if (el) el.className = "py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1";
-            });
-
-            if (processName) {
-                const activeBtn = document.getElementById(ids[processName]);
-                if (activeBtn) {
-                    activeBtn.className = "py-2 bg-indigo-600 border border-indigo-600 text-white rounded-xl text-xs font-black text-center shadow-md shadow-indigo-100 transition active:scale-95 flex items-center justify-center gap-1";
-                }
-            }
-            updateStatusText();
-        };
-
-        function updateStatusText() {
-            const span = document.getElementById('status-panel');
-            if (selectedWorker || selectedProcess) {
-                span.innerText = `[대기] 작업자: ${selectedWorker || '미선택'} | 공정: ${selectedProcess || '미선택'}`;
-                span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400";
-            } else {
-                span.innerText = "현재 대기 상태 (준비 완료)";
-                span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-emerald-400";
-            }
         }
 
         function updateDivisionFilters() {
             const selectFilter = document.getElementById('select-division-filter');
             const logFilter = document.getElementById('log-division-filter');
+            if(!selectFilter || !logFilter) return;
 
             const planDivisions = planEquipments.map(p => p.division || 'ACM');
-            
             const logDivisions = [];
-            completedLogs.forEach(l => {
-                if (l.equipments && l.equipments.length > 0) {
-                    l.equipments.forEach(eq => logDivisions.push(eq.division || 'ACM'));
-                } else if (l.division) {
-                    logDivisions.push(l.division);
-                }
-            });
-
+            completedLogs.forEach(l => { (l.equipments || [{ division: l.division }]).forEach(eq => logDivisions.push(eq.division || 'ACM')); });
             const allDivisions = [...new Set([...planDivisions, ...logDivisions])].filter(Boolean).sort();
-
-            const currentSelectVal = selectFilter.value;
-            const currentLogVal = logFilter.value;
-
-            selectFilter.innerHTML = '<option value="">사업부 전체</option>';
-            logFilter.innerHTML = '<option value="">사업부 전체</option>';
-
+            
+            const currentSelectVal = selectFilter.value, currentLogVal = logFilter.value;
+            selectFilter.innerHTML = '<option value="">사업부 전체</option>'; logFilter.innerHTML = '<option value="">사업부 전체</option>';
             allDivisions.forEach(div => {
-                const optSelect = document.createElement('option');
-                optSelect.value = div;
-                optSelect.innerText = div;
-                if (div === currentSelectVal) optSelect.selected = true;
-                selectFilter.appendChild(optSelect);
-
-                const optLog = document.createElement('option');
-                optLog.value = div;
-                optLog.innerText = div;
-                if (div === currentLogVal) optLog.selected = true;
-                logFilter.appendChild(optLog);
+                selectFilter.appendChild(new Option(div, div, false, div === currentSelectVal));
+                logFilter.appendChild(new Option(div, div, false, div === currentLogVal));
             });
-        }
-
-        function renderEquipmentDropdown() {
-            filterEquipments();
         }
 
         function filterEquipments() {
-            const query = document.getElementById('equipment-search').value.toLowerCase().trim();
-            const selectedDivision = document.getElementById('select-division-filter').value;
+            const query = (document.getElementById('equipment-search')?.value || '').toLowerCase().trim();
+            const selectedDivision = document.getElementById('select-division-filter')?.value || '';
             const select = document.getElementById('select-equipment');
-            select.innerHTML = '';
-
-            if (planEquipments.length === 0) {
-                select.innerHTML = `<option value="">생산계획을 먼저 연동하세요...</option>`;
-                return;
-            }
+            if(!select) return; select.innerHTML = '';
+            if (planEquipments.length === 0) { select.innerHTML = `<option value="">생산계획을 먼저 연동하세요...</option>`; return; }
 
             const filtered = planEquipments.filter(item => {
                 const divisionMatch = !selectedDivision || (item.division && item.division === selectedDivision);
-                const queryMatch = (
-                    (item.equipment && item.equipment.toLowerCase().includes(query)) ||
-                    (item.cskSn && item.cskSn.toLowerCase().includes(query)) ||
-                    (item.deliveryDate && item.deliveryDate.toLowerCase().includes(query))
-                );
+                const queryMatch = (item.equipment?.toLowerCase().includes(query) || item.cskSn?.toLowerCase().includes(query) || item.deliveryDate?.toLowerCase().includes(query));
                 return divisionMatch && queryMatch;
             });
-
             select.innerHTML = `<option value="">-- 장비 선택 (${filtered.length}건) --</option>`;
-            
-            filtered.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.id;
-                opt.innerText = `[${item.division || 'ACM'}] ${item.equipment} (S/N: ${item.cskSn} | 납기: ${item.deliveryDate})`;
-                select.appendChild(opt);
-            });
+            filtered.forEach(item => select.appendChild(new Option(`[${item.division || 'ACM'}] ${item.equipment} (S/N: ${item.cskSn} | 납기: ${item.deliveryDate})`, item.id)));
         }
 
         function renderSelectedEquipmentsList() {
             const container = document.getElementById('equipment-selected-list-container');
-            if (!container) return;
-            container.innerHTML = '';
-
+            if (!container) return; container.innerHTML = '';
             if (selectedEquipments.length === 0) return;
 
             const header = document.createElement('div');
             header.className = "flex justify-between items-center text-xs font-bold text-indigo-900 px-1 pb-1 pt-2 border-t border-slate-100";
-            header.innerHTML = `
-                <span>선택된 제작 장비 목록 (${selectedEquipments.length}대)</span>
-                <button type="button" onclick="clearSelectedEquipments()" class="text-[10px] text-rose-600 hover:underline font-bold">
-                    <i class="fa-solid fa-rotate-left"></i> 전체 취소
-                </button>
-            `;
+            header.innerHTML = `<span>선택된 제작 장비 목록 (${selectedEquipments.length}대)</span><button type="button" onclick="clearSelectedEquipments()" class="text-[10px] text-rose-600 hover:underline font-bold"><i class="fa-solid fa-rotate-left"></i> 전체 취소</button>`;
             container.appendChild(header);
 
             selectedEquipments.forEach((item, index) => {
                 const card = document.createElement('div');
-                card.className = "p-3 bg-gradient-to-r from-indigo-50/90 to-slate-50 border border-indigo-200/80 rounded-xl space-y-1.5 text-xs relative shadow-xs hover:border-indigo-400 transition";
-                
-                const badgeColor = item.division === 'Abatement' 
-                    ? "bg-amber-500 text-white" 
-                    : "bg-indigo-600 text-white";
-
+                card.className = "p-3 bg-gradient-to-r from-indigo-50/90 to-slate-50 border border-indigo-200/80 rounded-xl space-y-1.5 text-xs relative shadow-xs";
+                const badgeColor = item.division === 'Abatement' ? "bg-amber-500" : "bg-indigo-600";
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b border-indigo-100 pb-1.5 pr-6">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[9px] font-black px-1.5 py-0.5 rounded ${badgeColor} tracking-wider">${item.division || 'ACM'}</span>
-                            <span class="text-[10px] font-bold text-slate-500">장비 #${index + 1}</span>
-                        </div>
-                        <button type="button" onclick="removeSelectedEquipment(${index})" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-rose-600 transition p-1" title="장비 선택 해제">
-                            <i class="fa-solid fa-xmark text-sm"></i>
-                        </button>
+                        <div class="flex items-center gap-1.5"><span class="text-[9px] font-black px-1.5 py-0.5 rounded ${badgeColor} text-white tracking-wider">${item.division || 'ACM'}</span><span class="text-[10px] font-bold text-slate-500">장비 #${index + 1}</span></div>
+                        <button type="button" onclick="removeSelectedEquipment(${index})" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-xmark text-sm"></i></button>
                     </div>
-                    
                     <div class="grid grid-cols-2 gap-x-2 gap-y-1 pt-0.5">
-                        <div class="col-span-2">
-                            <span class="text-[9px] text-slate-400 block font-semibold">장비 모델명</span>
-                            <span class="font-black text-slate-900 text-xs break-all">${item.equipment}</span>
-                        </div>
-                        <div>
-                            <span class="text-[9px] text-slate-400 block font-semibold">CSK S/N</span>
-                            <span class="font-mono-num font-bold text-indigo-700 break-all">${item.cskSn || '-'}</span>
-                        </div>
-                        <div>
-                            <span class="text-[9px] text-slate-400 block font-semibold">납품일</span>
-                            <span class="font-semibold text-slate-700 flex items-center gap-1">
-                                📅 <span>${item.deliveryDate || '-'}</span>
-                            </span>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        window.removeSelectedEquipment = function(index) {
-            selectedEquipments.splice(index, 1);
-            renderSelectedEquipmentsList();
-        };
-
-        window.clearSelectedEquipments = function() {
-            selectedEquipments = [];
-            renderSelectedEquipmentsList();
-        };
-
-        function handleExcelImport(file) {
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-                    if (!rawRows || rawRows.length < 2) {
-                        showMessage('구조 오류', '엑셀 파일의 행이 비어 있거나 읽을 수 없습니다.');
-                        return;
-                    }
-
-                    let divisionColIdx = -1;
-                    let equipmentColIdx = -1;
-                    let cskSnColIdx = -1;
-                    let deliveryDateColIdx = -1;
-                    let headerRowIdx = -1;
-
-                    for (let r = 0; r < Math.min(rawRows.length, 10); r++) {
-                        const row = rawRows[r];
-                        if (!row) continue;
-                        let foundCount = 0;
-                        let tempDiv = -1, tempEquip = -1, tempCsk = -1, tempDeliv = -1;
-                        
-                        for (let c = 0; c < row.length; c++) {
-                            const val = String(row[c] || '').trim().replace(/\s+/g, '').toLowerCase();
-                            if (val.includes('사업부')) { tempDiv = c; foundCount++; }
-                            else if (val.includes('장비명') || val.includes('모델명') || val.includes('품명')) { tempEquip = c; foundCount++; }
-                            else if (val.includes('csks/n') || val.includes('csksn') || val.includes('s/n') || val.includes('시리얼')) { tempCsk = c; foundCount++; }
-                            else if (val.includes('납품일') || val.includes('납기일')) { tempDeliv = c; foundCount++; }
-                        }
-                        
-                        if (foundCount >= 2) {
-                            headerRowIdx = r;
-                            divisionColIdx = tempDiv;
-                            equipmentColIdx = tempEquip;
-                            cskSnColIdx = tempCsk;
-                            deliveryDateColIdx = tempDeliv;
-                            break;
-                        }
-                    }
-
-                    if (headerRowIdx === -1) {
-                        headerRowIdx = 0;
-                        divisionColIdx = 1;
-                        equipmentColIdx = 3;
-                        cskSnColIdx = 4;
-                        deliveryDateColIdx = 11;
-                    }
-
-                    let parsedPlan = [];
-                    for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
-                        const row = rawRows[i];
-                        if (!row || row.length === 0) continue;
-
-                        const equipName = row[equipmentColIdx] !== undefined ? String(row[equipmentColIdx]).trim() : '';
-                        if (!equipName || equipName === '장비명' || equipName === '모델명' || equipName.includes('합계') || equipName === 'No.') continue;
-
-                        const divName = divisionColIdx !== -1 && row[divisionColIdx] !== undefined ? String(row[divisionColIdx]).trim() : 'ACM';
-                        const cskSn = cskSnColIdx !== -1 && row[cskSnColIdx] !== undefined ? String(row[cskSnColIdx]).trim() : '-';
-                        
-                        let delivDate = '-';
-                        if (deliveryDateColIdx !== -1 && row[deliveryDateColIdx] !== undefined && row[deliveryDateColIdx] !== null) {
-                            const rawDate = row[deliveryDateColIdx];
-                            if (rawDate instanceof Date) {
-                                const pad = (n) => String(n).padStart(2, '0');
-                                delivDate = `${rawDate.getFullYear()}-${pad(rawDate.getMonth() + 1)}-${pad(rawDate.getDate())}`;
-                            } else if (typeof rawDate === 'number') {
-                                const dateObj = XLSX.SSF.parse_date_code(rawDate);
-                                if (dateObj) {
-                                    const pad = (n) => String(n).padStart(2, '0');
-                                    delivDate = `${dateObj.y}-${pad(dateObj.m)}-${pad(dateObj.d)}`;
-                                } else {
-                                    delivDate = String(rawDate).trim();
-                                }
-                            } else {
-                                delivDate = String(rawDate).split(' ')[0].trim();
-                            }
-                        }
-
-                        parsedPlan.push({
-                            id: 'equip_' + i + '_' + Date.now(),
-                            division: divName,
-                            equipment: equipName,
-                            cskSn: cskSn,
-                            deliveryDate: delivDate
-                        });
-                    }
-
-                    if (parsedPlan.length > 0) {
-                        planEquipments = parsedPlan;
-                        document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
-                        
-                        const badge = document.getElementById('load-status-badge');
-                        badge.innerText = `생산계획 연동 완료 (${planEquipments.length}건)`;
-                        badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
-
-                        document.getElementById('equipment-search').value = '';
-                        document.getElementById('select-division-filter').value = '';
-                        selectedEquipments = [];
-                        renderSelectedEquipmentsList();
-                        updateDivisionFilters();
-                        renderEquipmentDropdown();
-
-                        await saveRoomState(true);
-                        showMessage('엑셀 파싱 성공', `업로드한 파일에서 ${planEquipments.length}개의 제작 장비 목록을 인식하여 적용했습니다.`);
-                    } else {
-                        showMessage('파싱 경고', '엑셀 파일에서 올바른 장비 항목을 찾을 수 없습니다. 컬럼 제목(사업부, 장비명, S/N, 납기일)을 확인해 주세요.');
-                    }
-                } catch (err) {
-                    console.error("Excel Read Error:", err);
-                    showMessage('파일 오류', '엑셀 파일을 읽는 중 오류가 발생했습니다.');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function getRoomDocRef(roomId) {
-            const safeRoom = roomId.trim().toUpperCase().replace(/[^A-Z0-9_-가-힣]/g, '') || '제조2팀';
-            return doc(db, 'artifacts', appId, 'public', 'data', 'rooms', safeRoom);
-        }
-
-        function loadLocalBackup() {
-            try {
-                const local = localStorage.getItem(`room_${currentRoomId}_data`);
-                if (local) {
-                    const parsed = JSON.parse(local);
-                    runningTasks = parsed.runningTasks || [];
-                    completedLogs = parsed.completedLogs || [];
-                    if (parsed.activeWorkersList && Array.isArray(parsed.activeWorkersList) && parsed.activeWorkersList.length > 0) {
-                        activeWorkersList = parsed.activeWorkersList;
-                    }
-                    if (parsed.planEquipments && parsed.planEquipments.length > 0) {
-                        planEquipments = parsed.planEquipments;
-                        document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
-                        document.getElementById('load-status-badge').innerText = `생산계획 저장됨 (${planEquipments.length}건)`;
-                        document.getElementById('load-status-badge').className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
-                    }
-                } else {
-                    const savedWorkers = localStorage.getItem('activeWorkersList');
-                    if (savedWorkers) {
-                        try {
-                            const parsedW = JSON.parse(savedWorkers);
-                            if (Array.isArray(parsedW) && parsedW.length > 0) activeWorkersList = parsedW;
-                        } catch(e) {}
-                    }
-                }
-            } catch (e) {
-                console.warn("Error reading local backup:", e);
-            }
-            renderWorkers();
-            renderActiveTasks();
-            renderCompletedLogs();
-            updateDivisionFilters();
-            renderEquipmentDropdown();
-        }
-
-        async function saveRoomState(immediate = false) {
-            try {
-                localStorage.setItem('activeWorkersList', JSON.stringify(activeWorkersList));
-                localStorage.setItem(`room_${currentRoomId}_data`, JSON.stringify({
-                    runningTasks: runningTasks,
-                    completedLogs: completedLogs,
-                    planEquipments: planEquipments,
-                    activeWorkersList: activeWorkersList
-                }));
-            } catch (e) {
-                console.warn("Local storage write failed:", e);
-            }
-
-            if (!currentUser || !db || !isCloudAvailable) return;
-
-            try {
-                const dataToSave = {
-                    runningTasks: runningTasks,
-                    completedLogs: completedLogs,
-                    planEquipments: planEquipments,
-                    activeWorkersList: activeWorkersList,
-                    updatedAt: Date.now()
-                };
-                await setDoc(getRoomDocRef(currentRoomId), dataToSave, { merge: true });
-                updateCloudStatusBadge(true);
-            } catch (e) {
-                console.warn("Save room state failed (running offline):", e);
-                updateCloudStatusBadge(false);
-            }
-        }
-
-        function updateCloudStatusBadge(connected) {
-            const badge = document.getElementById('cloud-status-badge');
-            const badgeMobile = document.getElementById('cloud-status-badge-mobile');
-
-            if (connected) {
-                if (badge) {
-                    badge.className = "text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-3 py-1 rounded-full flex items-center gap-1.5 border border-emerald-500/30";
-                    badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span><span>실시간 다중 기기 연동 중 (${currentRoomId})</span>`;
-                }
-                if (badgeMobile) {
-                    badgeMobile.className = "text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1";
-                    badgeMobile.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>${currentRoomId}`;
-                }
-            } else {
-                if (badge) {
-                    badge.className = "text-[10px] bg-slate-700/80 text-slate-300 font-bold px-3 py-1 rounded-full flex items-center gap-1.5 border border-slate-600";
-                    badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>오프라인/로컬 모드 (${currentRoomId})</span>`;
-                }
-                if (badgeMobile) {
-                    badgeMobile.className = "text-[10px] bg-slate-700/80 text-slate-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1";
-                    badgeMobile.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>로컬`;
-                }
-            }
-        }
-
-        async function triggerPunchIn() {
-            if (!selectedWorker) {
-                showMessage('입력 오류', '공정을 시작할 작업자를 선택해 주십시오.');
-                return;
-            }
-            if (selectedEquipments.length === 0) {
-                showMessage('입력 오류', '대상 장비를 최소 하나 이상 선택해 주십시오.');
-                return;
-            }
-            if (!selectedProcess) {
-                showMessage('입력 오류', '수행할 세부 공정을 선택해 주십시오.');
-                return;
-            }
-
-            let duplicatedItems = [];
-            selectedEquipments.forEach(item => {
-                const exists = runningTasks.find(t => {
-                    if (t.worker !== selectedWorker || t.process !== selectedProcess) return false;
-                    const eqList = t.equipments || [{ id: t.equipmentId }];
-                    return eqList.some(eq => eq.id === item.id);
-                });
-                if (exists) {
-                    duplicatedItems.push(`[${item.division || 'ACM'}] ${item.equipment} (S/N: ${item.cskSn})`);
-                }
-            });
-
-            if (duplicatedItems.length > 0) {
-                showMessage('중복 경고', `${selectedWorker}님은 이미 해당 공정(${selectedProcess})에서 다음 장비를 작업 중입니다:\n${duplicatedItems.join('\n')}`);
-                return;
-            }
-
-            const timestamp = new Date().getTime();
-            
-            // 묶어서 하나의 Task 로 생성
-            const newTask = {
-                id: 'task_' + timestamp + '_' + Math.random().toString(36).substr(2, 5),
-                worker: selectedWorker,
-                process: selectedProcess,
-                startTime: timestamp,
-                paused: false,
-                pausedAt: null,
-                totalPausedDuration: 0,
-                equipments: selectedEquipments.map(item => ({
-                    id: item.id,
-                    equipment: item.equipment,
-                    division: item.division,
-                    cskSn: item.cskSn,
-                    deliveryDate: item.deliveryDate
-                }))
-            };
-            
-            runningTasks.unshift(newTask);
-
-            selectedWorker = '';
-            selectedProcess = '';
-            selectedEquipments = [];
-            renderSelectedEquipmentsList();
-            
-            document.getElementById('equipment-search').value = '';
-            filterEquipments();
-            renderWorkers();
-            selectProcess('');
-            updateStatusText();
-
-            renderActiveTasks();
-            playSound(1000, 0.1);
-            await saveRoomState(true);
-            showToast("공정이 시작되었습니다.", "fa-play");
-        }
-
-        window.triggerTogglePause = async function(taskId) {
-            const task = runningTasks.find(t => t.id === taskId);
-            if (!task) return;
-
-            const now = new Date().getTime();
-
-            if (!task.paused) {
-                task.paused = true;
-                task.pausedAt = now;
-                playSound(500, 0.1);
-                showToast(`${task.worker} 작업이 일시정지 되었습니다.`, "fa-pause");
-            } else {
-                const pausedDuration = now - task.pausedAt;
-                task.totalPausedDuration = (task.totalPausedDuration || 0) + pausedDuration;
-                task.paused = false;
-                task.pausedAt = null;
-                playSound(900, 0.1);
-                showToast(`${task.worker} 작업이 재개되었습니다.`, "fa-play");
-            }
-
-            renderActiveTasks();
-            await saveRoomState(true);
-        };
-
-        window.triggerPunchOut = async function(taskId) {
-            const task = runningTasks.find(t => t.id === taskId);
-            if (!task) return;
-
-            const now = new Date().getTime();
-            const totalPaused = task.totalPausedDuration || 0;
-
-            let elapsedMs = 0;
-            if (task.paused) {
-                elapsedMs = task.pausedAt - task.startTime - totalPaused;
-            } else {
-                elapsedMs = now - task.startTime - totalPaused;
-            }
-
-            if (elapsedMs < 0) elapsedMs = 0;
-            
-            const elapsedHours = parseFloat((elapsedMs / (1000 * 60 * 60)).toFixed(4));
-            const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
-
-            let finalEquipments = task.equipments;
-            if (!finalEquipments || finalEquipments.length === 0) {
-                finalEquipments = [{
-                    division: task.division || 'ACM',
-                    equipment: task.equipment || '미지정',
-                    cskSn: task.cskSn || '-',
-                    deliveryDate: task.deliveryDate || '-'
-                }];
-            }
-
-            const finishedJob = {
-                id: 'log_' + new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5),
-                worker: task.worker,
-                process: task.process,
-                startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
-                endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
-                elapsedMinutes: elapsedMinutes,
-                elapsedHours: elapsedHours,
-                date: new Date().toISOString().split('T')[0],
-                equipments: finalEquipments
-            };
-
-            runningTasks = runningTasks.filter(t => t.id !== taskId);
-            completedLogs.unshift(finishedJob);
-
-            renderActiveTasks();
-            renderCompletedLogs();
-
-            playSound(1200, 0.2);
-            await saveRoomState(true);
-            showToast(`${finishedJob.worker}님 [${finishedJob.process}] 완료 저장 완료!`, "fa-check");
-        };
-
-        window.triggerDeleteLog = function(logId) {
-            const logToDelete = completedLogs.find(l => l.id === logId);
-            if (!logToDelete) return;
-
-            showConfirm(
-                '개별 이력 삭제',
-                `[${logToDelete.worker}]님의 '${logToDelete.process}' 작업 이력을 삭제하시겠습니까?`,
-                async () => {
-                    completedLogs = completedLogs.filter(l => l.id !== logId);
-                    renderCompletedLogs();
-                    await saveRoomState(true);
-                    showToast("해당 작업 이력이 삭제되었습니다.", "fa-trash");
-                }
-            );
-        };
-
-        function renderActiveTasks() {
-            const container = document.getElementById('active-tasks-container');
-            if (!container) return;
-            container.innerHTML = '';
-
-            if (runningTasks.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full py-8 text-center text-slate-400 text-xs italic">
-                        현재 진행 중인 공정이 없습니다. 왼쪽에서 작업 시작 체크인을 진행하세요!
+                        <div class="col-span-2"><span class="text-[9px] text-slate-400 block font-semibold">장비 모델명</span><span class="font-black text-slate-900 break-all">${item.equipment}</span></div>
+                        <div><span class="text-[9px] text-slate-400 block font-semibold">CSK S/N</span><span class="font-mono-num font-bold text-indigo-700 break-all">${item.cskSn || '-'}</span></div>
+                        <div><span class="text-[9px] text-slate-400 block font-semibold">납품일</span><span class="font-semibold text-slate-700 flex items-center gap-1">📅 <span>${item.deliveryDate || '-'}</span></span></div>
                     </div>`;
-                updateStatsCount();
-                return;
-            }
-
-            runningTasks.forEach(task => {
-                const isPaused = task.paused;
-                
-                const cardBgClass = isPaused 
-                    ? "bg-slate-900/90 text-white p-5 rounded-2xl shadow-lg border border-slate-800 flex flex-col justify-between space-y-4 opacity-80" 
-                    : "bg-slate-900 text-white p-5 rounded-2xl shadow-lg border border-slate-800 flex flex-col justify-between space-y-4 hover:shadow-indigo-950/20 hover:scale-[1.01] transition duration-200";
-                
-                const pulseLightClass = isPaused ? "bg-amber-500 rounded-full w-2.5 h-2.5" : "w-2.5 h-2.5 rounded-full bg-red-500 pulse-red";
-                const pauseBadgeClass = isPaused 
-                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded" 
-                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.5 rounded";
-                const pauseBadgeText = isPaused ? "일시정지됨" : "실시간 가동중";
-
-                let procBadge = "";
-                if (task.process === '취부') {
-                    procBadge = 'bg-blue-600/20 text-blue-400 border border-blue-500/30';
-                } else if (task.process.includes('결선')) {
-                    procBadge = 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30';
-                } else if (task.process.includes('BOX')) {
-                    procBadge = 'bg-amber-600/20 text-amber-400 border border-amber-500/30';
-                } else {
-                    procBadge = 'bg-slate-600/20 text-slate-400 border border-slate-50/30';
-                }
-
-                const timerId = `span-timer-${task.id}`;
-
-                let eqList = task.equipments || [];
-                if (eqList.length === 0 && task.equipment) {
-                    eqList = [{
-                        division: task.division || 'ACM',
-                        equipment: task.equipment,
-                        cskSn: task.cskSn || '-',
-                        deliveryDate: task.deliveryDate || '-'
-                    }];
-                }
-
-                const equipmentsHtml = eqList.map((eq, idx) => `
-                    <div class="pb-2 mb-2 border-b border-slate-800/80 last:border-0 last:mb-0 last:pb-0">
-                        <div class="flex justify-between items-center mb-1.5">
-                            <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-indigo-900 text-indigo-300 tracking-wider border border-indigo-700/50">${eq.division || 'ACM'}</span>
-                            <span class="text-[9px] font-bold text-slate-500">장비 #${idx + 1}</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-1 gap-2">
-                            <span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">장비 모델</span>
-                            <span class="text-[11px] font-bold text-indigo-400 truncate text-right" title="${eq.equipment}">${eq.equipment || '미지정'}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">CSK S/N</span>
-                            <span class="text-[11px] font-mono-num font-bold text-indigo-300">${eq.cskSn || '-'}</span>
-                        </div>
-                    </div>
-                `).join('');
-
-
-                const card = document.createElement('div');
-                card.className = cardBgClass;
-                card.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <span class="text-[10px] text-slate-400 uppercase tracking-widest block font-medium flex items-center gap-1">
-                                <span class="${pauseBadgeClass}">${pauseBadgeText}</span>
-                            </span>
-                            <h4 class="text-lg font-black mt-1.5 text-slate-100 flex items-center gap-2">
-                                ${task.worker}
-                                <span class="text-[10px] px-2 py-0.5 rounded-lg ${procBadge}">${task.process}</span>
-                            </h4>
-                        </div>
-                        <span class="${pulseLightClass}"></span>
-                    </div>
-
-                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 text-xs max-h-36 overflow-y-auto custom-scrollbar shadow-inner">
-                        ${equipmentsHtml || '<div class="text-slate-500 text-center py-2 text-[10px]">장비 정보 없음</div>'}
-                    </div>
-
-                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
-                        <div>
-                            <span class="text-[9px] text-slate-500 block font-bold mb-0.5">현재 진행 시간</span>
-                            <span id="${timerId}" class="text-xl font-mono-num font-bold text-slate-200 tracking-wider shadow-sm">00:00:00</span>
-                        </div>
-                        
-                        <div class="flex items-center gap-1.5">
-                            <button onclick="triggerTogglePause('${task.id}')" class="px-3 py-2 ${isPaused ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'} rounded-xl text-xs font-extrabold transition active:scale-95 flex items-center gap-1 shadow-sm">
-                                ${isPaused ? '▶ 재개' : '⏸ 일시정지'}
-                            </button>
-                            <button onclick="triggerPunchOut('${task.id}')" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-md shadow-rose-900/20 transition active:scale-95">
-                                🏁 완료 처리
-                            </button>
-                        </div>
-                    </div>
-                `;
-
                 container.appendChild(card);
             });
-
-            updateStatsCount();
         }
+        window.removeSelectedEquipment = (index) => { selectedEquipments.splice(index, 1); renderSelectedEquipmentsList(); };
+        window.clearSelectedEquipments = () => { selectedEquipments = []; renderSelectedEquipmentsList(); };
 
         function startLocalTimerLoop() {
             setInterval(() => {
@@ -1354,72 +696,91 @@
                 runningTasks.forEach(task => {
                     const el = document.getElementById(`span-timer-${task.id}`);
                     if (!el) return;
-
-                    const totalPaused = task.totalPausedDuration || 0;
-                    let diff = 0;
-
-                    if (task.paused) {
-                        diff = task.pausedAt - task.startTime - totalPaused;
-                    } else {
-                        diff = now - task.startTime - totalPaused;
-                    }
-
+                    let diff = task.paused ? (task.pausedAt - task.startTime - (task.totalPausedDuration||0)) : (now - task.startTime - (task.totalPausedDuration||0));
                     if (diff < 0) diff = 0;
-
-                    const sec = Math.floor((diff / 1000) % 60);
-                    const min = Math.floor((diff / (1000 * 60)) % 60);
-                    const hour = Math.floor((diff / (1000 * 60 * 60)) % 24);
-
+                    const sec = Math.floor((diff / 1000) % 60), min = Math.floor((diff / (1000 * 60)) % 60), hour = Math.floor((diff / (1000 * 60 * 60)) % 24);
                     const pad = (n) => String(n).padStart(2, '0');
                     el.innerText = `${pad(hour)}:${pad(min)}:${pad(sec)}`;
                 });
             }, 1000);
         }
 
-        function renderCompletedLogs() {
-            // 구버전 데이터 호환을 위해 id가 없는 로그에 고유 id 부여
-            completedLogs.forEach(log => {
-                if (!log.id) log.id = 'log_' + Math.random().toString(36).substr(2, 9);
+        function renderActiveTasks() {
+            const container = document.getElementById('active-tasks-container');
+            if (!container) return; container.innerHTML = '';
+            if (runningTasks.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 text-xs italic">현재 활성화된 작업이 없습니다.</div>`;
+                document.getElementById('cnt-active-workers').innerText = 0; return;
+            }
+            runningTasks.forEach(task => {
+                const isPaused = task.paused;
+                const cardBgClass = isPaused ? "bg-slate-900/90 text-white p-5 rounded-2xl shadow-lg border border-slate-800 flex flex-col justify-between space-y-4 opacity-80" : "bg-slate-900 text-white p-5 rounded-2xl shadow-lg border border-slate-800 flex flex-col justify-between space-y-4 hover:shadow-indigo-950/20 hover:scale-[1.01] transition duration-200";
+                const pulseLightClass = isPaused ? "bg-amber-500 rounded-full w-2.5 h-2.5" : "w-2.5 h-2.5 rounded-full bg-red-500 pulse-red";
+                const pauseBadgeClass = isPaused ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                const pauseBadgeText = isPaused ? "일시정지됨" : "실시간 가동중";
+
+                let procBadge = 'bg-slate-600/20 text-slate-400 border-slate-50/30';
+                if (task.process === '취부') procBadge = 'bg-blue-600/20 text-blue-400 border-blue-500/30';
+                else if (task.process.includes('결선')) procBadge = 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30';
+                else if (task.process.includes('BOX')) procBadge = 'bg-amber-600/20 text-amber-400 border-amber-500/30';
+
+                let eqList = task.equipments || [];
+                if (eqList.length === 0 && task.equipment) eqList = [{ division: task.division || 'ACM', equipment: task.equipment, cskSn: task.cskSn || '-', deliveryDate: task.deliveryDate || '-' }];
+
+                const equipmentsHtml = eqList.map((eq, idx) => `
+                    <div class="pb-2 mb-2 border-b border-slate-800/80 last:border-0 last:mb-0 last:pb-0">
+                        <div class="flex justify-between items-center mb-1.5"><span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-indigo-900 text-indigo-300 tracking-wider">${eq.division || 'ACM'}</span><span class="text-[9px] font-bold text-slate-500">장비 #${idx + 1}</span></div>
+                        <div class="flex justify-between items-center mb-1 gap-2"><span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">장비 모델</span><span class="text-[11px] font-bold text-indigo-400 truncate">${eq.equipment || '미지정'}</span></div>
+                        <div class="flex justify-between items-center"><span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">CSK S/N</span><span class="text-[11px] font-mono-num font-bold text-indigo-300">${eq.cskSn || '-'}</span></div>
+                    </div>
+                `).join('');
+
+                const card = document.createElement('div');
+                card.className = cardBgClass;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[10px] text-slate-400 uppercase tracking-widest block font-medium flex items-center gap-1"><span class="text-[9px] px-1.5 py-0.5 rounded border ${pauseBadgeClass}">${pauseBadgeText}</span></span>
+                            <h4 class="text-lg font-black mt-1.5 text-slate-100 flex items-center gap-2">${task.worker} <span class="text-[10px] px-2 py-0.5 rounded-lg border ${procBadge}">${task.process}</span></h4>
+                        </div>
+                        <span class="${pulseLightClass}"></span>
+                    </div>
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 text-xs max-h-36 overflow-y-auto custom-scrollbar shadow-inner">${equipmentsHtml}</div>
+                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
+                        <div><span class="text-[9px] text-slate-500 block font-bold mb-0.5">진행 시간</span><span id="span-timer-${task.id}" class="text-xl font-mono-num font-bold text-slate-200 tracking-wider shadow-sm">00:00:00</span></div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="triggerTogglePause('${task.id}')" class="px-3 py-2 ${isPaused ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'} rounded-xl text-xs font-extrabold transition active:scale-95 shadow-sm">${isPaused ? '▶ 재개' : '⏸ 일시정지'}</button>
+                            <button onclick="triggerPunchOut('${task.id}')" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-md transition active:scale-95">🏁 완료 처리</button>
+                        </div>
+                    </div>`;
+                container.appendChild(card);
             });
+            document.getElementById('cnt-active-workers').innerText = runningTasks.length;
+        }
 
+        function renderCompletedLogs() {
             const tbody = document.getElementById('log-table-body');
-            const selectedLogDiv = document.getElementById('log-division-filter').value;
-            tbody.innerHTML = '';
-
+            const selectedLogDiv = document.getElementById('log-division-filter') ? document.getElementById('log-division-filter').value : '';
+            if(!tbody) return; tbody.innerHTML = '';
+            
             const filteredLogs = completedLogs.filter(item => {
                 if (!selectedLogDiv) return true;
                 const eqs = item.equipments || [{ division: item.division }];
                 return eqs.some(eq => (eq.division || 'ACM') === selectedLogDiv);
             });
 
-            if (filteredLogs.length === 0) {
-                tbody.innerHTML = `
-                    <tr id="empty-log-tr">
-                        <td colspan="8" class="py-8 text-center text-slate-400 italic">완료된 공정 기록이 존재하지 않습니다.</td>
-                    </tr>`;
-                return;
-            }
+            if (filteredLogs.length === 0) { tbody.innerHTML = `<tr id="empty-log-tr"><td colspan="8" class="py-8 text-center text-slate-400 italic">완료된 공정 기록이 존재하지 않습니다.</td></tr>`; return; }
 
             filteredLogs.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
                 
                 let badgeClass = "bg-blue-50 text-blue-800 border-blue-200";
-                if (item.process.includes('결선')) {
-                    badgeClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
-                } else if (item.process.includes('BOX')) {
-                    badgeClass = "bg-amber-50 text-amber-800 border-amber-200";
-                }
+                if (item.process.includes('결선')) badgeClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                else if (item.process.includes('BOX')) badgeClass = "bg-amber-50 text-amber-800 border-amber-200";
 
                 let eqList = item.equipments || [];
-                if (eqList.length === 0 && item.equipment) {
-                    eqList = [{
-                        division: item.division || 'ACM',
-                        equipment: item.equipment,
-                        cskSn: item.cskSn || '-',
-                        deliveryDate: item.deliveryDate || '-'
-                    }];
-                }
+                if (eqList.length === 0 && item.equipment) eqList = [{ division: item.division || 'ACM', equipment: item.equipment, cskSn: item.cskSn || '-', deliveryDate: item.deliveryDate || '-' }];
 
                 const equipmentsHtml = eqList.map(eq => `
                     <div class="mb-1.5 last:mb-0">
@@ -1435,40 +796,22 @@
                 tr.innerHTML = `
                     <td class="py-3 px-4 text-center text-slate-400 font-bold">${index + 1}</td>
                     <td class="py-3 px-4 font-black text-slate-800">${item.worker}</td>
-                    <td class="py-3 px-4 min-w-[250px]">
-                        ${equipmentsHtml}
-                    </td>
-                    <td class="py-3 px-4 text-center">
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badgeClass}">
-                            ${item.process}
-                        </span>
-                    </td>
+                    <td class="py-3 px-4 min-w-[250px]">${equipmentsHtml}</td>
+                    <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badgeClass}">${item.process}</span></td>
                     <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${item.startTime}</td>
                     <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${item.endTime}</td>
-                    <td class="py-3 px-4 text-right font-bold text-indigo-700 font-mono-num">
-                        ${item.elapsedMinutes}분 <span class="text-[10px] text-slate-400">(${item.elapsedHours.toFixed(2)}h)</span>
-                    </td>
+                    <td class="py-3 px-4 text-right font-bold text-indigo-700 font-mono-num">${item.elapsedMinutes}분 <span class="text-[10px] text-slate-400">(${item.elapsedHours.toFixed(2)}h)</span></td>
                     <td class="py-3 px-4 text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                정상등록
-                            </span>
-                            <button type="button" onclick="triggerDeleteLog('${item.id}')" class="text-slate-400 hover:text-rose-600 transition p-1" title="기록 삭제">
-                                <i class="fa-solid fa-trash-can text-sm"></i>
-                            </button>
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>정상등록</span>
+                            <button type="button" onclick="triggerDeleteLog('${item.id}')" class="text-slate-400 hover:text-rose-600 transition p-1"><i class="fa-solid fa-trash-can text-sm"></i></button>
                         </div>
-                    </td>
-                `;
+                    </td>`;
                 tbody.appendChild(tr);
             });
         }
 
-        function updateStatsCount() {
-            const el = document.getElementById('cnt-active-workers');
-            if (el) el.innerText = runningTasks.length;
-        }
-
+        // 엑셀 다운로드 (상세 내역 + 월별 통계 탭 자동 생성)
         function exportLogsToExcel() {
             const selectedLogDiv = document.getElementById('log-division-filter').value;
             const targetLogs = completedLogs.filter(item => {
@@ -1476,360 +819,258 @@
                 const eqs = item.equipments || [{ division: item.division }];
                 return eqs.some(eq => (eq.division || 'ACM') === selectedLogDiv);
             });
+            if (targetLogs.length === 0) { showMessage('작업 이력 없음', '엑셀로 출력할 완료된 작업 이력이 없습니다.'); return; }
 
-            if (targetLogs.length === 0) {
-                showMessage('작업 이력 없음', '엑셀로 출력할 완료된 작업 이력이 없습니다.');
-                return;
-            }
+            const wb = XLSX.utils.book_new();
 
-            const header = [
-                'No.', '작업 일자', '작업자', '사업부 목록', '장비 모델명 목록', 'CSK S/N 목록', '납품일 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '소요 시간 (분)', '소요 공수 (시간)'
-            ];
+            // 1. 상세 내역 시트 (기존 기능)
+            const header = ['No.', '작업 일자', '작업자', '사업부 목록', '장비 모델명 목록', 'CSK S/N 목록', '납품일 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '소요 시간 (분)', '소요 공수 (시간)'];
             let rows = [header];
-
             targetLogs.forEach((item, index) => {
                 let eqList = item.equipments || [];
-                if (eqList.length === 0 && item.equipment) {
-                    eqList = [{
-                        division: item.division,
-                        equipment: item.equipment,
-                        cskSn: item.cskSn,
-                        deliveryDate: item.deliveryDate
-                    }];
-                }
-
+                if (eqList.length === 0 && item.equipment) eqList = [{ division: item.division, equipment: item.equipment, cskSn: item.cskSn, deliveryDate: item.deliveryDate }];
                 const divisions = eqList.map(e => e.division || 'ACM').join(', ');
                 const equipments = eqList.map(e => e.equipment || '미지정').join(', ');
                 const cskSns = eqList.map(e => e.cskSn || '-').join(', ');
                 const deliveryDates = eqList.map(e => e.deliveryDate || '-').join(', ');
+                rows.push([index + 1, item.date, item.worker, divisions, equipments, cskSns, deliveryDates, item.process, item.startTime, item.endTime, item.elapsedMinutes, parseFloat(item.elapsedHours.toFixed(4))]);
+            });
+            const wsDetail = XLSX.utils.aoa_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, wsDetail, "작업일보_상세내역");
 
-                rows.push([
-                    index + 1,
-                    item.date,
-                    item.worker,
-                    divisions,
-                    equipments,
-                    cskSns,
-                    deliveryDates,
-                    item.process,
-                    item.startTime,
-                    item.endTime,
-                    item.elapsedMinutes,
-                    parseFloat(item.elapsedHours.toFixed(4))
-                ]);
+            // 2. 월별 통계 시트 (새 기능: 월별 분류 및 장비 모델별 수량 집계)
+            const monthlyStats = {};
+            targetLogs.forEach(log => {
+                const dateParts = log.date.split('-');
+                if (dateParts.length >= 2) {
+                    const monthKey = `${dateParts[0]}-${dateParts[1]}`; // YYYY-MM 추출
+                    if (!monthlyStats[monthKey]) monthlyStats[monthKey] = {};
+                    
+                    const worker = log.worker;
+                    if (!monthlyStats[monthKey][worker]) monthlyStats[monthKey][worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {} };
+                    
+                    monthlyStats[monthKey][worker].totalJobs += 1;
+                    monthlyStats[monthKey][worker].totalMinutes += log.elapsedMinutes;
+                    
+                    let eqList = log.equipments || [];
+                    if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment }];
+                    monthlyStats[monthKey][worker].totalEquips += eqList.length;
+
+                    eqList.forEach(eq => {
+                        const eqName = eq.equipment || '미지정';
+                        monthlyStats[monthKey][worker].equipsDetail[eqName] = (monthlyStats[monthKey][worker].equipsDetail[eqName] || 0) + 1;
+                    });
+                }
             });
 
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, "제조2팀 작업일보");
+            // 계산된 월별 통계를 시트로 추가
+            Object.keys(monthlyStats).sort().forEach(month => {
+                const stats = monthlyStats[month];
+                const statHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 작업 수량 (상세)', '총 투입 시간 (분)', '총 투입 공수 (시간)', '건당 평균 소요 시간 (분)'];
+                let statRows = [statHeader];
+
+                Object.keys(stats).sort().forEach(worker => {
+                    const data = stats[worker];
+                    const totalHours = parseFloat((data.totalMinutes / 60).toFixed(2));
+                    const avgMinutes = Math.round(data.totalMinutes / data.totalJobs);
+                    
+                    // 장비 상세 문자열 생성 (예: DTLR-TDS-KLEAA(2대), ABT-MODEL-X(1대))
+                    const equipDetailStr = Object.entries(data.equipsDetail).map(([name, count]) => `${name}(${count}대)`).join(', ');
+
+                    statRows.push([worker, data.totalJobs, data.totalEquips, equipDetailStr, data.totalMinutes, totalHours, avgMinutes]);
+                });
+                const wsStat = XLSX.utils.aoa_to_sheet(statRows);
+                XLSX.utils.book_append_sheet(wb, wsStat, `통계_${month}`);
+            });
 
             const fileName = selectedLogDiv ? `제조2팀_실공수_기록대장_${selectedLogDiv}_${currentRoomId}.xlsx` : `제조2팀_실공수_기록대장_전체_${currentRoomId}.xlsx`;
             XLSX.writeFile(wb, fileName);
             showToast("엑셀 파일 다운로드가 완료되었습니다.", "fa-file-excel");
         }
 
-        function checkUrlHashRoom() {
-            try {
-                const hash = window.location.hash.replace('#', '').trim();
-                if (hash) {
-                    currentRoomId = decodeURIComponent(hash).toUpperCase();
-                    const roomInput = document.getElementById('roomInput');
-                    if (roomInput) roomInput.value = currentRoomId;
-                }
-            } catch (e) {
-                console.warn("Error parsing URL hash room:", e);
-            }
-        }
-
         function setupEventListeners() {
-            const confirmBtn = document.getElementById('btn-confirm-action');
-            if (confirmBtn) {
-                confirmBtn.onclick = () => {
-                    closeConfirmModal(true);
-                };
-            }
+            document.getElementById('btn-confirm-action')?.addEventListener('click', () => closeConfirmModal(true));
 
-            document.getElementById('btnJoinRoom').addEventListener('click', () => {
+            document.getElementById('btnJoinRoom')?.addEventListener('click', () => {
                 const roomVal = document.getElementById('roomInput').value.trim().toUpperCase();
                 if (roomVal) {
-                    currentRoomId = roomVal;
-                    window.location.hash = encodeURIComponent(currentRoomId);
-                    loadLocalBackup();
+                    currentRoomId = roomVal; window.location.hash = encodeURIComponent(currentRoomId);
                     if (isCloudAvailable) subscribeToRoom(currentRoomId);
                     showToast(`라인/룸코드 ${currentRoomId} 접속 완료`, 'fa-right-to-bracket');
                 }
             });
 
-            document.getElementById('btnCopyLink').addEventListener('click', () => {
+            document.getElementById('btnCopyLink')?.addEventListener('click', () => {
                 const url = window.location.href.split('#')[0] + '#' + encodeURIComponent(currentRoomId);
-                const tempInput = document.createElement('input');
-                tempInput.value = url;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-                showToast("접속 공유 링크가 클립보드에 복사되었습니다.", "fa-share-nodes");
+                const tempInput = document.createElement('input'); tempInput.value = url; document.body.appendChild(tempInput); tempInput.select(); document.execCommand('copy'); document.body.removeChild(tempInput);
+                showToast("접속 공유 링크가 복사되었습니다.", "fa-share-nodes");
             });
 
-            const btnFirebaseOpen = document.getElementById('btn-open-firebase-modal');
-            const btnFirebaseOpenMobile = document.getElementById('btn-open-firebase-modal-mobile');
-            if (btnFirebaseOpen) btnFirebaseOpen.addEventListener('click', openFirebaseModal);
-            if (btnFirebaseOpenMobile) btnFirebaseOpenMobile.addEventListener('click', openFirebaseModal);
-
-            document.getElementById('btn-close-firebase-modal').addEventListener('click', closeFirebaseModal);
-            document.getElementById('btn-cancel-firebase-modal').addEventListener('click', closeFirebaseModal);
-
-            function parseFirebaseConfigInput(text) {
-                if (!text) return null;
-                text = text.trim();
-                try {
-                    const parsed = JSON.parse(text);
-                    if (parsed && parsed.apiKey) return parsed;
-                } catch(e) {}
-
-                const extractField = (key) => {
-                    const match = text.match(new RegExp(`['"]?${key}['"]?\\s*:\\s*['"]([^'"]+)['"]`));
-                    return match ? match[1] : null;
-                };
-
-                const apiKey = extractField('apiKey');
-                const projectId = extractField('projectId');
-                const authDomain = extractField('authDomain');
-                const storageBucket = extractField('storageBucket');
-                const messagingSenderId = extractField('messagingSenderId');
-                const appId = extractField('appId');
-
-                if (apiKey && projectId) {
-                    return {
-                        apiKey,
-                        authDomain: authDomain || `${projectId}.firebaseapp.com`,
-                        projectId,
-                        storageBucket: storageBucket || `${projectId}.appspot.com`,
-                        messagingSenderId: messagingSenderId || '',
-                        appId: appId || ''
-                    };
-                }
-                return null;
-            }
-
-            document.getElementById('btn-save-firebase-config').addEventListener('click', async () => {
+            const firebaseModalHandler = () => window.openFirebaseModal();
+            document.getElementById('btn-open-firebase-modal')?.addEventListener('click', firebaseModalHandler);
+            document.getElementById('btn-open-firebase-modal-mobile')?.addEventListener('click', firebaseModalHandler);
+            
+            document.getElementById('btn-close-firebase-modal')?.addEventListener('click', window.closeFirebaseModal);
+            document.getElementById('btn-cancel-firebase-modal')?.addEventListener('click', window.closeFirebaseModal);
+            
+            document.getElementById('btn-save-firebase-config')?.addEventListener('click', async () => {
                 const raw = document.getElementById('firebase-config-input').value.trim();
-                if (!raw) {
-                    showMessage('입력 오류', 'Firebase Config 정보를 입력해 주세요.');
-                    return;
-                }
-
-                const parsed = parseFirebaseConfigInput(raw);
-                if (!parsed || !parsed.apiKey || !parsed.projectId) {
-                    showMessage('형식 오류', 'Firebase Config에서 필수 정보(apiKey, projectId)를 인식할 수 없습니다.\n\nFirebase 콘솔의 const firebaseConfig = { ... }; 코드를 그대로 붙여넣으셔도 됩니다.');
-                    return;
-                }
-
+                if (!raw) { showMessage('입력 오류', 'Firebase Config 정보를 입력해 주세요.'); return; }
                 try {
+                    const parsed = JSON.parse(raw);
+                    if (!parsed.apiKey) throw new Error("Invalid format");
                     localStorage.setItem('custom_firebase_config', JSON.stringify(parsed));
-                    firebaseConfig = parsed;
-                    closeFirebaseModal();
-                    showToast("클라우드 연동 설정이 저장되었습니다. 재연동을 시도합니다.", "fa-cloud");
-                    await initAuth();
-                } catch(e) {
-                    console.error("Config save error:", e);
-                    showMessage('저장 오류', '설정을 저장하고 클라우드에 연결하는 중 오류가 발생했습니다.');
-                }
+                    firebaseConfig = parsed; closeFirebaseModal();
+                    showToast("클라우드 설정이 저장되었습니다. 새로고침 시 적용됩니다.", "fa-cloud");
+                    setTimeout(() => window.location.reload(), 1500);
+                } catch(e) { showMessage('형식 오류', '올바른 JSON 형식이 아닙니다.'); }
             });
 
-            document.getElementById('btn-clear-firebase-config').addEventListener('click', () => {
-                localStorage.removeItem('custom_firebase_config');
-                document.getElementById('firebase-config-input').value = '';
-                showToast("커스텀 클라우드 설정이 삭제되었습니다.", "fa-trash");
+            document.getElementById('btn-clear-firebase-config')?.addEventListener('click', () => {
+                localStorage.removeItem('custom_firebase_config'); document.getElementById('firebase-config-input').value = ''; showToast("커스텀 설정이 삭제되었습니다.", "fa-trash");
             });
 
             const dropZone = document.getElementById('drop-zone');
             const fileUploader = document.getElementById('file-uploader');
+            if (dropZone && fileUploader) {
+                dropZone.addEventListener('click', () => fileUploader.click());
+                fileUploader.addEventListener('change', (e) => { if (e.target.files && e.target.files[0]) handleExcelImport(e.target.files[0]); });
+                dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); });
+                dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'));
+                dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleExcelImport(e.dataTransfer.files[0]); });
+            }
 
-            dropZone.addEventListener('click', () => {
-                fileUploader.click();
-            });
+            document.getElementById('btn-open-worker-modal')?.addEventListener('click', window.openWorkerModal);
+            document.getElementById('btn-add-worker')?.addEventListener('click', handleAddWorker);
+            document.getElementById('btn-reset-workers')?.addEventListener('click', handleResetWorkers);
+            document.getElementById('new-worker-input')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddWorker(); });
+            document.getElementById('equipment-search')?.addEventListener('input', filterEquipments);
+            document.getElementById('select-division-filter')?.addEventListener('change', filterEquipments);
 
-            fileUploader.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files[0]) {
-                    handleExcelImport(e.target.files[0]);
-                }
-            });
-
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('border-indigo-500', 'bg-indigo-50');
-            });
-
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
-            });
-
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    handleExcelImport(e.dataTransfer.files[0]);
-                }
-            });
-
-            document.getElementById('btn-open-worker-modal').addEventListener('click', openWorkerModal);
-            document.getElementById('btn-add-worker').addEventListener('click', handleAddWorker);
-            document.getElementById('btn-reset-workers').addEventListener('click', handleResetWorkers);
-            document.getElementById('new-worker-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') handleAddWorker();
-            });
-
-            document.getElementById('equipment-search').addEventListener('input', filterEquipments);
-            document.getElementById('select-division-filter').addEventListener('change', filterEquipments);
-
-            document.getElementById('select-equipment').addEventListener('change', (e) => {
+            document.getElementById('select-equipment')?.addEventListener('change', (e) => {
                 const selectedId = e.target.value;
                 if (!selectedId) return;
-
-                if (selectedEquipments.some(item => item.id === selectedId)) {
-                    showMessage('중복 선택', '이미 선택 목록에 등록된 장비입니다.');
-                    e.target.value = '';
-                    return;
-                }
-
+                if (selectedEquipments.some(item => item.id === selectedId)) { showMessage('중복 선택', '이미 등록된 장비입니다.'); e.target.value = ''; return; }
                 const item = planEquipments.find(p => p.id === selectedId);
-                if (item) {
-                    selectedEquipments.push(item);
-                    renderSelectedEquipmentsList();
-                    showToast(`'${item.equipment}' 장비가 선택되었습니다.`, 'fa-circle-check');
-                }
+                if (item) { selectedEquipments.push(item); renderSelectedEquipmentsList(); showToast(`장비 추가됨`, 'fa-circle-check'); }
                 e.target.value = '';
             });
 
-            document.getElementById('btn-punch-in').addEventListener('click', triggerPunchIn);
-            document.getElementById('log-division-filter').addEventListener('change', renderCompletedLogs);
-
-            document.getElementById('btn-load-demo').addEventListener('click', async () => {
-                planEquipments = JSON.parse(JSON.stringify(demoPlanData));
-                document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
-                
-                const badge = document.getElementById('load-status-badge');
-                badge.innerText = "생산계획 데모 세팅 완료";
-                badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800";
-                
-                document.getElementById('equipment-search').value = '';
-                document.getElementById('select-division-filter').value = '';
-                selectedEquipments = [];
-                renderSelectedEquipmentsList();
-                updateDivisionFilters();
-                renderEquipmentDropdown();
-
-                await saveRoomState(true);
-                showMessage('데모 세팅 완료', '생산계획 데모 데이터 7건이 성공적으로 로드되었습니다.');
-            });
-
-            document.getElementById('btn-export-logs').addEventListener('click', exportLogsToExcel);
+            document.getElementById('btn-punch-in')?.addEventListener('click', triggerPunchIn);
+            document.getElementById('log-division-filter')?.addEventListener('change', renderCompletedLogs);
             
-            document.getElementById('btn-clear-logs').addEventListener('click', () => {
-                showConfirm(
-                    '이력 초기화 확인',
-                    '오늘의 완료 이력을 영구 삭제하시겠습니까? (진행 중인 타이머는 유지됩니다.)',
-                    async () => {
-                        try {
-                            completedLogs = [];
-                            renderCompletedLogs();
-                            updateDivisionFilters();
+            document.getElementById('btn-pause-all')?.addEventListener('click', triggerPauseAll);
+            document.getElementById('btn-resume-all')?.addEventListener('click', triggerResumeAll);
 
-                            const localData = JSON.parse(localStorage.getItem(`room_${currentRoomId}_data`) || '{}');
-                            localData.completedLogs = [];
-                            localStorage.setItem(`room_${currentRoomId}_data`, JSON.stringify(localData));
-
-                            if (currentUser && db && isCloudAvailable) {
-                                await setDoc(getRoomDocRef(currentRoomId), {
-                                    completedLogs: []
-                                }, { merge: true });
-                            }
-
-                            showToast("작업 이력이 완전히 초기화되었습니다.", "fa-trash");
-                        } catch (err) {
-                            console.error("로그 초기화 실패:", err);
-                            showMessage("초기화 오류", "로그를 초기화하는 중 오류가 발생했습니다.");
-                        }
-                    }
-                );
+            document.getElementById('btn-load-demo')?.addEventListener('click', async () => {
+                planEquipments = JSON.parse(JSON.stringify(demoPlanData)); document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
+                const badge = document.getElementById('load-status-badge'); badge.innerText = "데모 세팅 완료"; badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800";
+                document.getElementById('equipment-search').value = ''; document.getElementById('select-division-filter').value = '';
+                selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); renderEquipmentDropdown(); await saveRoomState(true);
+                showMessage('데모 세팅 완료', '데모 데이터가 로드되었습니다.');
             });
+
+            document.getElementById('btn-export-logs')?.addEventListener('click', exportLogsToExcel);
+            document.getElementById('btn-clear-logs')?.addEventListener('click', () => { showConfirm('초기화', '정말 삭제하시겠습니까?', () => { updateTaskInCloudSecurely('CLEAR_LOGS', null); showToast("로그 초기화 완료", "fa-trash"); }); });
         }
+
+        function handleExcelImport(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    if (!rawRows || rawRows.length < 2) { showMessage('구조 오류', '엑셀을 읽을 수 없습니다.'); return; }
+
+                    let divIdx = -1, eqIdx = -1, cskIdx = -1, delivIdx = -1, hRowIdx = -1;
+                    for (let r = 0; r < Math.min(rawRows.length, 10); r++) {
+                        const row = rawRows[r]; if (!row) continue;
+                        let foundCount = 0;
+                        for (let c = 0; c < row.length; c++) {
+                            const val = String(row[c] || '').trim().replace(/\s+/g, '').toLowerCase();
+                            if (val.includes('사업부')) { divIdx = c; foundCount++; }
+                            else if (val.includes('장비명') || val.includes('모델명') || val.includes('품명')) { eqIdx = c; foundCount++; }
+                            else if (val.includes('csks/n') || val.includes('csksn') || val.includes('s/n') || val.includes('시리얼')) { cskIdx = c; foundCount++; }
+                            else if (val.includes('납품일') || val.includes('납기일')) { delivIdx = c; foundCount++; }
+                        }
+                        if (foundCount >= 2) { hRowIdx = r; break; }
+                    }
+
+                    if (hRowIdx === -1) { hRowIdx = 0; divIdx = 1; eqIdx = 3; cskIdx = 4; delivIdx = 11; }
+
+                    let parsedPlan = [];
+                    for (let i = hRowIdx + 1; i < rawRows.length; i++) {
+                        const row = rawRows[i]; if (!row || row.length === 0) continue;
+                        const equipName = row[eqIdx] !== undefined ? String(row[eqIdx]).trim() : '';
+                        if (!equipName || equipName === '장비명' || equipName === '모델명' || equipName.includes('합계') || equipName === 'No.') continue;
+                        
+                        const divName = divIdx !== -1 && row[divIdx] !== undefined ? String(row[divIdx]).trim() : 'ACM';
+                        const cskSn = cskIdx !== -1 && row[cskIdx] !== undefined ? String(row[cskIdx]).trim() : '-';
+                        let delivDate = '-';
+                        if (delivIdx !== -1 && row[delivIdx] !== undefined && row[delivIdx] !== null) {
+                            const rawDate = row[delivIdx];
+                            if (rawDate instanceof Date) { delivDate = `${rawDate.getFullYear()}-${String(rawDate.getMonth() + 1).padStart(2, '0')}-${String(rawDate.getDate()).padStart(2, '0')}`; } 
+                            else if (typeof rawDate === 'number') { const dateObj = XLSX.SSF.parse_date_code(rawDate); delivDate = dateObj ? `${dateObj.y}-${String(dateObj.m).padStart(2, '0')}-${String(dateObj.d).padStart(2, '0')}` : String(rawDate).trim(); } 
+                            else { delivDate = String(rawDate).split(' ')[0].trim(); }
+                        }
+                        parsedPlan.push({ id: 'equip_' + i + '_' + Date.now(), division: divName, equipment: equipName, cskSn: cskSn, deliveryDate: delivDate });
+                    }
+
+                    if (parsedPlan.length > 0) {
+                        planEquipments = parsedPlan; document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
+                        const badge = document.getElementById('load-status-badge');
+                        badge.innerText = `생산계획 연동 완료 (${planEquipments.length}건)`; badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
+                        document.getElementById('equipment-search').value = ''; document.getElementById('select-division-filter').value = '';
+                        selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); filterEquipments(); await saveRoomState(true);
+                        showMessage('엑셀 파싱 성공', `${planEquipments.length}개의 장비 목록을 인식하여 적용했습니다.`);
+                    } else { showMessage('파싱 경고', '엑셀 파일에서 항목을 찾을 수 없습니다.'); }
+                } catch (err) { console.error(err); showMessage('파일 오류', '엑셀 파일을 읽는 중 오류가 발생했습니다.'); }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function checkUrlHashRoom() {
+            try {
+                const hash = window.location.hash.replace('#', '').trim();
+                if (hash) { currentRoomId = decodeURIComponent(hash).toUpperCase(); const roomInput = document.getElementById('roomInput'); if (roomInput) roomInput.value = currentRoomId; }
+            } catch (e) {}
+        }
+        
+        function renderEquipmentDropdown() { filterEquipments(); }
 
         function subscribeToRoom(roomId) {
             if (unsubscribeRoom) unsubscribeRoom();
-            if (!db || !currentUser) {
-                updateCloudStatusBadge(false);
-                loadLocalBackup();
-                return;
-            }
+            if (!db || !currentUser) return;
 
-            const roomRef = getRoomDocRef(roomId);
-            const tag = document.getElementById('currentRoomTag');
-            if (tag) tag.textContent = `ROOM: ${roomId.toUpperCase()}`;
-
-            unsubscribeRoom = onSnapshot(roomRef, (snapshot) => {
+            unsubscribeRoom = onSnapshot(getRoomDocRef(roomId), (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.data();
                     runningTasks = data.runningTasks || [];
                     completedLogs = data.completedLogs || [];
-                    if (data.activeWorkersList && Array.isArray(data.activeWorkersList) && data.activeWorkersList.length > 0) {
-                        activeWorkersList = data.activeWorkersList;
-                        renderWorkers();
-                    }
-                    if (data.planEquipments && data.planEquipments.length > 0) {
-                        planEquipments = data.planEquipments;
-                        document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
-                        document.getElementById('load-status-badge').innerText = `생산계획 연동 중 (${planEquipments.length}건)`;
-                        document.getElementById('load-status-badge').className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
-                    }
-
-                    renderActiveTasks();
-                    renderCompletedLogs();
-                    updateDivisionFilters();
-                    renderEquipmentDropdown();
-                    updateCloudStatusBadge(true);
-                } else {
-                    saveRoomState(true);
+                    if (data.activeWorkersList) activeWorkersList = data.activeWorkersList;
+                    if (data.planEquipments) { planEquipments = data.planEquipments; document.getElementById('cnt-loaded-items').innerText = planEquipments.length; }
+                    
+                    renderWorkers(); renderActiveTasks(); renderCompletedLogs();
+                    updateDivisionFilters(); renderEquipmentDropdown(); renderWorkerManageList();
+                    document.getElementById('cloud-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span><span>실시간 연동 가동중 (${currentRoomId})</span>`;
                 }
-            }, (err) => {
-                console.warn("Room sync listener fallback to local:", err);
-                updateCloudStatusBadge(false);
-                loadLocalBackup();
             });
         }
 
         async function initAuth() {
             try {
-                if (firebaseConfig.apiKey === 'demo-key') {
-                    throw new Error("Demo config active");
-                }
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                if (firebaseConfig.apiKey === 'demo-key') throw new Error("Demo config");
+                app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
+                await signInAnonymously(auth);
                 isCloudAvailable = true;
             } catch (err) {
-                console.warn("Running in offline local mode:", err);
-                isCloudAvailable = false;
-                updateCloudStatusBadge(false);
-                loadLocalBackup();
-                return;
+                console.warn("오프라인 로컬 모드로 전환됩니다: ", err.message);
+                isCloudAvailable = false; return;
             }
-
             onAuthStateChanged(auth, (user) => {
-                currentUser = user;
-                if (user) {
-                    subscribeToRoom(currentRoomId);
-                } else {
-                    updateCloudStatusBadge(false);
-                    loadLocalBackup();
-                }
+                currentUser = user; if (user) subscribeToRoom(currentRoomId);
             });
         }
 
@@ -1837,7 +1078,6 @@
             checkUrlHashRoom();
             renderWorkers();
             setupEventListeners();
-            loadLocalBackup();
             startLocalTimerLoop();
             await initAuth();
         });
