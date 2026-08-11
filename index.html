@@ -584,7 +584,26 @@
             if (selectedWorker || selectedProcess) { span.innerText = `[대기] 작업자: ${selectedWorker || '미선택'} | 공정: ${selectedProcess || '미선택'}`; span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400"; } 
             else { span.innerText = "현재 대기 상태 (준비 완료)"; span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-emerald-400"; }
         }
-        window.selectProcess = (p) => { selectedProcess = p; updateStatusText(); };
+        
+        window.selectProcess = (p) => { 
+            selectedProcess = p; 
+            updateStatusText(); 
+            
+            // 1. 모든 공정 버튼의 하이라이트 스타일 초기화
+            document.querySelectorAll('button[onclick^="selectProcess"]').forEach(btn => {
+                btn.classList.remove('border-2', 'border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
+                btn.classList.add('border', 'border-slate-200', 'bg-slate-50', 'text-slate-700');
+            });
+
+            // 2. 선택된 공정 버튼만 활성화 스타일 적용
+            if (p) {
+                const activeBtn = document.querySelector(`button[onclick="selectProcess('${p}')"]`);
+                if (activeBtn) {
+                    activeBtn.classList.remove('border', 'border-slate-200', 'bg-slate-50', 'text-slate-700');
+                    activeBtn.classList.add('border-2', 'border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
+                }
+            }
+        };
 
         window.deleteWorkerName = async function(name) {
             activeWorkersList = activeWorkersList.filter(w => w !== name);
