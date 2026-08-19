@@ -222,7 +222,7 @@
             <div class="p-6 border-b border-slate-200 bg-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
                     <h4 class="text-md font-bold text-slate-900">오늘의 공정 완료 이력 현황 (Total Work Logs)</h4>
-                    <p class="text-xs text-slate-500 mt-1">기록기 가동 이후 정상 완료 처리된 실측 작업 양식입니다.</p>
+                    <p class="text-xs text-slate-500 mt-1">기록기 가동 이후 정상 완료 처리된 실측 작업 양식입니다. 우측의 관리 버튼을 통해 시간을 수정할 수 있습니다.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                     <div class="flex items-center gap-1.5">
@@ -248,7 +248,7 @@
                             <th class="py-3 px-4 text-center">시작 시각</th>
                             <th class="py-3 px-4 text-center">종료 시각</th>
                             <th class="py-3 px-4 text-right">소요 시간</th>
-                            <th class="py-3 px-4 text-center">관리</th>
+                            <th class="py-3 px-4 text-center">관리 (수정/삭제)</th>
                         </tr>
                     </thead>
                     <tbody id="log-table-body" class="divide-y divide-slate-100 text-xs font-mono-num">
@@ -278,6 +278,22 @@
             <div class="flex justify-end gap-2">
                 <button onclick="closeConfirmModal(false)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">취소</button>
                 <button id="btn-confirm-action" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition">실행</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Time Modal -->
+    <div id="edit-time-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
+            <h3 class="text-md font-bold text-slate-900 mb-2"><i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> 작업 소요 시간 수정</h3>
+            <p class="text-xs text-slate-500 leading-relaxed mb-4">일시정지를 누르지 못한 경우 등, 실제 작업한 총 소요 시간(분)으로 수정해주세요.</p>
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-700 mb-1">소요 시간 (분)</label>
+                <input type="number" id="edit-time-input" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500" min="0">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeEditTimeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">취소</button>
+                <button id="btn-save-edited-time" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">저장하기</button>
             </div>
         </div>
     </div>
@@ -362,9 +378,19 @@
         let selectedProcess = '';
         let selectedEquipments = [];
         let confirmCallback = null;
+        let editingLogId = null; // 수정 중인 로그 ID 저장
+        let editingActiveTaskId = null; // 수정 중인 활성 작업 ID 저장
 
         let runningTasks = [];
         let completedLogs = [];
+        
+        // Basic HTML escaper to prevent XSS
+        const escapeHTML = (str) => {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])
+            );
+        };
 
         window.closeModal = () => document.getElementById('custom-modal').classList.add('hidden');
         window.closeConfirmModal = (result) => { 
@@ -377,6 +403,35 @@
         window.openFirebaseModal = () => document.getElementById('firebase-modal').classList.remove('hidden');
         window.closeFirebaseModal = () => document.getElementById('firebase-modal').classList.add('hidden');
         
+        window.triggerEditLogTime = function(logId, currentMinutes) {
+            editingLogId = logId;
+            editingActiveTaskId = null;
+            document.getElementById('edit-time-input').value = currentMinutes;
+            document.getElementById('edit-time-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('edit-time-input').focus(), 100);
+        };
+        
+        window.triggerEditActiveTime = function(taskId) {
+            const task = runningTasks.find(t => t.id === taskId);
+            if (!task) return;
+            const now = new Date().getTime();
+            let currentElapsedMs = task.paused ? (task.pausedAt - task.startTime - (task.totalPausedDuration||0)) : (now - task.startTime - (task.totalPausedDuration||0));
+            if (currentElapsedMs < 0) currentElapsedMs = 0;
+            const currentElapsedMins = Math.floor(currentElapsedMs / 60000);
+            
+            editingActiveTaskId = taskId;
+            editingLogId = null;
+            document.getElementById('edit-time-input').value = currentElapsedMins;
+            document.getElementById('edit-time-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('edit-time-input').focus(), 100);
+        };
+        
+        window.closeEditTimeModal = function() {
+            document.getElementById('edit-time-modal').classList.add('hidden');
+            editingLogId = null;
+            editingActiveTaskId = null;
+        };
+        
         function showMessage(title, body) { document.getElementById('modal-title').innerText = title; document.getElementById('modal-body').innerText = body; document.getElementById('custom-modal').classList.remove('hidden'); }
         function showConfirm(title, body, callback) { document.getElementById('confirm-title').innerText = title; document.getElementById('confirm-body').innerText = body; confirmCallback = callback; document.getElementById('confirm-modal').classList.remove('hidden'); }
         function showToast(msg, icon = 'fa-circle-info') { 
@@ -384,7 +439,7 @@
             if (!container) return;
             const toast = document.createElement('div');
             toast.className = `pointer-events-auto bg-slate-900 border border-slate-700 text-slate-100 text-xs px-3.5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 transform transition-all duration-300 translate-y-4 opacity-0 z-50 font-bold`;
-            toast.innerHTML = `<i class="fa-solid ${icon} text-emerald-400"></i> <span>${msg}</span>`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-emerald-400"></i> <span>${escapeHTML(msg)}</span>`;
             container.appendChild(toast);
             setTimeout(() => { toast.classList.remove('translate-y-4', 'opacity-0'); }, 10);
             setTimeout(() => { toast.classList.add('translate-y-4', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
@@ -403,6 +458,24 @@
             } catch (e) {}
             if (isMetaUpdate && currentUser && db && isCloudAvailable) {
                 try { await setDoc(getRoomDocRef(currentRoomId), { planEquipments, activeWorkersList, updatedAt: Date.now() }, { merge: true }); } catch(e) {}
+            }
+        }
+        
+        function loadLocalRoomState() {
+            try {
+                const storedWorkers = localStorage.getItem('activeWorkersList');
+                if (storedWorkers) activeWorkersList = JSON.parse(storedWorkers);
+                
+                const storedData = localStorage.getItem(`room_${currentRoomId}_data`);
+                if (storedData) {
+                    const parsed = JSON.parse(storedData);
+                    if (parsed.runningTasks) runningTasks = parsed.runningTasks;
+                    if (parsed.completedLogs) completedLogs = parsed.completedLogs;
+                    if (parsed.planEquipments) { planEquipments = parsed.planEquipments; document.getElementById('cnt-loaded-items').innerText = planEquipments.length; }
+                    if (parsed.activeWorkersList) activeWorkersList = parsed.activeWorkersList;
+                }
+            } catch (e) {
+                console.warn("Failed to load local state", e);
             }
         }
 
@@ -427,6 +500,17 @@
                 }
                 else if (actionType === 'DELETE_LOG') completedLogs = completedLogs.filter(x => x.id !== payload.id);
                 else if (actionType === 'CLEAR_LOGS') completedLogs = [];
+                else if (actionType === 'EDIT_LOG_TIME') {
+                    const log = completedLogs.find(x => x.id === payload.id);
+                    if (log) {
+                        log.elapsedMinutes = payload.newMinutes;
+                        log.elapsedHours = parseFloat((payload.newMinutes / 60).toFixed(4));
+                    }
+                }
+                else if (actionType === 'EDIT_ACTIVE_TIME') {
+                    const t = runningTasks.find(x => x.id === payload.id);
+                    if(t) { t.startTime = payload.newStartTime; }
+                }
                 
                 renderActiveTasks(); renderCompletedLogs(); saveRoomState();
                 return;
@@ -460,6 +544,17 @@
                     } 
                     else if (actionType === 'DELETE_LOG') { currentLogs = currentLogs.filter(x => x.id !== payload.id); } 
                     else if (actionType === 'CLEAR_LOGS') { currentLogs = []; }
+                    else if (actionType === 'EDIT_LOG_TIME') {
+                        const idx = currentLogs.findIndex(x => x.id === payload.id);
+                        if (idx > -1) {
+                            currentLogs[idx].elapsedMinutes = payload.newMinutes;
+                            currentLogs[idx].elapsedHours = parseFloat((payload.newMinutes / 60).toFixed(4));
+                        }
+                    }
+                    else if (actionType === 'EDIT_ACTIVE_TIME') {
+                        const idx = currentRunning.findIndex(x => x.id === payload.id);
+                        if (idx > -1) { currentRunning[idx].startTime = payload.newStartTime; }
+                    }
 
                     if (sfDoc.exists()) {
                         transaction.update(roomRef, { runningTasks: currentRunning, completedLogs: currentLogs, updatedAt: Date.now() });
@@ -572,7 +667,7 @@
             grid.innerHTML = '';
             activeWorkersList.forEach(w => {
                 const btn = document.createElement('button');
-                btn.type = 'button'; btn.innerText = w;
+                btn.type = 'button'; btn.innerText = w; // innerText is safe
                 btn.className = selectedWorker === w ? "py-2.5 border-2 border-indigo-600 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black shadow-sm transition" : "py-2.5 border border-slate-200 bg-white text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-50 transition active:scale-95";
                 btn.onclick = () => { selectedWorker = w; renderWorkers(); updateStatusText(); };
                 grid.appendChild(btn);
@@ -581,8 +676,14 @@
 
         function updateStatusText() {
             const span = document.getElementById('status-panel');
-            if (selectedWorker || selectedProcess) { span.innerText = `[대기] 작업자: ${selectedWorker || '미선택'} | 공정: ${selectedProcess || '미선택'}`; span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400"; } 
-            else { span.innerText = "현재 대기 상태 (준비 완료)"; span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-emerald-400"; }
+            if (selectedWorker || selectedProcess) { 
+                span.textContent = `[대기] 작업자: ${selectedWorker || '미선택'} | 공정: ${selectedProcess || '미선택'}`; 
+                span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400"; 
+            } 
+            else { 
+                span.textContent = "현재 대기 상태 (준비 완료)"; 
+                span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-emerald-400"; 
+            }
         }
         
         window.selectProcess = (p) => { 
@@ -640,7 +741,7 @@
             activeWorkersList.forEach(w => {
                 const item = document.createElement('div');
                 item.className = "flex justify-between items-center bg-white px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm";
-                item.innerHTML = `<span class="truncate">${w}</span><button type="button" onclick="deleteWorkerName('${w}')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
+                item.innerHTML = `<span class="truncate">${escapeHTML(w)}</span><button type="button" onclick="deleteWorkerName('${escapeHTML(w)}')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
                 container.appendChild(item);
             });
         }
@@ -695,13 +796,13 @@
                 const badgeColor = item.division === 'Abatement' ? "bg-amber-500" : "bg-indigo-600";
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b border-indigo-100 pb-1.5 pr-6">
-                        <div class="flex items-center gap-1.5"><span class="text-[9px] font-black px-1.5 py-0.5 rounded ${badgeColor} text-white tracking-wider">${item.division || 'ACM'}</span><span class="text-[10px] font-bold text-slate-500">장비 #${index + 1}</span></div>
+                        <div class="flex items-center gap-1.5"><span class="text-[9px] font-black px-1.5 py-0.5 rounded ${badgeColor} text-white tracking-wider">${escapeHTML(item.division || 'ACM')}</span><span class="text-[10px] font-bold text-slate-500">장비 #${index + 1}</span></div>
                         <button type="button" onclick="removeSelectedEquipment(${index})" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-xmark text-sm"></i></button>
                     </div>
                     <div class="grid grid-cols-2 gap-x-2 gap-y-1 pt-0.5">
-                        <div class="col-span-2"><span class="text-[9px] text-slate-400 block font-semibold">장비 모델명</span><span class="font-black text-slate-900 break-all">${item.equipment}</span></div>
-                        <div><span class="text-[9px] text-slate-400 block font-semibold">CSK S/N</span><span class="font-mono-num font-bold text-indigo-700 break-all">${item.cskSn || '-'}</span></div>
-                        <div><span class="text-[9px] text-slate-400 block font-semibold">납품일</span><span class="font-semibold text-slate-700 flex items-center gap-1">📅 <span>${item.deliveryDate || '-'}</span></span></div>
+                        <div class="col-span-2"><span class="text-[9px] text-slate-400 block font-semibold">장비 모델명</span><span class="font-black text-slate-900 break-all">${escapeHTML(item.equipment)}</span></div>
+                        <div><span class="text-[9px] text-slate-400 block font-semibold">CSK S/N</span><span class="font-mono-num font-bold text-indigo-700 break-all">${escapeHTML(item.cskSn || '-')}</span></div>
+                        <div><span class="text-[9px] text-slate-400 block font-semibold">납품일</span><span class="font-semibold text-slate-700 flex items-center gap-1">📅 <span>${escapeHTML(item.deliveryDate || '-')}</span></span></div>
                     </div>`;
                 container.appendChild(card);
             });
@@ -748,9 +849,9 @@
 
                 const equipmentsHtml = eqList.map((eq, idx) => `
                     <div class="pb-2 mb-2 border-b border-slate-800/80 last:border-0 last:mb-0 last:pb-0">
-                        <div class="flex justify-between items-center mb-1.5"><span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-indigo-900 text-indigo-300 tracking-wider">${eq.division || 'ACM'}</span><span class="text-[9px] font-bold text-slate-500">장비 #${idx + 1}</span></div>
-                        <div class="flex justify-between items-center mb-1 gap-2"><span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">장비 모델</span><span class="text-[11px] font-bold text-indigo-400 truncate">${eq.equipment || '미지정'}</span></div>
-                        <div class="flex justify-between items-center"><span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">CSK S/N</span><span class="text-[11px] font-mono-num font-bold text-indigo-300">${eq.cskSn || '-'}</span></div>
+                        <div class="flex justify-between items-center mb-1.5"><span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-indigo-900 text-indigo-300 tracking-wider">${escapeHTML(eq.division || 'ACM')}</span><span class="text-[9px] font-bold text-slate-500">장비 #${idx + 1}</span></div>
+                        <div class="flex justify-between items-center mb-1 gap-2"><span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">장비 모델</span><span class="text-[11px] font-bold text-indigo-400 truncate">${escapeHTML(eq.equipment || '미지정')}</span></div>
+                        <div class="flex justify-between items-center"><span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">CSK S/N</span><span class="text-[11px] font-mono-num font-bold text-indigo-300">${escapeHTML(eq.cskSn || '-')}</span></div>
                     </div>
                 `).join('');
 
@@ -760,13 +861,19 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <span class="text-[10px] text-slate-400 uppercase tracking-widest block font-medium flex items-center gap-1"><span class="text-[9px] px-1.5 py-0.5 rounded border ${pauseBadgeClass}">${pauseBadgeText}</span></span>
-                            <h4 class="text-lg font-black mt-1.5 text-slate-100 flex items-center gap-2">${task.worker} <span class="text-[10px] px-2 py-0.5 rounded-lg border ${procBadge}">${task.process}</span></h4>
+                            <h4 class="text-lg font-black mt-1.5 text-slate-100 flex items-center gap-2">${escapeHTML(task.worker)} <span class="text-[10px] px-2 py-0.5 rounded-lg border ${procBadge}">${escapeHTML(task.process)}</span></h4>
                         </div>
                         <span class="${pulseLightClass}"></span>
                     </div>
                     <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 text-xs max-h-36 overflow-y-auto custom-scrollbar shadow-inner">${equipmentsHtml}</div>
                     <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
-                        <div><span class="text-[9px] text-slate-500 block font-bold mb-0.5">진행 시간</span><span id="span-timer-${task.id}" class="text-xl font-mono-num font-bold text-slate-200 tracking-wider shadow-sm">00:00:00</span></div>
+                        <div>
+                            <span class="text-[9px] text-slate-500 block font-bold mb-0.5">진행 시간</span>
+                            <div class="flex items-center gap-2">
+                                <span id="span-timer-${task.id}" class="text-xl font-mono-num font-bold text-slate-200 tracking-wider shadow-sm">00:00:00</span>
+                                <button onclick="triggerEditActiveTime('${task.id}')" class="text-slate-500 hover:text-indigo-400 transition" title="진행 시간 수정"><i class="fa-solid fa-pen-to-square"></i></button>
+                            </div>
+                        </div>
                         <div class="flex items-center gap-1.5">
                             <button onclick="triggerTogglePause('${task.id}')" class="px-3 py-2 ${isPaused ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'} rounded-xl text-xs font-extrabold transition active:scale-95 shadow-sm">${isPaused ? '▶ 재개' : '⏸ 일시정지'}</button>
                             <button onclick="triggerPunchOut('${task.id}')" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-md transition active:scale-95">🏁 완료 처리</button>
@@ -803,27 +910,28 @@
 
                 const equipmentsHtml = eqList.map(eq => `
                     <div class="mb-1.5 last:mb-0">
-                        <div class="font-extrabold text-slate-900 text-xs">${eq.equipment || '미지정'}</div>
+                        <div class="font-extrabold text-slate-900 text-xs">${escapeHTML(eq.equipment || '미지정')}</div>
                         <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-1.5 items-center">
-                            <span class="bg-indigo-50 text-indigo-700 font-extrabold px-1.5 py-0.5 rounded text-[9px] border border-indigo-100">${eq.division || 'ACM'}</span>
-                            <span class="font-mono-num font-semibold text-slate-600">S/N: ${eq.cskSn || '-'}</span>
-                            <span class="text-slate-400">📅 ${eq.deliveryDate || '-'}</span>
+                            <span class="bg-indigo-50 text-indigo-700 font-extrabold px-1.5 py-0.5 rounded text-[9px] border border-indigo-100">${escapeHTML(eq.division || 'ACM')}</span>
+                            <span class="font-mono-num font-semibold text-slate-600">S/N: ${escapeHTML(eq.cskSn || '-')}</span>
+                            <span class="text-slate-400">📅 ${escapeHTML(eq.deliveryDate || '-')}</span>
                         </div>
                     </div>
                 `).join('<div class="border-t border-slate-100 my-1.5"></div>');
 
                 tr.innerHTML = `
                     <td class="py-3 px-4 text-center text-slate-400 font-bold">${index + 1}</td>
-                    <td class="py-3 px-4 font-black text-slate-800">${item.worker}</td>
+                    <td class="py-3 px-4 font-black text-slate-800">${escapeHTML(item.worker)}</td>
                     <td class="py-3 px-4 min-w-[250px]">${equipmentsHtml}</td>
-                    <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badgeClass}">${item.process}</span></td>
-                    <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${item.startTime}</td>
-                    <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${item.endTime}</td>
+                    <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badgeClass}">${escapeHTML(item.process)}</span></td>
+                    <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${escapeHTML(item.startTime)}</td>
+                    <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${escapeHTML(item.endTime)}</td>
                     <td class="py-3 px-4 text-right font-bold text-indigo-700 font-mono-num">${item.elapsedMinutes}분 <span class="text-[10px] text-slate-400">(${item.elapsedHours.toFixed(2)}h)</span></td>
                     <td class="py-3 px-4 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>정상등록</span>
-                            <button type="button" onclick="triggerDeleteLog('${item.id}')" class="text-slate-400 hover:text-rose-600 transition p-1"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 hidden sm:inline-flex"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>기록됨</span>
+                            <button type="button" onclick="triggerEditLogTime('${item.id}', ${item.elapsedMinutes})" class="text-slate-400 hover:text-indigo-600 transition p-1.5" title="소요 시간 수정"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button type="button" onclick="triggerDeleteLog('${item.id}')" class="text-slate-400 hover:text-rose-600 transition p-1.5" title="이력 삭제"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </td>`;
                 tbody.appendChild(tr);
@@ -915,6 +1023,11 @@
                 if (roomVal) {
                     currentRoomId = roomVal; window.location.hash = encodeURIComponent(currentRoomId);
                     if (isCloudAvailable) subscribeToRoom(currentRoomId);
+                    else {
+                        loadLocalRoomState();
+                        renderWorkers(); renderActiveTasks(); renderCompletedLogs();
+                        updateDivisionFilters(); renderEquipmentDropdown(); renderWorkerManageList();
+                    }
                     showToast(`라인/룸코드 ${currentRoomId} 접속 완료`, 'fa-right-to-bracket');
                 }
             });
@@ -981,6 +1094,36 @@
             document.getElementById('btn-pause-all')?.addEventListener('click', triggerPauseAll);
             document.getElementById('btn-resume-all')?.addEventListener('click', triggerResumeAll);
 
+            // 시간 수정 저장 버튼 클릭 이벤트
+            document.getElementById('btn-save-edited-time')?.addEventListener('click', async () => {
+                if (!editingLogId && !editingActiveTaskId) return;
+                const newVal = parseInt(document.getElementById('edit-time-input').value, 10);
+                if (isNaN(newVal) || newVal < 0) {
+                    showToast("유효한 분 단위 시간을 입력해주세요.", "fa-triangle-exclamation");
+                    return;
+                }
+                
+                if (editingLogId) {
+                    await updateTaskInCloudSecurely('EDIT_LOG_TIME', { id: editingLogId, newMinutes: newVal });
+                    showToast("작업 소요 시간이 성공적으로 수정되었습니다.", "fa-check");
+                } else if (editingActiveTaskId) {
+                    const task = runningTasks.find(t => t.id === editingActiveTaskId);
+                    if (task) {
+                        const desiredMs = newVal * 60000;
+                        const now = new Date().getTime();
+                        let newStartTime;
+                        if (task.paused) {
+                            newStartTime = task.pausedAt - desiredMs - (task.totalPausedDuration || 0);
+                        } else {
+                            newStartTime = now - desiredMs - (task.totalPausedDuration || 0);
+                        }
+                        await updateTaskInCloudSecurely('EDIT_ACTIVE_TIME', { id: editingActiveTaskId, newStartTime: newStartTime });
+                        showToast("실시간 진행 시간이 수정되었습니다.", "fa-check");
+                    }
+                }
+                closeEditTimeModal();
+            });
+
             document.getElementById('btn-load-demo')?.addEventListener('click', async () => {
                 planEquipments = JSON.parse(JSON.stringify(demoPlanData)); document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
                 const badge = document.getElementById('load-status-badge'); badge.innerText = "데모 세팅 완료"; badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800";
@@ -1017,7 +1160,10 @@
                         if (foundCount >= 2) { hRowIdx = r; break; }
                     }
 
-                    if (hRowIdx === -1) { hRowIdx = 0; divIdx = 1; eqIdx = 3; cskIdx = 4; delivIdx = 11; }
+                    if (hRowIdx === -1) { 
+                        showMessage('파싱 경고', '엑셀 파일에서 필수 헤더(장비명, S/N 등)를 찾을 수 없습니다.');
+                        return; // Fail gracefully instead of using wrong hardcoded values
+                    }
 
                     let parsedPlan = [];
                     for (let i = hRowIdx + 1; i < rawRows.length; i++) {
@@ -1044,7 +1190,7 @@
                         document.getElementById('equipment-search').value = ''; document.getElementById('select-division-filter').value = '';
                         selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); filterEquipments(); await saveRoomState(true);
                         showMessage('엑셀 파싱 성공', `${planEquipments.length}개의 장비 목록을 인식하여 적용했습니다.`);
-                    } else { showMessage('파싱 경고', '엑셀 파일에서 항목을 찾을 수 없습니다.'); }
+                    } else { showMessage('파싱 경고', '엑셀 파일에서 유효한 데이터 행을 찾을 수 없습니다.'); }
                 } catch (err) { console.error(err); showMessage('파일 오류', '엑셀 파일을 읽는 중 오류가 발생했습니다.'); }
             };
             reader.readAsArrayBuffer(file);
@@ -1073,7 +1219,7 @@
                     
                     renderWorkers(); renderActiveTasks(); renderCompletedLogs();
                     updateDivisionFilters(); renderEquipmentDropdown(); renderWorkerManageList();
-                    document.getElementById('cloud-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span><span>실시간 연동 가동중 (${currentRoomId})</span>`;
+                    document.getElementById('cloud-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span><span>실시간 연동 가동중 (${escapeHTML(currentRoomId)})</span>`;
                 }
             });
         }
@@ -1086,7 +1232,9 @@
                 isCloudAvailable = true;
             } catch (err) {
                 console.warn("오프라인 로컬 모드로 전환됩니다: ", err.message);
-                isCloudAvailable = false; return;
+                isCloudAvailable = false;
+                loadLocalRoomState();
+                return;
             }
             onAuthStateChanged(auth, (user) => {
                 currentUser = user; if (user) subscribeToRoom(currentRoomId);
