@@ -351,14 +351,21 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        let firebaseConfig = { apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo-project", storageBucket: "demo.appspot.com", messagingSenderId: "123456789", appId: "1:123456789:web:abcdef" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-process-time-tracker';
+        
+        let firebaseConfig = null;
+        if (typeof __firebase_config !== 'undefined') {
+            try { firebaseConfig = JSON.parse(__firebase_config); } catch(e) {}
+        } else {
+            firebaseConfig = { apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo-project" };
+        }
+
         const savedCustomConfig = localStorage.getItem('custom_firebase_config');
         if (savedCustomConfig) { try { firebaseConfig = JSON.parse(savedCustomConfig); } catch(e) {} }
 
-        const appId = 'smart-process-time-tracker';
         let app, auth, db;
         let currentUser = null;
         let currentRoomId = '제조2팀';
@@ -1226,9 +1233,19 @@
 
         async function initAuth() {
             try {
-                if (firebaseConfig.apiKey === 'demo-key') throw new Error("Demo config");
-                app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
-                await signInAnonymously(auth);
+                if (!firebaseConfig || firebaseConfig.apiKey === 'demo-key') throw new Error("Cloud config missing");
+                
+                app = initializeApp(firebaseConfig); 
+                auth = getAuth(app); 
+                db = getFirestore(app);
+                
+                // 플랫폼 제공 인증 토큰 사용
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
                 isCloudAvailable = true;
             } catch (err) {
                 console.warn("오프라인 로컬 모드로 전환됩니다: ", err.message);
@@ -1236,8 +1253,10 @@
                 loadLocalRoomState();
                 return;
             }
+            
             onAuthStateChanged(auth, (user) => {
-                currentUser = user; if (user) subscribeToRoom(currentRoomId);
+                currentUser = user; 
+                if (user) subscribeToRoom(currentRoomId);
             });
         }
 
