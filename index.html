@@ -354,15 +354,48 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
+        // =========================================================================
+        // [중요] GitHub에 올리실 때는 아래 null 값을 지우고 본인의 Firebase Config JSON을 직접 입력하세요!
+        // 그래야 모든 스마트폰/태블릿에서 접속하자마자 자동으로 연동됩니다.
+        // =========================================================================
+        const MY_CUSTOM_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAaxrRBDPlOEIlt6FC0zUdOS8FN70qbPQ4",
+  authDomain: "mfg2-timer.firebaseapp.com",
+  projectId: "mfg2-timer",
+  storageBucket: "mfg2-timer.firebasestorage.app",
+  messagingSenderId: "164581870353",
+  appId: "1:164581870353:web:e0d32912e5ec7df4409ab0"
+}; 
+        
+        /* 💡 입력 예시 (중괄호 {} 포함해서 복사/붙여넣기 하세요) :
+        const MY_CUSTOM_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyB-xxxxxxxxxxxxxxxxx",
+            authDomain: "my-smart-tracker.firebaseapp.com",
+            projectId: "my-smart-tracker",
+            storageBucket: "my-smart-tracker.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdef123456"
+        };
+        */
+
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-process-time-tracker';
         
         let firebaseConfig = null;
-        if (typeof __firebase_config !== 'undefined') {
+        
+        // 1. 코드에 직접 하드코딩한 설정이 1순위 (GitHub 호스팅용)
+        if (MY_CUSTOM_FIREBASE_CONFIG) {
+            firebaseConfig = MY_CUSTOM_FIREBASE_CONFIG;
+        }
+        // 2. 현재 플랫폼(에디터) 자동 설정 (테스트용)
+        else if (typeof __firebase_config !== 'undefined') {
             try { firebaseConfig = JSON.parse(__firebase_config); } catch(e) {}
-        } else {
+        } 
+        // 3. 없으면 오프라인 모드 설정
+        else {
             firebaseConfig = { apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo-project" };
         }
 
+        // 4. 기기별로 수동 입력했던 로컬 스토리지 캐시 설정 덮어쓰기
         const savedCustomConfig = localStorage.getItem('custom_firebase_config');
         if (savedCustomConfig) { try { firebaseConfig = JSON.parse(savedCustomConfig); } catch(e) {} }
 
@@ -385,8 +418,8 @@
         let selectedProcess = '';
         let selectedEquipments = [];
         let confirmCallback = null;
-        let editingLogId = null; // 수정 중인 로그 ID 저장
-        let editingActiveTaskId = null; // 수정 중인 활성 작업 ID 저장
+        let editingLogId = null; // 수정 중인 완료 로그 ID 
+        let editingActiveTaskId = null; // 수정 중인 활성 작업 ID
 
         let runningTasks = [];
         let completedLogs = [];
@@ -394,9 +427,7 @@
         // Basic HTML escaper to prevent XSS
         const escapeHTML = (str) => {
             if (typeof str !== 'string') return str;
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])
-            );
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
         };
 
         window.closeModal = () => document.getElementById('custom-modal').classList.add('hidden');
@@ -410,6 +441,7 @@
         window.openFirebaseModal = () => document.getElementById('firebase-modal').classList.remove('hidden');
         window.closeFirebaseModal = () => document.getElementById('firebase-modal').classList.add('hidden');
         
+        // 시간 수정 기능 트리거 (완료된 로그)
         window.triggerEditLogTime = function(logId, currentMinutes) {
             editingLogId = logId;
             editingActiveTaskId = null;
@@ -418,6 +450,7 @@
             setTimeout(() => document.getElementById('edit-time-input').focus(), 100);
         };
         
+        // 시간 수정 기능 트리거 (실시간 활성 작업)
         window.triggerEditActiveTime = function(taskId) {
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
@@ -488,6 +521,7 @@
 
         async function updateTaskInCloudSecurely(actionType, payload) {
             if (!currentUser || !db || !isCloudAvailable) {
+                // Offline Logic
                 if (actionType === 'PUNCH_IN') runningTasks.unshift(payload);
                 else if (actionType === 'PAUSE_TOGGLE') {
                     const t = runningTasks.find(x => x.id === payload.id);
@@ -697,13 +731,11 @@
             selectedProcess = p; 
             updateStatusText(); 
             
-            // 1. 모든 공정 버튼의 하이라이트 스타일 초기화
             document.querySelectorAll('button[onclick^="selectProcess"]').forEach(btn => {
                 btn.classList.remove('border-2', 'border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
                 btn.classList.add('border', 'border-slate-200', 'bg-slate-50', 'text-slate-700');
             });
 
-            // 2. 선택된 공정 버튼만 활성화 스타일 적용
             if (p) {
                 const activeBtn = document.querySelector(`button[onclick="selectProcess('${p}')"]`);
                 if (activeBtn) {
@@ -945,7 +977,6 @@
             });
         }
 
-        // 엑셀 다운로드 (상세 내역 + 월별 통계 탭 자동 생성)
         function exportLogsToExcel() {
             const selectedLogDiv = document.getElementById('log-division-filter').value;
             const targetLogs = completedLogs.filter(item => {
@@ -957,7 +988,6 @@
 
             const wb = XLSX.utils.book_new();
 
-            // 1. 상세 내역 시트 (기존 기능)
             const header = ['No.', '작업 일자', '작업자', '사업부 목록', '장비 모델명 목록', 'CSK S/N 목록', '납품일 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '소요 시간 (분)', '소요 공수 (시간)'];
             let rows = [header];
             targetLogs.forEach((item, index) => {
@@ -972,14 +1002,12 @@
             const wsDetail = XLSX.utils.aoa_to_sheet(rows);
             XLSX.utils.book_append_sheet(wb, wsDetail, "작업일보_상세내역");
 
-            // 2. 월별 통계 시트 (새 기능: 월별 분류 및 장비 모델별 수량 집계)
             const monthlyStats = {};
             targetLogs.forEach(log => {
                 const dateParts = log.date.split('-');
                 if (dateParts.length >= 2) {
-                    const monthKey = `${dateParts[0]}-${dateParts[1]}`; // YYYY-MM 추출
+                    const monthKey = `${dateParts[0]}-${dateParts[1]}`;
                     if (!monthlyStats[monthKey]) monthlyStats[monthKey] = {};
-                    
                     const worker = log.worker;
                     if (!monthlyStats[monthKey][worker]) monthlyStats[monthKey][worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {} };
                     
@@ -997,7 +1025,6 @@
                 }
             });
 
-            // 계산된 월별 통계를 시트로 추가
             Object.keys(monthlyStats).sort().forEach(month => {
                 const stats = monthlyStats[month];
                 const statHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 작업 수량 (상세)', '총 투입 시간 (분)', '총 투입 공수 (시간)', '건당 평균 소요 시간 (분)'];
@@ -1007,10 +1034,7 @@
                     const data = stats[worker];
                     const totalHours = parseFloat((data.totalMinutes / 60).toFixed(2));
                     const avgMinutes = Math.round(data.totalMinutes / data.totalJobs);
-                    
-                    // 장비 상세 문자열 생성 (예: DTLR-TDS-KLEAA(2대), ABT-MODEL-X(1대))
                     const equipDetailStr = Object.entries(data.equipsDetail).map(([name, count]) => `${name}(${count}대)`).join(', ');
-
                     statRows.push([worker, data.totalJobs, data.totalEquips, equipDetailStr, data.totalMinutes, totalHours, avgMinutes]);
                 });
                 const wsStat = XLSX.utils.aoa_to_sheet(statRows);
@@ -1031,8 +1055,7 @@
                     currentRoomId = roomVal; window.location.hash = encodeURIComponent(currentRoomId);
                     if (isCloudAvailable) subscribeToRoom(currentRoomId);
                     else {
-                        loadLocalRoomState();
-                        renderWorkers(); renderActiveTasks(); renderCompletedLogs();
+                        loadLocalRoomState(); renderWorkers(); renderActiveTasks(); renderCompletedLogs();
                         updateDivisionFilters(); renderEquipmentDropdown(); renderWorkerManageList();
                     }
                     showToast(`라인/룸코드 ${currentRoomId} 접속 완료`, 'fa-right-to-bracket');
@@ -1169,7 +1192,7 @@
 
                     if (hRowIdx === -1) { 
                         showMessage('파싱 경고', '엑셀 파일에서 필수 헤더(장비명, S/N 등)를 찾을 수 없습니다.');
-                        return; // Fail gracefully instead of using wrong hardcoded values
+                        return; 
                     }
 
                     let parsedPlan = [];
@@ -1239,10 +1262,15 @@
                 auth = getAuth(app); 
                 db = getFirestore(app);
                 
-                // 플랫폼 제공 인증 토큰 사용
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                // 💡 [중요] 연동 권한 처리 로직 개선
+                if (MY_CUSTOM_FIREBASE_CONFIG) {
+                    // 1. 사용자가 직접 Config를 넣었을 때 (GitHub 등 외부 호스팅 시) -> 익명 로그인 사용
+                    await signInAnonymously(auth);
+                } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    // 2. 현재 AI 에디터 환경 내에서 실행 중일 때 -> 플랫폼 권한 토큰 사용
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
+                    // 3. 그 외 로컬 파일로 그냥 열었을 때 등 -> 익명 로그인으로 폴백
                     await signInAnonymously(auth);
                 }
                 
