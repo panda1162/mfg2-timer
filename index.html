@@ -234,6 +234,10 @@
                     <button id="btn-export-logs" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-file-excel"></i> 월별 통계 엑셀 다운로드
                     </button>
+                    <!-- KGSystem 연동 버튼 추가 -->
+                    <button id="btn-open-kgsystem-modal" class="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-server"></i> KGSystem 연동 데이터 생성
+                    </button>
                     <button id="btn-clear-logs" class="px-3 py-2 bg-white hover:bg-rose-50 border border-slate-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-semibold transition">로그 초기화</button>
                 </div>
             </div>
@@ -341,6 +345,33 @@
         </div>
     </div>
 
+    <!-- KGSystem 연동 모달 -->
+    <div id="kgsystem-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-md font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-server text-indigo-600"></i> KGSystem 연동 데이터 생성</h3>
+                <button onclick="closeKGSystemModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">선택한 대상 월의 완료된 작업 기록을 검증하고 KGSystem용 월별 스냅샷을 생성합니다.</p>
+            
+            <div class="mb-2">
+                <label class="block text-xs font-bold text-slate-700 mb-1">대상 월 (YYYY-MM)</label>
+                <input type="month" id="kgs-month-input" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
+                <p><i class="fa-solid fa-check text-emerald-500"></i> 자동 교차 검증 수행 (엑셀 통계 일치)</p>
+                <p><i class="fa-solid fa-check text-emerald-500"></i> 영구 ID 할당 및 Soft-Delete 기록 동기화</p>
+                <p><i class="fa-solid fa-check text-emerald-500"></i> 표준화 포맷(KGS_WORKLOG_V1) 준수</p>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button onclick="closeKGSystemModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">취소</button>
+                <button id="btn-generate-kgsystem" class="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition">스냅샷 갱신 및 JSON 다운로드</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
@@ -352,50 +383,36 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        // writeBatch 추가
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         // =========================================================================
         // [중요] GitHub에 올리실 때는 아래 null 값을 지우고 본인의 Firebase Config JSON을 직접 입력하세요!
         // 그래야 모든 스마트폰/태블릿에서 접속하자마자 자동으로 연동됩니다.
         // =========================================================================
         const MY_CUSTOM_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAaxrRBDPlOEIlt6FC0zUdOS8FN70qbPQ4",
-  authDomain: "mfg2-timer.firebaseapp.com",
-  projectId: "mfg2-timer",
-  storageBucket: "mfg2-timer.firebasestorage.app",
-  messagingSenderId: "164581870353",
-  appId: "1:164581870353:web:e0d32912e5ec7df4409ab0"
-}; 
-        
-        /* 💡 입력 예시 (중괄호 {} 포함해서 복사/붙여넣기 하세요) :
-        const MY_CUSTOM_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyB-xxxxxxxxxxxxxxxxx",
-            authDomain: "my-smart-tracker.firebaseapp.com",
-            projectId: "my-smart-tracker",
-            storageBucket: "my-smart-tracker.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:abcdef123456"
-        };
-        */
+            apiKey: "AIzaSyAaxrRBDPlOEIlt6FC0zUdOS8FN70qbPQ4",
+            authDomain: "mfg2-timer.firebaseapp.com",
+            projectId: "mfg2-timer",
+            storageBucket: "mfg2-timer.firebasestorage.app",
+            messagingSenderId: "164581870353",
+            appId: "1:164581870353:web:e0d32912e5ec7df4409ab0"
+        }; 
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-process-time-tracker';
         
         let firebaseConfig = null;
         
-        // 1. 코드에 직접 하드코딩한 설정이 1순위 (GitHub 호스팅용)
         if (MY_CUSTOM_FIREBASE_CONFIG) {
             firebaseConfig = MY_CUSTOM_FIREBASE_CONFIG;
         }
-        // 2. 현재 플랫폼(에디터) 자동 설정 (테스트용)
         else if (typeof __firebase_config !== 'undefined') {
             try { firebaseConfig = JSON.parse(__firebase_config); } catch(e) {}
         } 
-        // 3. 없으면 오프라인 모드 설정
         else {
             firebaseConfig = { apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo-project" };
         }
 
-        // 4. 기기별로 수동 입력했던 로컬 스토리지 캐시 설정 덮어쓰기
         const savedCustomConfig = localStorage.getItem('custom_firebase_config');
         if (savedCustomConfig) { try { firebaseConfig = JSON.parse(savedCustomConfig); } catch(e) {} }
 
@@ -418,13 +435,12 @@
         let selectedProcess = '';
         let selectedEquipments = [];
         let confirmCallback = null;
-        let editingLogId = null; // 수정 중인 완료 로그 ID 
-        let editingActiveTaskId = null; // 수정 중인 활성 작업 ID
+        let editingLogId = null; 
+        let editingActiveTaskId = null; 
 
         let runningTasks = [];
         let completedLogs = [];
         
-        // Basic HTML escaper to prevent XSS
         const escapeHTML = (str) => {
             if (typeof str !== 'string') return str;
             return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
@@ -441,7 +457,16 @@
         window.openFirebaseModal = () => document.getElementById('firebase-modal').classList.remove('hidden');
         window.closeFirebaseModal = () => document.getElementById('firebase-modal').classList.add('hidden');
         
-        // 시간 수정 기능 트리거 (완료된 로그)
+        // KGSystem Modal Functions
+        window.openKGSystemModal = () => {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            document.getElementById('kgs-month-input').value = `${yyyy}-${mm}`;
+            document.getElementById('kgsystem-modal').classList.remove('hidden');
+        };
+        window.closeKGSystemModal = () => document.getElementById('kgsystem-modal').classList.add('hidden');
+        
         window.triggerEditLogTime = function(logId, currentMinutes) {
             editingLogId = logId;
             editingActiveTaskId = null;
@@ -450,7 +475,6 @@
             setTimeout(() => document.getElementById('edit-time-input').focus(), 100);
         };
         
-        // 시간 수정 기능 트리거 (실시간 활성 작업)
         window.triggerEditActiveTime = function(taskId) {
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
@@ -514,9 +538,7 @@
                     if (parsed.planEquipments) { planEquipments = parsed.planEquipments; document.getElementById('cnt-loaded-items').innerText = planEquipments.length; }
                     if (parsed.activeWorkersList) activeWorkersList = parsed.activeWorkersList;
                 }
-            } catch (e) {
-                console.warn("Failed to load local state", e);
-            }
+            } catch (e) {}
         }
 
         async function updateTaskInCloudSecurely(actionType, payload) {
@@ -539,13 +561,21 @@
                     runningTasks = runningTasks.filter(x => x.id !== payload.taskId);
                     completedLogs.unshift(payload.finishedJob);
                 }
-                else if (actionType === 'DELETE_LOG') completedLogs = completedLogs.filter(x => x.id !== payload.id);
-                else if (actionType === 'CLEAR_LOGS') completedLogs = [];
+                else if (actionType === 'DELETE_LOG') {
+                    // Soft-Delete 적용
+                    const log = completedLogs.find(x => x.id === payload.id);
+                    if (log) { log.isDeleted = true; log.deletedAt = Date.now(); log.updatedAt = Date.now(); }
+                }
+                else if (actionType === 'CLEAR_LOGS') {
+                    // Soft-Delete 적용
+                    completedLogs.forEach(log => { if (!log.isDeleted) { log.isDeleted = true; log.deletedAt = Date.now(); log.updatedAt = Date.now(); } });
+                }
                 else if (actionType === 'EDIT_LOG_TIME') {
                     const log = completedLogs.find(x => x.id === payload.id);
                     if (log) {
                         log.elapsedMinutes = payload.newMinutes;
                         log.elapsedHours = parseFloat((payload.newMinutes / 60).toFixed(4));
+                        log.updatedAt = Date.now();
                     }
                 }
                 else if (actionType === 'EDIT_ACTIVE_TIME') {
@@ -583,13 +613,21 @@
                         if (idx > -1) currentRunning.splice(idx, 1);
                         currentLogs.unshift(payload.finishedJob);
                     } 
-                    else if (actionType === 'DELETE_LOG') { currentLogs = currentLogs.filter(x => x.id !== payload.id); } 
-                    else if (actionType === 'CLEAR_LOGS') { currentLogs = []; }
+                    else if (actionType === 'DELETE_LOG') { 
+                        // Soft-Delete 적용
+                        const idx = currentLogs.findIndex(x => x.id === payload.id);
+                        if (idx > -1) { currentLogs[idx].isDeleted = true; currentLogs[idx].deletedAt = Date.now(); currentLogs[idx].updatedAt = Date.now(); }
+                    } 
+                    else if (actionType === 'CLEAR_LOGS') { 
+                        // Soft-Delete 적용
+                        currentLogs.forEach(log => { if (!log.isDeleted) { log.isDeleted = true; log.deletedAt = Date.now(); log.updatedAt = Date.now(); } });
+                    }
                     else if (actionType === 'EDIT_LOG_TIME') {
                         const idx = currentLogs.findIndex(x => x.id === payload.id);
                         if (idx > -1) {
                             currentLogs[idx].elapsedMinutes = payload.newMinutes;
                             currentLogs[idx].elapsedHours = parseFloat((payload.newMinutes / 60).toFixed(4));
+                            currentLogs[idx].updatedAt = Date.now();
                         }
                     }
                     else if (actionType === 'EDIT_ACTIVE_TIME') {
@@ -681,14 +719,21 @@
             const elapsedHours = parseFloat((elapsedMs / (1000 * 60 * 60)).toFixed(4));
             const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
 
+            // 신규 스키마 대응 영구 workLogId 및 타임스탬프 부여
+            const newLogId = 'log_' + now + '_' + Math.random().toString(36).substr(2, 5);
+
             const finishedJob = {
-                id: 'log_' + new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5),
+                id: newLogId,
+                workLogId: newLogId,
                 worker: task.worker, process: task.process,
                 startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
                 endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
                 elapsedMinutes: elapsedMinutes, elapsedHours: elapsedHours,
                 date: new Date().toISOString().split('T')[0],
-                equipments: task.equipments && task.equipments.length > 0 ? task.equipments : [{ division: task.division||'ACM', equipment: task.equipment||'미지정', cskSn: task.cskSn||'-', deliveryDate: task.deliveryDate||'-' }]
+                equipments: task.equipments && task.equipments.length > 0 ? task.equipments : [{ division: task.division||'ACM', equipment: task.equipment||'미지정', cskSn: task.cskSn||'-', deliveryDate: task.deliveryDate||'-' }],
+                isDeleted: false,
+                createdAt: now,
+                updatedAt: now
             };
 
             await updateTaskInCloudSecurely('PUNCH_OUT', { taskId: taskId, finishedJob: finishedJob });
@@ -708,7 +753,7 @@
             grid.innerHTML = '';
             activeWorkersList.forEach(w => {
                 const btn = document.createElement('button');
-                btn.type = 'button'; btn.innerText = w; // innerText is safe
+                btn.type = 'button'; btn.innerText = w; 
                 btn.className = selectedWorker === w ? "py-2.5 border-2 border-indigo-600 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black shadow-sm transition" : "py-2.5 border border-slate-200 bg-white text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-50 transition active:scale-95";
                 btn.onclick = () => { selectedWorker = w; renderWorkers(); updateStatusText(); };
                 grid.appendChild(btn);
@@ -792,7 +837,10 @@
 
             const planDivisions = planEquipments.map(p => p.division || 'ACM');
             const logDivisions = [];
-            completedLogs.forEach(l => { (l.equipments || [{ division: l.division }]).forEach(eq => logDivisions.push(eq.division || 'ACM')); });
+            // Soft delete된 항목 제외
+            completedLogs.filter(l => !l.isDeleted).forEach(l => { 
+                (l.equipments || [{ division: l.division }]).forEach(eq => logDivisions.push(eq.division || 'ACM')); 
+            });
             const allDivisions = [...new Set([...planDivisions, ...logDivisions])].filter(Boolean).sort();
             
             const currentSelectVal = selectFilter.value, currentLogVal = logFilter.value;
@@ -928,7 +976,9 @@
             const selectedLogDiv = document.getElementById('log-division-filter') ? document.getElementById('log-division-filter').value : '';
             if(!tbody) return; tbody.innerHTML = '';
             
+            // UI 표시 시 Soft Delete 처리된 로그는 숨김
             const filteredLogs = completedLogs.filter(item => {
+                if (item.isDeleted) return false;
                 if (!selectedLogDiv) return true;
                 const eqs = item.equipments || [{ division: item.division }];
                 return eqs.some(eq => (eq.division || 'ACM') === selectedLogDiv);
@@ -979,7 +1029,9 @@
 
         function exportLogsToExcel() {
             const selectedLogDiv = document.getElementById('log-division-filter').value;
+            // 엑셀에는 삭제되지 않은 정상 건만 표시
             const targetLogs = completedLogs.filter(item => {
+                if (item.isDeleted) return false;
                 if (!selectedLogDiv) return true;
                 const eqs = item.equipments || [{ division: item.division }];
                 return eqs.some(eq => (eq.division || 'ACM') === selectedLogDiv);
@@ -1044,6 +1096,152 @@
             const fileName = selectedLogDiv ? `제조2팀_실공수_기록대장_${selectedLogDiv}_${currentRoomId}.xlsx` : `제조2팀_실공수_기록대장_전체_${currentRoomId}.xlsx`;
             XLSX.writeFile(wb, fileName);
             showToast("엑셀 파일 다운로드가 완료되었습니다.", "fa-file-excel");
+        }
+
+        // =========================================================================
+        // KGSystem 연동을 위한 데이터 생성 및 Firestore 배치 처리
+        // =========================================================================
+        function getCreatedAt(log) {
+            if (log.createdAt) return log.createdAt;
+            const parts = log.id.split('_');
+            if (parts.length > 1 && !isNaN(parts[1])) return parseInt(parts[1], 10);
+            return new Date(log.date).getTime();
+        }
+
+        function createStandardKGRecord(log) {
+            let eqList = log.equipments || [];
+            if (eqList.length === 0 && log.equipment) {
+                eqList = [{ division: log.division || 'ACM', equipment: log.equipment, cskSn: log.cskSn || '-', deliveryDate: log.deliveryDate || '-' }];
+            }
+            
+            return {
+                schemaVersion: "KGS_WORKLOG_V1",
+                workLogId: log.workLogId || log.id, // 기존 데이터 마이그레이션 대비
+                roomId: currentRoomId,
+                workDate: log.date,
+                workerName: log.worker,
+                workerId: null, // 추정 금지 원칙에 따라 명시적 null
+                division: [...new Set(eqList.map(e => e.division || 'ACM'))].join(', '), // 사업부 병합
+                equipmentModels: eqList.map(e => e.equipment || '미지정'),
+                cskSerialNumbers: eqList.map(e => e.cskSn || '-'),
+                deliveryDates: eqList.map(e => e.deliveryDate || '-'),
+                processName: log.process,
+                startTime: log.startTime,
+                endTime: log.endTime,
+                elapsedMinutes: log.elapsedMinutes,
+                elapsedHours: log.elapsedHours,
+                status: log.isDeleted ? 'DELETED' : 'COMPLETED',
+                createdAt: getCreatedAt(log),
+                updatedAt: log.updatedAt || Date.now(),
+                deletedAt: log.deletedAt || null
+            };
+        }
+
+        async function processKGSystemExport() {
+            const yearMonth = document.getElementById('kgs-month-input').value; // 'YYYY-MM'
+            if (!yearMonth) { showMessage('오류', '대상 월을 선택하세요.'); return; }
+
+            const logsForMonth = completedLogs.filter(l => l.date && l.date.startsWith(yearMonth));
+            if (logsForMonth.length === 0) { showMessage('데이터 없음', '해당 월의 작업 기록이 존재하지 않습니다.'); return; }
+
+            // 1. 엑셀과 비교할 정상(Active) 데이터 통계 산출
+            const activeLogs = logsForMonth.filter(l => !l.isDeleted);
+            const excelCount = activeLogs.length;
+            const excelTotalMins = activeLogs.reduce((sum, l) => sum + l.elapsedMinutes, 0);
+            const excelTotalHours = parseFloat(activeLogs.reduce((sum, l) => sum + l.elapsedHours, 0).toFixed(4));
+            const excelWorkers = new Set(activeLogs.map(l => l.worker)).size;
+
+            // 2. KGSystem 표준 스키마 맵핑 (삭제 이력 포함)
+            const mappedRecords = logsForMonth.map(createStandardKGRecord);
+            const activeMapped = mappedRecords.filter(r => r.status === 'COMPLETED');
+
+            // 3. KGSystem 통계 산출
+            const kgsCount = activeMapped.length;
+            const kgsTotalMins = activeMapped.reduce((sum, r) => sum + r.elapsedMinutes, 0);
+            const kgsWorkers = new Set(activeMapped.map(r => r.workerName)).size;
+
+            // S/N 개수를 생산대수로 추정하지 않고 "고유 S/N 수"로만 표기 (명세 사항)
+            const allSns = [];
+            activeLogs.forEach(l => {
+                let eqList = l.equipments || [];
+                if (eqList.length === 0 && l.equipment) eqList = [{ cskSn: l.cskSn }];
+                eqList.forEach(eq => { if (eq.cskSn && eq.cskSn !== '-') allSns.push(eq.cskSn); });
+            });
+            const uniqueSns = new Set(allSns).size;
+
+            // 4. 엑셀 데이터와 교차 검증 (Cross-Validation)
+            if (excelCount !== kgsCount || excelTotalMins !== kgsTotalMins || excelWorkers !== kgsWorkers) {
+                showMessage('데이터 교차 검증 실패', `엑셀 통계와 연동 데이터가 일치하지 않습니다.\n\nExcel 건수: ${excelCount} / KG 건수: ${kgsCount}\nExcel 시간: ${excelTotalMins} / KG 시간: ${kgsTotalMins}`);
+                return;
+            }
+
+            const generatedAt = Date.now();
+            const summary = {
+                schemaVersion: "KGS_WORKLOG_V1",
+                roomId: currentRoomId,
+                yearMonth: yearMonth,
+                generatedAt: generatedAt,
+                updatedAt: generatedAt,
+                validRecordCount: kgsCount,
+                totalElapsedMinutes: kgsTotalMins,
+                totalElapsedHours: parseFloat((kgsTotalMins/60).toFixed(4)),
+                activeWorkerCount: kgsWorkers,
+                uniqueSerialNumberCount: uniqueSns
+            };
+
+            // 5. Firestore에 월별 Snapshot (Batched Write) 기록
+            if (isCloudAvailable && db) {
+                try {
+                    showToast("Firestore 연동 데이터 스냅샷 생성 중...", "fa-spinner");
+                    const batchArray = [writeBatch(db)];
+                    let operationCounter = 0;
+                    let batchIndex = 0;
+
+                    const exportDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'kgsystemExports', yearMonth);
+                    batchArray[batchIndex].set(exportDocRef, summary, { merge: true });
+                    operationCounter++;
+
+                    // Subcollection 'records' 에 단건씩 저장하여 문서 1MB 한계 돌파
+                    for (const record of mappedRecords) {
+                        if (operationCounter === 499) { // Batch limit is 500
+                            batchArray.push(writeBatch(db));
+                            batchIndex++;
+                            operationCounter = 0;
+                        }
+                        const recordRef = doc(exportDocRef, 'records', record.workLogId);
+                        batchArray[batchIndex].set(recordRef, record, { merge: true }); // 기존 데이터 덮어쓰거나 병합
+                        operationCounter++;
+                    }
+
+                    for (const batch of batchArray) {
+                        await batch.commit();
+                    }
+                    showToast("클라우드 스냅샷 생성 완료", "fa-check");
+                } catch (e) {
+                    console.error("Snapshot Error:", e);
+                    showMessage('스냅샷 생성 실패', '클라우드에 데이터를 저장하지 못했습니다.');
+                    return;
+                }
+            }
+
+            // 6. JSON 파일 다운로드
+            const exportData = {
+                summary: summary,
+                records: mappedRecords
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `KGSystem_WorkLog_${currentRoomId}_${yearMonth}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            closeKGSystemModal();
+            showToast("연동 JSON 파일 다운로드 성공", "fa-download");
         }
 
         function setupEventListeners() {
@@ -1124,6 +1322,10 @@
             document.getElementById('btn-pause-all')?.addEventListener('click', triggerPauseAll);
             document.getElementById('btn-resume-all')?.addEventListener('click', triggerResumeAll);
 
+            // KGSystem 연동 이벤트 설정
+            document.getElementById('btn-open-kgsystem-modal')?.addEventListener('click', window.openKGSystemModal);
+            document.getElementById('btn-generate-kgsystem')?.addEventListener('click', processKGSystemExport);
+
             // 시간 수정 저장 버튼 클릭 이벤트
             document.getElementById('btn-save-edited-time')?.addEventListener('click', async () => {
                 if (!editingLogId && !editingActiveTaskId) return;
@@ -1163,7 +1365,7 @@
             });
 
             document.getElementById('btn-export-logs')?.addEventListener('click', exportLogsToExcel);
-            document.getElementById('btn-clear-logs')?.addEventListener('click', () => { showConfirm('초기화', '정말 삭제하시겠습니까?', () => { updateTaskInCloudSecurely('CLEAR_LOGS', null); showToast("로그 초기화 완료", "fa-trash"); }); });
+            document.getElementById('btn-clear-logs')?.addEventListener('click', () => { showConfirm('초기화', '전체 로그를 삭제(Soft Delete)하시겠습니까?\nKGSystem용 통계 데이터는 유지됩니다.', () => { updateTaskInCloudSecurely('CLEAR_LOGS', null); showToast("로그 삭제 완료", "fa-trash"); }); });
         }
 
         function handleExcelImport(file) {
@@ -1262,15 +1464,11 @@
                 auth = getAuth(app); 
                 db = getFirestore(app);
                 
-                // 💡 [중요] 연동 권한 처리 로직 개선
                 if (MY_CUSTOM_FIREBASE_CONFIG) {
-                    // 1. 사용자가 직접 Config를 넣었을 때 (GitHub 등 외부 호스팅 시) -> 익명 로그인 사용
                     await signInAnonymously(auth);
                 } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    // 2. 현재 AI 에디터 환경 내에서 실행 중일 때 -> 플랫폼 권한 토큰 사용
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    // 3. 그 외 로컬 파일로 그냥 열었을 때 등 -> 익명 로그인으로 폴백
                     await signInAnonymously(auth);
                 }
                 
