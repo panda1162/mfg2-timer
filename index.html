@@ -184,6 +184,7 @@
                 </div>
             </div>
 
+            <!-- Column 2 & 3: Active Tasks -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 lg:col-span-2 flex flex-col justify-between">
                 <div>
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
@@ -218,6 +219,7 @@
             </div>
         </section>
 
+        <!-- Completed Logs Section -->
         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div class="p-6 border-b border-slate-200 bg-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
@@ -234,7 +236,7 @@
                     <button id="btn-export-logs" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-file-excel"></i> 월별 통계 엑셀 다운로드
                     </button>
-                    <!-- KGSystem 연동 버튼 추가 -->
+                    <!-- [KGSystem 연동] 스냅샷 생성 버튼 -->
                     <button id="btn-open-kgsystem-modal" class="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-server"></i> KGSystem 연동 데이터 생성
                     </button>
@@ -263,18 +265,15 @@
         </section>
     </main>
 
-    <!-- Notification Modal -->
+    <!-- [UI 영역] 모달 모음 -->
     <div id="custom-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
             <h3 id="modal-title" class="text-md font-bold text-slate-900 mb-2">알림</h3>
             <p id="modal-body" class="text-xs text-slate-500 leading-relaxed mb-4 whitespace-pre-line">내용</p>
-            <div class="flex justify-end">
-                <button onclick="closeModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">확인</button>
-            </div>
+            <div class="flex justify-end"><button onclick="closeModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">확인</button></div>
         </div>
     </div>
 
-    <!-- Confirm Modal -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
             <h3 id="confirm-title" class="text-md font-bold text-slate-900 mb-2">확인</h3>
@@ -286,7 +285,6 @@
         </div>
     </div>
 
-    <!-- Edit Time Modal -->
     <div id="edit-time-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
             <h3 class="text-md font-bold text-slate-900 mb-2"><i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> 작업 소요 시간 수정</h3>
@@ -302,7 +300,6 @@
         </div>
     </div>
 
-    <!-- Worker Modal -->
     <div id="worker-modal" class="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -324,7 +321,6 @@
         </div>
     </div>
 
-    <!-- Firebase Modal -->
     <div id="firebase-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -345,7 +341,7 @@
         </div>
     </div>
 
-    <!-- KGSystem 연동 모달 -->
+    <!-- [KGSystem 연동] 연동 모달 창 -->
     <div id="kgsystem-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -360,7 +356,7 @@
             </div>
 
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-                <p><i class="fa-solid fa-check text-emerald-500"></i> 자동 교차 검증 수행 (엑셀 통계 일치)</p>
+                <p><i class="fa-solid fa-check text-emerald-500"></i> 원본 작업로그 ↔ KGSystem 변환결과 자체검증</p>
                 <p><i class="fa-solid fa-check text-emerald-500"></i> 영구 ID 할당 및 Soft-Delete 기록 동기화</p>
                 <p><i class="fa-solid fa-check text-emerald-500"></i> 표준화 포맷(KGS_WORKLOG_V1) 준수</p>
             </div>
@@ -380,27 +376,20 @@
         </div>
     </footer>
 
+    <!-- 자바스크립트 영역 -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        // writeBatch 추가
+        // [KGSystem 연동] writeBatch 추가됨
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         // =========================================================================
-        // [중요] GitHub에 올리실 때는 아래 null 값을 지우고 본인의 Firebase Config JSON을 직접 입력하세요!
-        // 그래야 모든 스마트폰/태블릿에서 접속하자마자 자동으로 연동됩니다.
+        // [보안 조치] 실제 Firebase 키 제거됨.
+        // 배포 시 .env.example을 참고하여 서버나 빌드에서 주입하십시오.
         // =========================================================================
-        const MY_CUSTOM_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyAaxrRBDPlOEIlt6FC0zUdOS8FN70qbPQ4",
-            authDomain: "mfg2-timer.firebaseapp.com",
-            projectId: "mfg2-timer",
-            storageBucket: "mfg2-timer.firebasestorage.app",
-            messagingSenderId: "164581870353",
-            appId: "1:164581870353:web:e0d32912e5ec7df4409ab0"
-        }; 
+        const MY_CUSTOM_FIREBASE_CONFIG = null; 
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-process-time-tracker';
-        
         let firebaseConfig = null;
         
         if (MY_CUSTOM_FIREBASE_CONFIG) {
@@ -446,6 +435,7 @@
             return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
         };
 
+        // 모달 제어 전역 함수들
         window.closeModal = () => document.getElementById('custom-modal').classList.add('hidden');
         window.closeConfirmModal = (result) => { 
             document.getElementById('confirm-modal').classList.add('hidden');
@@ -457,7 +447,7 @@
         window.openFirebaseModal = () => document.getElementById('firebase-modal').classList.remove('hidden');
         window.closeFirebaseModal = () => document.getElementById('firebase-modal').classList.add('hidden');
         
-        // KGSystem Modal Functions
+        // [KGSystem 연동] 모달 함수 추가
         window.openKGSystemModal = () => {
             const now = new Date();
             const yyyy = now.getFullYear();
@@ -468,8 +458,7 @@
         window.closeKGSystemModal = () => document.getElementById('kgsystem-modal').classList.add('hidden');
         
         window.triggerEditLogTime = function(logId, currentMinutes) {
-            editingLogId = logId;
-            editingActiveTaskId = null;
+            editingLogId = logId; editingActiveTaskId = null;
             document.getElementById('edit-time-input').value = currentMinutes;
             document.getElementById('edit-time-modal').classList.remove('hidden');
             setTimeout(() => document.getElementById('edit-time-input').focus(), 100);
@@ -483,8 +472,7 @@
             if (currentElapsedMs < 0) currentElapsedMs = 0;
             const currentElapsedMins = Math.floor(currentElapsedMs / 60000);
             
-            editingActiveTaskId = taskId;
-            editingLogId = null;
+            editingActiveTaskId = taskId; editingLogId = null;
             document.getElementById('edit-time-input').value = currentElapsedMins;
             document.getElementById('edit-time-modal').classList.remove('hidden');
             setTimeout(() => document.getElementById('edit-time-input').focus(), 100);
@@ -492,8 +480,7 @@
         
         window.closeEditTimeModal = function() {
             document.getElementById('edit-time-modal').classList.add('hidden');
-            editingLogId = null;
-            editingActiveTaskId = null;
+            editingLogId = null; editingActiveTaskId = null;
         };
         
         function showMessage(title, body) { document.getElementById('modal-title').innerText = title; document.getElementById('modal-body').innerText = body; document.getElementById('custom-modal').classList.remove('hidden'); }
@@ -541,9 +528,16 @@
             } catch (e) {}
         }
 
+        // 트랜잭션을 통한 상태 업데이트 (데이터 무결성 보장)
         async function updateTaskInCloudSecurely(actionType, payload) {
+            /**
+             * [KGSystem 연동 참고사항] 
+             * 아래 로직에서 DELETE_LOG, CLEAR_LOGS, EDIT_LOG_TIME 호출 시
+             * 단순 삭제가 아닌 Soft-Delete 처리 (isDeleted, deletedAt, updatedAt 갱신)를 수행하여 
+             * KGSystem 연동 시 삭제된 데이터의 무결성도 보장하도록 설계되었습니다.
+             */
             if (!currentUser || !db || !isCloudAvailable) {
-                // Offline Logic
+                // 오프라인 로직
                 if (actionType === 'PUNCH_IN') runningTasks.unshift(payload);
                 else if (actionType === 'PAUSE_TOGGLE') {
                     const t = runningTasks.find(x => x.id === payload.id);
@@ -553,21 +547,19 @@
                     runningTasks.forEach(task => { if (!task.paused) { task.paused = true; task.pausedAt = payload.timestamp; } });
                 }
                 else if (actionType === 'RESUME_ALL') {
-                    runningTasks.forEach(task => {
-                        if (task.paused) { task.totalPausedDuration += (payload.timestamp - task.pausedAt); task.paused = false; task.pausedAt = null; }
-                    });
+                    runningTasks.forEach(task => { if (task.paused) { task.totalPausedDuration += (payload.timestamp - task.pausedAt); task.paused = false; task.pausedAt = null; } });
                 }
                 else if (actionType === 'PUNCH_OUT') {
                     runningTasks = runningTasks.filter(x => x.id !== payload.taskId);
                     completedLogs.unshift(payload.finishedJob);
                 }
                 else if (actionType === 'DELETE_LOG') {
-                    // Soft-Delete 적용
+                    // [KGSystem 연동] Soft-Delete
                     const log = completedLogs.find(x => x.id === payload.id);
                     if (log) { log.isDeleted = true; log.deletedAt = Date.now(); log.updatedAt = Date.now(); }
                 }
                 else if (actionType === 'CLEAR_LOGS') {
-                    // Soft-Delete 적용
+                    // [KGSystem 연동] Soft-Delete
                     completedLogs.forEach(log => { if (!log.isDeleted) { log.isDeleted = true; log.deletedAt = Date.now(); log.updatedAt = Date.now(); } });
                 }
                 else if (actionType === 'EDIT_LOG_TIME') {
@@ -582,7 +574,6 @@
                     const t = runningTasks.find(x => x.id === payload.id);
                     if(t) { t.startTime = payload.newStartTime; }
                 }
-                
                 renderActiveTasks(); renderCompletedLogs(); saveRoomState();
                 return;
             }
@@ -604,9 +595,7 @@
                         currentRunning.forEach(task => { if (!task.paused) { task.paused = true; task.pausedAt = payload.timestamp; } });
                     }
                     else if (actionType === 'RESUME_ALL') {
-                        currentRunning.forEach(task => {
-                            if (task.paused) { task.totalPausedDuration += (payload.timestamp - task.pausedAt); task.paused = false; task.pausedAt = null; }
-                        });
+                        currentRunning.forEach(task => { if (task.paused) { task.totalPausedDuration += (payload.timestamp - task.pausedAt); task.paused = false; task.pausedAt = null; } });
                     }
                     else if (actionType === 'PUNCH_OUT') {
                         const idx = currentRunning.findIndex(x => x.id === payload.taskId);
@@ -614,12 +603,11 @@
                         currentLogs.unshift(payload.finishedJob);
                     } 
                     else if (actionType === 'DELETE_LOG') { 
-                        // Soft-Delete 적용
+                        // [KGSystem 연동] Soft-Delete 처리
                         const idx = currentLogs.findIndex(x => x.id === payload.id);
                         if (idx > -1) { currentLogs[idx].isDeleted = true; currentLogs[idx].deletedAt = Date.now(); currentLogs[idx].updatedAt = Date.now(); }
                     } 
                     else if (actionType === 'CLEAR_LOGS') { 
-                        // Soft-Delete 적용
                         currentLogs.forEach(log => { if (!log.isDeleted) { log.isDeleted = true; log.deletedAt = Date.now(); log.updatedAt = Date.now(); } });
                     }
                     else if (actionType === 'EDIT_LOG_TIME') {
@@ -656,9 +644,7 @@
                 const exists = runningTasks.find(t => t.worker === selectedWorker && t.process === selectedProcess && (t.equipments||[]).some(eq => eq.id === item.id));
                 if (exists) duplicatedItems.push(`[${item.division || 'ACM'}] ${item.equipment}`);
             });
-            if (duplicatedItems.length > 0) {
-                showMessage('중복 경고', `${selectedWorker}님은 이미 해당 장비를 작업 중입니다:\n${duplicatedItems.join('\n')}`); return;
-            }
+            if (duplicatedItems.length > 0) { showMessage('중복 경고', `${selectedWorker}님은 이미 해당 장비를 작업 중입니다:\n${duplicatedItems.join('\n')}`); return; }
 
             const timestamp = new Date().getTime();
             const newTask = {
@@ -719,18 +705,22 @@
             const elapsedHours = parseFloat((elapsedMs / (1000 * 60 * 60)).toFixed(4));
             const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
 
-            // 신규 스키마 대응 영구 workLogId 및 타임스탬프 부여
+            // [KGSystem 연동] workLogId 고유 부여 로직 추가
             const newLogId = 'log_' + now + '_' + Math.random().toString(36).substr(2, 5);
+            
+            // [Fix] UTC 00:00~08:59 구간 KST 날짜 변환 버그 픽스 (Intl.DateTimeFormat 사용)
+            const kstDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now));
 
             const finishedJob = {
                 id: newLogId,
-                workLogId: newLogId,
+                workLogId: newLogId, // KGSystem 영구 PK
                 worker: task.worker, process: task.process,
                 startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
                 endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
                 elapsedMinutes: elapsedMinutes, elapsedHours: elapsedHours,
-                date: new Date().toISOString().split('T')[0],
+                date: kstDateStr, 
                 equipments: task.equipments && task.equipments.length > 0 ? task.equipments : [{ division: task.division||'ACM', equipment: task.equipment||'미지정', cskSn: task.cskSn||'-', deliveryDate: task.deliveryDate||'-' }],
+                // [KGSystem 연동] 메타 필드 추가
                 isDeleted: false,
                 createdAt: now,
                 updatedAt: now
@@ -765,8 +755,7 @@
             if (selectedWorker || selectedProcess) { 
                 span.textContent = `[대기] 작업자: ${selectedWorker || '미선택'} | 공정: ${selectedProcess || '미선택'}`; 
                 span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400"; 
-            } 
-            else { 
+            } else { 
                 span.textContent = "현재 대기 상태 (준비 완료)"; 
                 span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-emerald-400"; 
             }
@@ -775,12 +764,10 @@
         window.selectProcess = (p) => { 
             selectedProcess = p; 
             updateStatusText(); 
-            
             document.querySelectorAll('button[onclick^="selectProcess"]').forEach(btn => {
                 btn.classList.remove('border-2', 'border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
                 btn.classList.add('border', 'border-slate-200', 'bg-slate-50', 'text-slate-700');
             });
-
             if (p) {
                 const activeBtn = document.querySelector(`button[onclick="selectProcess('${p}')"]`);
                 if (activeBtn) {
@@ -837,7 +824,7 @@
 
             const planDivisions = planEquipments.map(p => p.division || 'ACM');
             const logDivisions = [];
-            // Soft delete된 항목 제외
+            // [KGSystem 연동] Soft delete 항목을 UI 필터 옵션 산출에서도 제외
             completedLogs.filter(l => !l.isDeleted).forEach(l => { 
                 (l.equipments || [{ division: l.division }]).forEach(eq => logDivisions.push(eq.division || 'ACM')); 
             });
@@ -976,7 +963,7 @@
             const selectedLogDiv = document.getElementById('log-division-filter') ? document.getElementById('log-division-filter').value : '';
             if(!tbody) return; tbody.innerHTML = '';
             
-            // UI 표시 시 Soft Delete 처리된 로그는 숨김
+            // [KGSystem 연동] UI 화면 렌더링 시 Soft Delete 처리된 로그는 숨김 처리
             const filteredLogs = completedLogs.filter(item => {
                 if (item.isDeleted) return false;
                 if (!selectedLogDiv) return true;
@@ -1029,7 +1016,7 @@
 
         function exportLogsToExcel() {
             const selectedLogDiv = document.getElementById('log-division-filter').value;
-            // 엑셀에는 삭제되지 않은 정상 건만 표시
+            // 엑셀 출력 시 삭제(Soft Delete)된 건 제외
             const targetLogs = completedLogs.filter(item => {
                 if (item.isDeleted) return false;
                 if (!selectedLogDiv) return true;
@@ -1099,7 +1086,7 @@
         }
 
         // =========================================================================
-        // KGSystem 연동을 위한 데이터 생성 및 Firestore 배치 처리
+        // [KGSystem 연동] 데이터 생성 및 Firestore 배치(Batch) 처리 핵심 로직
         // =========================================================================
         function getCreatedAt(log) {
             if (log.createdAt) return log.createdAt;
@@ -1116,12 +1103,12 @@
             
             return {
                 schemaVersion: "KGS_WORKLOG_V1",
-                workLogId: log.workLogId || log.id, // 기존 데이터 마이그레이션 대비
+                workLogId: log.workLogId || log.id, 
                 roomId: currentRoomId,
                 workDate: log.date,
                 workerName: log.worker,
-                workerId: null, // 추정 금지 원칙에 따라 명시적 null
-                division: [...new Set(eqList.map(e => e.division || 'ACM'))].join(', '), // 사업부 병합
+                workerId: null, // 추정 방지를 위해 명시적 null
+                division: [...new Set(eqList.map(e => e.division || 'ACM'))].join(', '),
                 equipmentModels: eqList.map(e => e.equipment || '미지정'),
                 cskSerialNumbers: eqList.map(e => e.cskSn || '-'),
                 deliveryDates: eqList.map(e => e.deliveryDate || '-'),
@@ -1131,6 +1118,7 @@
                 elapsedMinutes: log.elapsedMinutes,
                 elapsedHours: log.elapsedHours,
                 status: log.isDeleted ? 'DELETED' : 'COMPLETED',
+                isDeleted: !!log.isDeleted, // [Fix] 명시적으로 isDeleted 추가
                 createdAt: getCreatedAt(log),
                 updatedAt: log.updatedAt || Date.now(),
                 deletedAt: log.deletedAt || null
@@ -1141,26 +1129,25 @@
             const yearMonth = document.getElementById('kgs-month-input').value; // 'YYYY-MM'
             if (!yearMonth) { showMessage('오류', '대상 월을 선택하세요.'); return; }
 
+            // 1. 해당 월 데이터 필터링 (Soft Delete된 것도 모두 포함하여 내보냄)
             const logsForMonth = completedLogs.filter(l => l.date && l.date.startsWith(yearMonth));
             if (logsForMonth.length === 0) { showMessage('데이터 없음', '해당 월의 작업 기록이 존재하지 않습니다.'); return; }
 
-            // 1. 엑셀과 비교할 정상(Active) 데이터 통계 산출
+            // 2. 자체 검증을 위한 원본(Active) 데이터 통계 산출
             const activeLogs = logsForMonth.filter(l => !l.isDeleted);
-            const excelCount = activeLogs.length;
-            const excelTotalMins = activeLogs.reduce((sum, l) => sum + l.elapsedMinutes, 0);
-            const excelTotalHours = parseFloat(activeLogs.reduce((sum, l) => sum + l.elapsedHours, 0).toFixed(4));
-            const excelWorkers = new Set(activeLogs.map(l => l.worker)).size;
+            const sourceCount = activeLogs.length;
+            const sourceTotalMins = activeLogs.reduce((sum, l) => sum + l.elapsedMinutes, 0);
+            const sourceTotalHours = parseFloat(activeLogs.reduce((sum, l) => sum + l.elapsedHours, 0).toFixed(4));
+            const sourceWorkers = new Set(activeLogs.map(l => l.worker)).size;
 
-            // 2. KGSystem 표준 스키마 맵핑 (삭제 이력 포함)
+            // 3. KGSystem 규격 맵핑
             const mappedRecords = logsForMonth.map(createStandardKGRecord);
             const activeMapped = mappedRecords.filter(r => r.status === 'COMPLETED');
 
-            // 3. KGSystem 통계 산출
             const kgsCount = activeMapped.length;
             const kgsTotalMins = activeMapped.reduce((sum, r) => sum + r.elapsedMinutes, 0);
             const kgsWorkers = new Set(activeMapped.map(r => r.workerName)).size;
 
-            // S/N 개수를 생산대수로 추정하지 않고 "고유 S/N 수"로만 표기 (명세 사항)
             const allSns = [];
             activeLogs.forEach(l => {
                 let eqList = l.equipments || [];
@@ -1169,9 +1156,9 @@
             });
             const uniqueSns = new Set(allSns).size;
 
-            // 4. 엑셀 데이터와 교차 검증 (Cross-Validation)
-            if (excelCount !== kgsCount || excelTotalMins !== kgsTotalMins || excelWorkers !== kgsWorkers) {
-                showMessage('데이터 교차 검증 실패', `엑셀 통계와 연동 데이터가 일치하지 않습니다.\n\nExcel 건수: ${excelCount} / KG 건수: ${kgsCount}\nExcel 시간: ${excelTotalMins} / KG 시간: ${kgsTotalMins}`);
+            // 4. 교차 검증: 자체 검증 (원본 ↔ 변환결과)
+            if (sourceCount !== kgsCount || sourceTotalMins !== kgsTotalMins || sourceWorkers !== kgsWorkers) {
+                showMessage('데이터 검증 실패', `원본 작업로그 통계와 변환 데이터가 일치하지 않습니다.\n\n원본 건수: ${sourceCount} / KG 건수: ${kgsCount}\n원본 시간: ${sourceTotalMins} / KG 시간: ${kgsTotalMins}`);
                 return;
             }
 
@@ -1189,7 +1176,7 @@
                 uniqueSerialNumberCount: uniqueSns
             };
 
-            // 5. Firestore에 월별 Snapshot (Batched Write) 기록
+            // 5. Firestore에 월별 Snapshot (Batched Write) 업데이트
             if (isCloudAvailable && db) {
                 try {
                     showToast("Firestore 연동 데이터 스냅샷 생성 중...", "fa-spinner");
@@ -1197,19 +1184,20 @@
                     let operationCounter = 0;
                     let batchIndex = 0;
 
+                    // Summary Document
                     const exportDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'kgsystemExports', yearMonth);
                     batchArray[batchIndex].set(exportDocRef, summary, { merge: true });
                     operationCounter++;
 
-                    // Subcollection 'records' 에 단건씩 저장하여 문서 1MB 한계 돌파
+                    // Subcollection 'records' (1MB 제한 방지용 개별 저장)
                     for (const record of mappedRecords) {
-                        if (operationCounter === 499) { // Batch limit is 500
+                        if (operationCounter === 499) { // Firestore Batch Limit is 500
                             batchArray.push(writeBatch(db));
                             batchIndex++;
                             operationCounter = 0;
                         }
                         const recordRef = doc(exportDocRef, 'records', record.workLogId);
-                        batchArray[batchIndex].set(recordRef, record, { merge: true }); // 기존 데이터 덮어쓰거나 병합
+                        batchArray[batchIndex].set(recordRef, record, { merge: true });
                         operationCounter++;
                     }
 
@@ -1224,7 +1212,7 @@
                 }
             }
 
-            // 6. JSON 파일 다운로드
+            // 6. 브라우저 로컬 JSON 파일 다운로드
             const exportData = {
                 summary: summary,
                 records: mappedRecords
@@ -1322,11 +1310,10 @@
             document.getElementById('btn-pause-all')?.addEventListener('click', triggerPauseAll);
             document.getElementById('btn-resume-all')?.addEventListener('click', triggerResumeAll);
 
-            // KGSystem 연동 이벤트 설정
+            // [KGSystem 연동] 이벤트 바인딩
             document.getElementById('btn-open-kgsystem-modal')?.addEventListener('click', window.openKGSystemModal);
             document.getElementById('btn-generate-kgsystem')?.addEventListener('click', processKGSystemExport);
 
-            // 시간 수정 저장 버튼 클릭 이벤트
             document.getElementById('btn-save-edited-time')?.addEventListener('click', async () => {
                 if (!editingLogId && !editingActiveTaskId) return;
                 const newVal = parseInt(document.getElementById('edit-time-input').value, 10);
