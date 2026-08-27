@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 v3.1 (Anti-Collision Live Sync)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 v3.6 (상세내역 간소화)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS (xlsx) CDN -->
@@ -39,10 +39,10 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v3.1 Live Sync
+                                v3.6 AutoFilter
                             </span>
                         </h1>
-                        <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 다중 기기 공수 트래킹 & 엑셀 연동 시스템</p>
+                        <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 다중 기기 공수 트래킹 & 엑셀 오토필터 지원</p>
                     </div>
                 </div>
 
@@ -376,17 +376,11 @@
         </div>
     </footer>
 
-    <!-- 자바스크립트 영역 -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        // [KGSystem 연동] writeBatch 추가됨
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // =========================================================================
-        // [보안 조치] 실제 Firebase 키 제거됨.
-        // 배포 시 .env.example을 참고하여 서버나 빌드에서 주입하십시오.
-        // =========================================================================
         const MY_CUSTOM_FIREBASE_CONFIG = null; 
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-process-time-tracker';
@@ -435,7 +429,6 @@
             return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
         };
 
-        // 모달 제어 전역 함수들
         window.closeModal = () => document.getElementById('custom-modal').classList.add('hidden');
         window.closeConfirmModal = (result) => { 
             document.getElementById('confirm-modal').classList.add('hidden');
@@ -447,7 +440,6 @@
         window.openFirebaseModal = () => document.getElementById('firebase-modal').classList.remove('hidden');
         window.closeFirebaseModal = () => document.getElementById('firebase-modal').classList.add('hidden');
         
-        // [KGSystem 연동] 모달 함수 추가
         window.openKGSystemModal = () => {
             const now = new Date();
             const yyyy = now.getFullYear();
@@ -528,16 +520,8 @@
             } catch (e) {}
         }
 
-        // 트랜잭션을 통한 상태 업데이트 (데이터 무결성 보장)
         async function updateTaskInCloudSecurely(actionType, payload) {
-            /**
-             * [KGSystem 연동 참고사항] 
-             * 아래 로직에서 DELETE_LOG, CLEAR_LOGS, EDIT_LOG_TIME 호출 시
-             * 단순 삭제가 아닌 Soft-Delete 처리 (isDeleted, deletedAt, updatedAt 갱신)를 수행하여 
-             * KGSystem 연동 시 삭제된 데이터의 무결성도 보장하도록 설계되었습니다.
-             */
             if (!currentUser || !db || !isCloudAvailable) {
-                // 오프라인 로직
                 if (actionType === 'PUNCH_IN') runningTasks.unshift(payload);
                 else if (actionType === 'PAUSE_TOGGLE') {
                     const t = runningTasks.find(x => x.id === payload.id);
@@ -554,12 +538,10 @@
                     completedLogs.unshift(payload.finishedJob);
                 }
                 else if (actionType === 'DELETE_LOG') {
-                    // [KGSystem 연동] Soft-Delete
                     const log = completedLogs.find(x => x.id === payload.id);
                     if (log) { log.isDeleted = true; log.deletedAt = Date.now(); log.updatedAt = Date.now(); }
                 }
                 else if (actionType === 'CLEAR_LOGS') {
-                    // [KGSystem 연동] Soft-Delete
                     completedLogs.forEach(log => { if (!log.isDeleted) { log.isDeleted = true; log.deletedAt = Date.now(); log.updatedAt = Date.now(); } });
                 }
                 else if (actionType === 'EDIT_LOG_TIME') {
@@ -603,7 +585,6 @@
                         currentLogs.unshift(payload.finishedJob);
                     } 
                     else if (actionType === 'DELETE_LOG') { 
-                        // [KGSystem 연동] Soft-Delete 처리
                         const idx = currentLogs.findIndex(x => x.id === payload.id);
                         if (idx > -1) { currentLogs[idx].isDeleted = true; currentLogs[idx].deletedAt = Date.now(); currentLogs[idx].updatedAt = Date.now(); }
                     } 
@@ -705,22 +686,18 @@
             const elapsedHours = parseFloat((elapsedMs / (1000 * 60 * 60)).toFixed(4));
             const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
 
-            // [KGSystem 연동] workLogId 고유 부여 로직 추가
             const newLogId = 'log_' + now + '_' + Math.random().toString(36).substr(2, 5);
-            
-            // [Fix] UTC 00:00~08:59 구간 KST 날짜 변환 버그 픽스 (Intl.DateTimeFormat 사용)
             const kstDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now));
 
             const finishedJob = {
                 id: newLogId,
-                workLogId: newLogId, // KGSystem 영구 PK
+                workLogId: newLogId,
                 worker: task.worker, process: task.process,
                 startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
                 endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
                 elapsedMinutes: elapsedMinutes, elapsedHours: elapsedHours,
                 date: kstDateStr, 
                 equipments: task.equipments && task.equipments.length > 0 ? task.equipments : [{ division: task.division||'ACM', equipment: task.equipment||'미지정', cskSn: task.cskSn||'-', deliveryDate: task.deliveryDate||'-' }],
-                // [KGSystem 연동] 메타 필드 추가
                 isDeleted: false,
                 createdAt: now,
                 updatedAt: now
@@ -824,7 +801,6 @@
 
             const planDivisions = planEquipments.map(p => p.division || 'ACM');
             const logDivisions = [];
-            // [KGSystem 연동] Soft delete 항목을 UI 필터 옵션 산출에서도 제외
             completedLogs.filter(l => !l.isDeleted).forEach(l => { 
                 (l.equipments || [{ division: l.division }]).forEach(eq => logDivisions.push(eq.division || 'ACM')); 
             });
@@ -843,7 +819,7 @@
             const selectedDivision = document.getElementById('select-division-filter')?.value || '';
             const select = document.getElementById('select-equipment');
             if(!select) return; select.innerHTML = '';
-            if (planEquipments.length === 0) { select.innerHTML = `<option value="">생산계획을 먼저 연동하세요...</option>`; return; }
+            if (planEquipments.length === 0) { select.innerHTML = `<option value="">생산계획을 먼저 로드하세요...</option>`; return; }
 
             const filtered = planEquipments.filter(item => {
                 const divisionMatch = !selectedDivision || (item.division && item.division === selectedDivision);
@@ -963,7 +939,6 @@
             const selectedLogDiv = document.getElementById('log-division-filter') ? document.getElementById('log-division-filter').value : '';
             if(!tbody) return; tbody.innerHTML = '';
             
-            // [KGSystem 연동] UI 화면 렌더링 시 Soft Delete 처리된 로그는 숨김 처리
             const filteredLogs = completedLogs.filter(item => {
                 if (item.isDeleted) return false;
                 if (!selectedLogDiv) return true;
@@ -1014,9 +989,42 @@
             });
         }
 
+        // 장비 모델명 정규화 함수 (TDS010DC_* 및 TDS010DC_2B 통합, '통합장비' 단어 제거 -> 'TDS010DC'로 통일)
+        function normalizeEquipmentName(name) {
+            if (!name) return '미지정';
+            const upper = name.trim().toUpperCase();
+            if (upper.startsWith('TDS010DC') || upper.includes('TDS010DC')) {
+                return 'TDS010DC';
+            }
+            return name.trim();
+        }
+
+        // 엑셀 시트 컬럼 너비 자동 계산 헬퍼 함수
+        function autoFitSheetColumns(worksheet) {
+            const objectKeys = Object.keys(worksheet);
+            const colWidths = {};
+            
+            objectKeys.forEach(key => {
+                if (key[0] === '!') return;
+                const colLetter = key.replace(/[0-9]/g, '');
+                const cellValue = worksheet[key] ? String(worksheet[key].v || '') : '';
+                
+                let length = 0;
+                for (let i = 0; i < cellValue.length; i++) {
+                    const charCode = cellValue.charCodeAt(i);
+                    length += (charCode > 127 || charCode === 63) ? 2 : 1.2;
+                }
+                
+                if (!colWidths[colLetter] || length > colWidths[colLetter]) {
+                    colWidths[colLetter] = Math.max(length + 4, 12);
+                }
+            });
+
+            worksheet['!cols'] = Object.keys(colWidths).map(col => ({ wch: Math.min(colWidths[col], 50) }));
+        }
+
         function exportLogsToExcel() {
             const selectedLogDiv = document.getElementById('log-division-filter').value;
-            // 엑셀 출력 시 삭제(Soft Delete)된 건 제외
             const targetLogs = completedLogs.filter(item => {
                 if (item.isDeleted) return false;
                 if (!selectedLogDiv) return true;
@@ -1027,18 +1035,18 @@
 
             const wb = XLSX.utils.book_new();
 
-            const header = ['No.', '작업 일자', '작업자', '사업부 목록', '장비 모델명 목록', 'CSK S/N 목록', '납품일 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '소요 시간 (분)', '소요 공수 (시간)'];
+            // 1. 상세 내역 시트 (CSK S/N 목록 포함, 장비 모델명 및 납품일 등은 제거하여 간소화)
+            const header = ['No.', '작업 일자', '작업자', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '소요 시간 (분)', '소요 공수 (시간)'];
             let rows = [header];
             targetLogs.forEach((item, index) => {
                 let eqList = item.equipments || [];
-                if (eqList.length === 0 && item.equipment) eqList = [{ division: item.division, equipment: item.equipment, cskSn: item.cskSn, deliveryDate: item.deliveryDate }];
-                const divisions = eqList.map(e => e.division || 'ACM').join(', ');
-                const equipments = eqList.map(e => e.equipment || '미지정').join(', ');
+                if (eqList.length === 0 && item.equipment) eqList = [{ cskSn: item.cskSn }];
                 const cskSns = eqList.map(e => e.cskSn || '-').join(', ');
-                const deliveryDates = eqList.map(e => e.deliveryDate || '-').join(', ');
-                rows.push([index + 1, item.date, item.worker, divisions, equipments, cskSns, deliveryDates, item.process, item.startTime, item.endTime, item.elapsedMinutes, parseFloat(item.elapsedHours.toFixed(4))]);
+                rows.push([index + 1, item.date, item.worker, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, parseFloat(item.elapsedHours.toFixed(4))]);
             });
             const wsDetail = XLSX.utils.aoa_to_sheet(rows);
+            wsDetail['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: header.length - 1 } }) };
+            autoFitSheetColumns(wsDetail);
             XLSX.utils.book_append_sheet(wb, wsDetail, "작업일보_상세내역");
 
             const monthlyStats = {};
@@ -1046,38 +1054,127 @@
                 const dateParts = log.date.split('-');
                 if (dateParts.length >= 2) {
                     const monthKey = `${dateParts[0]}-${dateParts[1]}`;
-                    if (!monthlyStats[monthKey]) monthlyStats[monthKey] = {};
+                    if (!monthlyStats[monthKey]) {
+                        monthlyStats[monthKey] = { workers: {}, equipments: {} };
+                    }
                     const worker = log.worker;
-                    if (!monthlyStats[monthKey][worker]) monthlyStats[monthKey][worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {} };
+                    const process = log.process || '미지정';
+                    const elapsedMins = log.elapsedMinutes;
                     
-                    monthlyStats[monthKey][worker].totalJobs += 1;
-                    monthlyStats[monthKey][worker].totalMinutes += log.elapsedMinutes;
+                    if (!monthlyStats[monthKey].workers[worker]) {
+                        monthlyStats[monthKey].workers[worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, processCount: {}, processMinutes: {}, equipsDetail: {} };
+                    }
+                    let wStat = monthlyStats[monthKey].workers[worker];
+                    wStat.totalJobs += 1;
+                    wStat.totalMinutes += elapsedMins;
+                    wStat.processCount[process] = (wStat.processCount[process] || 0) + 1;
+                    wStat.processMinutes[process] = (wStat.processMinutes[process] || 0) + elapsedMins;
                     
                     let eqList = log.equipments || [];
-                    if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment }];
-                    monthlyStats[monthKey][worker].totalEquips += eqList.length;
+                    if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division }];
+                    wStat.totalEquips += eqList.length;
+
+                    const minsPerEq = elapsedMins / (eqList.length > 0 ? eqList.length : 1);
 
                     eqList.forEach(eq => {
-                        const eqName = eq.equipment || '미지정';
-                        monthlyStats[monthKey][worker].equipsDetail[eqName] = (monthlyStats[monthKey][worker].equipsDetail[eqName] || 0) + 1;
+                        const rawEqName = eq.equipment || '미지정';
+                        const eqName = normalizeEquipmentName(rawEqName); // TDS010DC 통합
+                        const divName = eq.division || 'ACM';
+                        const cskSn = eq.cskSn || '-';
+
+                        wStat.equipsDetail[eqName] = (wStat.equipsDetail[eqName] || 0) + 1;
+
+                        if (!monthlyStats[monthKey].equipments[eqName]) {
+                            monthlyStats[monthKey].equipments[eqName] = { 
+                                division: divName, 
+                                processes: {},
+                                cskProcessLogs: {} 
+                            };
+                        }
+                        let eStat = monthlyStats[monthKey].equipments[eqName];
+                        
+                        if (!eStat.processes[process]) {
+                            eStat.processes[process] = { count: 0, minutes: 0 };
+                        }
+                        eStat.processes[process].count += 1;
+                        eStat.processes[process].minutes += minsPerEq;
+
+                        if (cskSn && cskSn !== '-') {
+                            if (!eStat.cskProcessLogs[cskSn]) eStat.cskProcessLogs[cskSn] = new Set();
+                            eStat.cskProcessLogs[cskSn].add(process);
+                        }
                     });
                 }
             });
 
             Object.keys(monthlyStats).sort().forEach(month => {
-                const stats = monthlyStats[month];
-                const statHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 작업 수량 (상세)', '총 투입 시간 (분)', '총 투입 공수 (시간)', '건당 평균 소요 시간 (분)'];
-                let statRows = [statHeader];
+                const wStats = monthlyStats[month].workers;
+                const eStats = monthlyStats[month].equipments;
+                
+                // 2. 작업자별 통계 시트
+                const wStatHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '공정별 작업 내역', '장비 모델별 작업 수량', '총 투입 시간 (분)', '총 투입 공수 (시간)', '건당 평균 소요 시간 (분)'];
+                let wStatRows = [wStatHeader];
 
-                Object.keys(stats).sort().forEach(worker => {
-                    const data = stats[worker];
+                Object.keys(wStats).sort().forEach(worker => {
+                    const data = wStats[worker];
                     const totalHours = parseFloat((data.totalMinutes / 60).toFixed(2));
-                    const avgMinutes = Math.round(data.totalMinutes / data.totalJobs);
-                    const equipDetailStr = Object.entries(data.equipsDetail).map(([name, count]) => `${name}(${count}대)`).join(', ');
-                    statRows.push([worker, data.totalJobs, data.totalEquips, equipDetailStr, data.totalMinutes, totalHours, avgMinutes]);
+                    const avgMinutes = data.totalJobs > 0 ? Math.round(data.totalMinutes / data.totalJobs) : 0;
+                    
+                    const processDetailStr = Object.keys(data.processCount).map(name => {
+                        const count = data.processCount[name];
+                        const mins = Math.round(data.processMinutes[name]);
+                        const hrs = parseFloat((mins / 60).toFixed(2));
+                        return `${name} (${count}건 / ${mins}분 / ${hrs}h)`;
+                    }).join(' | ');
+                    
+                    const equipDetailStr = Object.entries(data.equipsDetail).map(([name, count]) => `${name} (${count}대)`).join(', ');
+                    
+                    wStatRows.push([worker, data.totalJobs, data.totalEquips, processDetailStr, equipDetailStr, Math.round(data.totalMinutes), totalHours, avgMinutes]);
                 });
-                const wsStat = XLSX.utils.aoa_to_sheet(statRows);
-                XLSX.utils.book_append_sheet(wb, wsStat, `통계_${month}`);
+                const wsWorkerStat = XLSX.utils.aoa_to_sheet(wStatRows);
+                wsWorkerStat['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: wStatRows.length - 1, c: wStatHeader.length - 1 } }) };
+                autoFitSheetColumns(wsWorkerStat);
+                XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
+
+                // 3. 장비별 통계 시트 (대표 S/N 제거, 장비별 총공수 및 한대분 평균 공수 포함)
+                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (시간)', '장비별 총 공수 (분 / h)', '한대분 전체 완료 평균 공수 (참고)'];
+                let eStatRows = [eStatHeader];
+                
+                Object.keys(eStats).sort().forEach(equip => {
+                    const data = eStats[equip];
+                    
+                    const totalEquipMinutes = Object.values(data.processes).reduce((sum, p) => sum + p.minutes, 0);
+                    const totalEquipHours = parseFloat((totalEquipMinutes / 60).toFixed(2));
+                    const totalEquipDisplay = `${Math.round(totalEquipMinutes)}분 (${totalEquipHours}h)`;
+
+                    const distinctSnCount = Object.keys(data.cskProcessLogs || {}).length || 1;
+                    
+                    const avgMinutesPerUnit = Math.round(totalEquipMinutes / distinctSnCount);
+                    const avgHoursPerUnit = parseFloat((avgMinutesPerUnit / 60).toFixed(2));
+                    const avgUnitDisplay = `${avgMinutesPerUnit}분 (${avgHoursPerUnit}h)`;
+
+                    let isFirstRowForEquip = true;
+                    Object.keys(data.processes).sort().forEach(proc => {
+                        const pInfo = data.processes[proc];
+                        const pHours = parseFloat((pInfo.minutes / 60).toFixed(2));
+                        
+                        eStatRows.push([
+                            equip, 
+                            data.division, 
+                            proc, 
+                            pInfo.count, 
+                            Math.round(pInfo.minutes), 
+                            pHours,
+                            isFirstRowForEquip ? totalEquipDisplay : '',
+                            isFirstRowForEquip ? avgUnitDisplay : ''
+                        ]);
+                        isFirstRowForEquip = false;
+                    });
+                });
+                const wsEquipStat = XLSX.utils.aoa_to_sheet(eStatRows);
+                wsEquipStat['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: eStatRows.length - 1, c: eStatHeader.length - 1 } }) };
+                autoFitSheetColumns(wsEquipStat);
+                XLSX.utils.book_append_sheet(wb, wsEquipStat, `장비별통계_${month}`);
             });
 
             const fileName = selectedLogDiv ? `제조2팀_실공수_기록대장_${selectedLogDiv}_${currentRoomId}.xlsx` : `제조2팀_실공수_기록대장_전체_${currentRoomId}.xlsx`;
@@ -1085,9 +1182,6 @@
             showToast("엑셀 파일 다운로드가 완료되었습니다.", "fa-file-excel");
         }
 
-        // =========================================================================
-        // [KGSystem 연동] 데이터 생성 및 Firestore 배치(Batch) 처리 핵심 로직
-        // =========================================================================
         function getCreatedAt(log) {
             if (log.createdAt) return log.createdAt;
             const parts = log.id.split('_');
@@ -1107,9 +1201,9 @@
                 roomId: currentRoomId,
                 workDate: log.date,
                 workerName: log.worker,
-                workerId: null, // 추정 방지를 위해 명시적 null
+                workerId: null, 
                 division: [...new Set(eqList.map(e => e.division || 'ACM'))].join(', '),
-                equipmentModels: eqList.map(e => e.equipment || '미지정'),
+                equipmentModels: eqList.map(e => normalizeEquipmentName(e.equipment || '미지정')),
                 cskSerialNumbers: eqList.map(e => e.cskSn || '-'),
                 deliveryDates: eqList.map(e => e.deliveryDate || '-'),
                 processName: log.process,
@@ -1118,7 +1212,7 @@
                 elapsedMinutes: log.elapsedMinutes,
                 elapsedHours: log.elapsedHours,
                 status: log.isDeleted ? 'DELETED' : 'COMPLETED',
-                isDeleted: !!log.isDeleted, // [Fix] 명시적으로 isDeleted 추가
+                isDeleted: !!log.isDeleted,
                 createdAt: getCreatedAt(log),
                 updatedAt: log.updatedAt || Date.now(),
                 deletedAt: log.deletedAt || null
@@ -1126,21 +1220,18 @@
         }
 
         async function processKGSystemExport() {
-            const yearMonth = document.getElementById('kgs-month-input').value; // 'YYYY-MM'
+            const yearMonth = document.getElementById('kgs-month-input').value; 
             if (!yearMonth) { showMessage('오류', '대상 월을 선택하세요.'); return; }
 
-            // 1. 해당 월 데이터 필터링 (Soft Delete된 것도 모두 포함하여 내보냄)
             const logsForMonth = completedLogs.filter(l => l.date && l.date.startsWith(yearMonth));
             if (logsForMonth.length === 0) { showMessage('데이터 없음', '해당 월의 작업 기록이 존재하지 않습니다.'); return; }
 
-            // 2. 자체 검증을 위한 원본(Active) 데이터 통계 산출
             const activeLogs = logsForMonth.filter(l => !l.isDeleted);
             const sourceCount = activeLogs.length;
             const sourceTotalMins = activeLogs.reduce((sum, l) => sum + l.elapsedMinutes, 0);
             const sourceTotalHours = parseFloat(activeLogs.reduce((sum, l) => sum + l.elapsedHours, 0).toFixed(4));
             const sourceWorkers = new Set(activeLogs.map(l => l.worker)).size;
 
-            // 3. KGSystem 규격 맵핑
             const mappedRecords = logsForMonth.map(createStandardKGRecord);
             const activeMapped = mappedRecords.filter(r => r.status === 'COMPLETED');
 
@@ -1156,7 +1247,6 @@
             });
             const uniqueSns = new Set(allSns).size;
 
-            // 4. 교차 검증: 자체 검증 (원본 ↔ 변환결과)
             if (sourceCount !== kgsCount || sourceTotalMins !== kgsTotalMins || sourceWorkers !== kgsWorkers) {
                 showMessage('데이터 검증 실패', `원본 작업로그 통계와 변환 데이터가 일치하지 않습니다.\n\n원본 건수: ${sourceCount} / KG 건수: ${kgsCount}\n원본 시간: ${sourceTotalMins} / KG 시간: ${kgsTotalMins}`);
                 return;
@@ -1176,7 +1266,6 @@
                 uniqueSerialNumberCount: uniqueSns
             };
 
-            // 5. Firestore에 월별 Snapshot (Batched Write) 업데이트
             if (isCloudAvailable && db) {
                 try {
                     showToast("Firestore 연동 데이터 스냅샷 생성 중...", "fa-spinner");
@@ -1184,14 +1273,12 @@
                     let operationCounter = 0;
                     let batchIndex = 0;
 
-                    // Summary Document
                     const exportDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'kgsystemExports', yearMonth);
                     batchArray[batchIndex].set(exportDocRef, summary, { merge: true });
                     operationCounter++;
 
-                    // Subcollection 'records' (1MB 제한 방지용 개별 저장)
                     for (const record of mappedRecords) {
-                        if (operationCounter === 499) { // Firestore Batch Limit is 500
+                        if (operationCounter === 499) { 
                             batchArray.push(writeBatch(db));
                             batchIndex++;
                             operationCounter = 0;
@@ -1212,7 +1299,6 @@
                 }
             }
 
-            // 6. 브라우저 로컬 JSON 파일 다운로드
             const exportData = {
                 summary: summary,
                 records: mappedRecords
@@ -1310,7 +1396,6 @@
             document.getElementById('btn-pause-all')?.addEventListener('click', triggerPauseAll);
             document.getElementById('btn-resume-all')?.addEventListener('click', triggerResumeAll);
 
-            // [KGSystem 연동] 이벤트 바인딩
             document.getElementById('btn-open-kgsystem-modal')?.addEventListener('click', window.openKGSystemModal);
             document.getElementById('btn-generate-kgsystem')?.addEventListener('click', processKGSystemExport);
 
