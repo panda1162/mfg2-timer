@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 v5 (상세내역 간소화)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5 (전버전 롤백)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN (엑셀 스타일링 지원) -->
@@ -233,7 +233,7 @@
                         </select>
                     </div>
                     <button id="btn-export-logs" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-file-excel"></i> 엑셀 통계 다운로드
+                        <i class="fa-solid fa-file-excel"></i> 월별 통계 엑셀 다운로드
                     </button>
                     <!-- [KGSystem 연동] 스냅샷 생성 버튼 -->
                     <button id="btn-open-kgsystem-modal" class="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
@@ -242,18 +242,18 @@
                     <button id="btn-clear-logs" class="px-3 py-2 bg-white hover:bg-rose-50 border border-slate-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-semibold transition">로그 초기화</button>
                 </div>
             </div>
-            <div class="overflow-x-auto flex-1 custom-scrollbar">
+            <div class="max-h-[500px] overflow-y-auto overflow-x-auto flex-1 custom-scrollbar">
                 <table class="w-full text-left border-collapse">
-                    <thead>
+                    <thead class="sticky top-0 z-10">
                         <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
-                            <th class="py-3 px-4 w-12 text-center">No.</th>
-                            <th class="py-3 px-4">작업자</th>
-                            <th class="py-3 px-4">작업 장비 목록 (여러 대 묶음 표기)</th>
-                            <th class="py-3 px-4 text-center">공정 유형</th>
-                            <th class="py-3 px-4 text-center">시작 시각</th>
-                            <th class="py-3 px-4 text-center">종료 시각</th>
-                            <th class="py-3 px-4 text-right">소요 시간</th>
-                            <th class="py-3 px-4 text-center">관리 (수정/삭제)</th>
+                            <th class="py-3 px-4 w-12 text-center bg-slate-100">No.</th>
+                            <th class="py-3 px-4 bg-slate-100">작업자</th>
+                            <th class="py-3 px-4 bg-slate-100">작업 장비 목록 (여러 대 묶음 표기)</th>
+                            <th class="py-3 px-4 text-center bg-slate-100">공정 유형</th>
+                            <th class="py-3 px-4 text-center bg-slate-100">시작 시각</th>
+                            <th class="py-3 px-4 text-center bg-slate-100">종료 시각</th>
+                            <th class="py-3 px-4 text-right bg-slate-100">소요 시간</th>
+                            <th class="py-3 px-4 text-center bg-slate-100">관리 (수정/삭제)</th>
                         </tr>
                     </thead>
                     <tbody id="log-table-body" class="divide-y divide-slate-100 text-xs font-mono-num">
@@ -371,7 +371,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5 (Styling & M/D Update)</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5 (Rolled-Back Stable)</p>
         </div>
     </footer>
 
@@ -969,7 +969,6 @@
                     </div>
                 `).join('<div class="border-t border-slate-100 my-1.5"></div>');
 
-                // 8시간 = 1 M/D 계산 표기
                 const mdValue = (item.elapsedMinutes / 60 / 8).toFixed(3);
 
                 tr.innerHTML = `
@@ -1025,30 +1024,23 @@
             worksheet['!cols'] = Object.keys(colWidths).map(col => ({ wch: Math.min(colWidths[col], 50) }));
         }
 
-        // 엑셀 스타일 적용 헬퍼 함수 (xlsx-js-style API 사용)
         function applyExcelStyle(ws, rowCount, colCount) {
             for (let R = 0; R < rowCount; ++R) {
                 for (let C = 0; C < colCount; ++C) {
                     const cellAddress = { c: C, r: R };
                     const cellRef = XLSX.utils.encode_cell(cellAddress);
-                    if (!ws[cellRef]) continue;
+                    if (!ws[cellRef]) ws[cellRef] = { v: '', t: 's' };
 
                     const isHeader = (R === 0);
                     const isEven = (R % 2 === 0);
                     
                     let alignment = { vertical: "center", wrapText: true };
                     if (isHeader) alignment.horizontal = "center";
-                    else if (typeof ws[cellRef].v === 'number' || (typeof ws[cellRef].v === 'string' && (ws[cellRef].v.includes('분 단축') || ws[cellRef].v.includes('분 지연')))) alignment.horizontal = "right";
+                    else if (typeof ws[cellRef].v === 'number') alignment.horizontal = "right";
                     else alignment.horizontal = "center";
 
-                    let fontColor = isHeader ? "FFFFFF" : "333333";
-                    if (!isHeader && typeof ws[cellRef].v === 'string') {
-                        if (ws[cellRef].v.includes('▼')) fontColor = "2563EB"; // Blue
-                        if (ws[cellRef].v.includes('▲')) fontColor = "DC2626"; // Red
-                    }
-
                     ws[cellRef].s = {
-                        font: { bold: isHeader, color: { rgb: fontColor }, name: "맑은 고딕", sz: 10 },
+                        font: { bold: isHeader, color: { rgb: isHeader ? "FFFFFF" : "333333" }, name: "맑은 고딕", sz: 10 },
                         fill: { fgColor: { rgb: isHeader ? "1E293B" : (isEven ? "F8FAFC" : "FFFFFF") } },
                         alignment: alignment,
                         border: {
@@ -1074,60 +1066,19 @@
 
             const wb = XLSX.utils.book_new();
 
-            // 1. 상세 내역 시트의 공정별 평균 시간 산출 (대당 평균 기준)
-            const avgCalcMap = {};
-            targetLogs.forEach(log => {
-                let eqList = log.equipments || [];
-                if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment }];
-                const unitCount = Math.max(1, eqList.length);
-                const mainModel = normalizeEquipmentName(eqList[0]?.equipment || '미지정');
-                const process = log.process || '미지정';
-                const key = `${mainModel}_${process}`;
-                
-                if (!avgCalcMap[key]) avgCalcMap[key] = { totalMins: 0, count: 0 };
-                avgCalcMap[key].totalMins += (log.elapsedMinutes / unitCount);
-                avgCalcMap[key].count += 1;
-            });
-
-            // 2. 상세 내역 시트 생성
-            const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간 (분)', '소요 공수 (M/D)', '해당 공정 평균 시간(대당)', '평균 대비 차이'];
+            // 1. 상세 내역 시트
+            const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간 (분)', '소요 공수 (M/D)'];
             let rows = [header];
             targetLogs.forEach((item, index) => {
                 let eqList = item.equipments || [];
                 if (eqList.length === 0 && item.equipment) eqList = [{ equipment: item.equipment, cskSn: item.cskSn }];
                 const cskSns = eqList.map(e => e.cskSn || '-').join(', ');
-                
                 const unitCount = Math.max(1, eqList.length);
                 const mainModel = normalizeEquipmentName(eqList[0]?.equipment || '미지정');
-                const process = item.process || '미지정';
-                const key = `${mainModel}_${process}`;
-                
-                // M/D 계산
                 const itemMD = parseFloat((item.elapsedMinutes / 60 / 8).toFixed(4));
-                
-                // 단축/지연 계산
-                const myMinsPerUnit = Math.round(item.elapsedMinutes / unitCount);
-                const avgMinsPerUnit = avgCalcMap[key] && avgCalcMap[key].count > 0 ? Math.round(avgCalcMap[key].totalMins / avgCalcMap[key].count) : myMinsPerUnit;
-                
-                const diff = myMinsPerUnit - avgMinsPerUnit;
-                let diffStr = "평균과 동일 (-)";
-                if (diff > 0) diffStr = `▲ ${diff}분 지연`;
-                else if (diff < 0) diffStr = `▼ ${Math.abs(diff)}분 단축`;
 
                 rows.push([
-                    index + 1, 
-                    item.date, 
-                    item.worker, 
-                    mainModel,
-                    `${unitCount}대`,
-                    cskSns, 
-                    item.process, 
-                    item.startTime, 
-                    item.endTime, 
-                    item.elapsedMinutes, 
-                    itemMD,
-                    `${avgMinsPerUnit}분`,
-                    diffStr
+                    index + 1, item.date, item.worker, mainModel, `${unitCount}대`, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, itemMD
                 ]);
             });
             const wsDetail = XLSX.utils.aoa_to_sheet(rows);
@@ -1162,8 +1113,6 @@
 
                     eqList.forEach(eq => {
                         const eqName = normalizeEquipmentName(eq.equipment || '미지정');
-                        
-                        // 작업자 통계 내 장비 세부기록
                         if (!wStat.equipsDetail[eqName]) wStat.equipsDetail[eqName] = { count: 0, mins: 0 };
                         wStat.equipsDetail[eqName].count += 1;
                         wStat.equipsDetail[eqName].mins += minsPerEq;
@@ -1192,21 +1141,27 @@
                 const wStats = monthlyStats[month].workers;
                 const eStats = monthlyStats[month].equipments;
                 
-                // 3. 작업자별 통계 시트 (장비 모델별 공수 포함)
-                const wStatHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 세부 작업 내역', '총 투입 시간 (분)', '총 투입 공수 (M/D)', '건당 평균 소요 시간 (분)'];
+                // 2. 작업자별 통계 시트
+                const wStatHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 세부 작업 내역 (대수/분/MD)', '총 투입 시간 (분)', '총 투입 공수 (M/D)'];
                 let wStatRows = [wStatHeader];
 
                 Object.keys(wStats).sort().forEach(worker => {
                     const data = wStats[worker];
                     const totalMD = parseFloat((data.totalMinutes / 60 / 8).toFixed(4));
-                    const avgMinutes = data.totalJobs > 0 ? Math.round(data.totalMinutes / data.totalJobs) : 0;
                     
-                    const equipDetailStr = Object.entries(data.equipsDetail).map(([name, info]) => {
+                    const equipDetailStrs = Object.entries(data.equipsDetail).map(([name, info]) => {
                         const md = parseFloat((info.mins / 60 / 8).toFixed(4));
                         return `[${name}] ${info.count}대 / ${Math.round(info.mins)}분 / ${md} M/D`;
-                    }).join('\n'); // 엑셀 줄바꿈 적용
-                    
-                    wStatRows.push([worker, data.totalJobs, data.totalEquips, equipDetailStr, Math.round(data.totalMinutes), totalMD, avgMinutes]);
+                    }).join('\n');
+
+                    wStatRows.push([
+                        worker, 
+                        data.totalJobs, 
+                        data.totalEquips, 
+                        equipDetailStrs, 
+                        Math.round(data.totalMinutes), 
+                        totalMD
+                    ]);
                 });
                 const wsWorkerStat = XLSX.utils.aoa_to_sheet(wStatRows);
                 wsWorkerStat['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: wStatRows.length - 1, c: wStatHeader.length - 1 } }) };
@@ -1214,7 +1169,7 @@
                 applyExcelStyle(wsWorkerStat, wStatRows.length, wStatHeader.length);
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
-                // 4. 장비별 통계 시트
+                // 3. 장비별 통계 시트
                 const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '장비별 총 공수 (분 / M/D)', '한대분 전체 완료 평균 공수 (참고)'];
                 let eStatRows = [eStatHeader];
                 
@@ -1237,12 +1192,7 @@
                         const pMD = parseFloat((pInfo.minutes / 60 / 8).toFixed(4));
                         
                         eStatRows.push([
-                            equip, 
-                            data.division, 
-                            proc, 
-                            pInfo.count, 
-                            Math.round(pInfo.minutes), 
-                            pMD,
+                            equip, data.division, proc, pInfo.count, Math.round(pInfo.minutes), pMD,
                             isFirstRowForEquip ? totalEquipDisplay : '',
                             isFirstRowForEquip ? avgUnitDisplay : ''
                         ]);
