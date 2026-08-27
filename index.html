@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 v3.6 (상세내역 간소화)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5 (상세내역 간소화)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS (xlsx) CDN -->
@@ -39,7 +39,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v3.6 AutoFilter
+                                V5 AutoFilter
                             </span>
                         </h1>
                         <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 다중 기기 공수 트래킹 & 엑셀 오토필터 지원</p>
@@ -1448,7 +1448,7 @@
                     const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                    if (!rawRows || rawRows.length < 2) { showMessage('구조 오류', '엑셀을 읽을 수 없습니다.'); return; }
+                    if (!rawRows || rawRows.length < 2) { showMessage('구조 오류', '엑셀을 읽을 수 정수 없습니다.'); return; }
 
                     let divIdx = -1, eqIdx = -1, cskIdx = -1, delivIdx = -1, hRowIdx = -1;
                     for (let r = 0; r < Math.min(rawRows.length, 10); r++) {
