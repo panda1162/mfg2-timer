@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5 (전버전 롤백)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.6 (Redteam Diagnostic)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN (엑셀 스타일링 지원) -->
@@ -26,6 +26,7 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col custom-scrollbar">
+
     <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl sticky top-0 z-40 border-b border-indigo-900/50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row justify-between items-center gap-4">
             
@@ -38,10 +39,10 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5 Stable
+                                v5.6 Redteam
                             </span>
                         </h1>
-                        <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 다중 기기 공수 트래킹 & 자동 스타일 엑셀 추출</p>
+                        <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 진단 퍼블릭 Fingerprint & Read-Only 가동</p>
                     </div>
                 </div>
 
@@ -72,14 +73,43 @@
                 </button>
             </div>
 
-            <div class="hidden md:flex items-center gap-2">
-                <span id="cloud-status-badge" class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-3 py-1 rounded-full flex items-center gap-1.5 border border-emerald-500/30">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>실시간 연동 가동중 (제조2팀)</span>
-                </span>
+            <div class="flex items-center gap-2">
+                <button id="btn-toggle-readonly" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-eye text-emerald-400"></i> <span id="readonly-mode-label">Read-Only OFF</span>
+                </button>
+                <button id="btn-toggle-fingerprint" class="px-3 py-1.5 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 rounded-xl text-xs font-bold border border-indigo-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-fingerprint text-indigo-400"></i> 진단 Fingerprint
+                </button>
             </div>
         </div>
     </header>
+
+    <div id="diagnostic-fingerprint-banner" class="bg-slate-950 text-slate-300 px-4 py-3 border-b border-slate-800 text-[11px] font-mono-num space-y-2 hidden">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="text-indigo-400 font-bold flex items-center gap-1"><i class="fa-solid fa-shield-cat"></i> REDTEAM DIAGNOSTIC FINGERPRINT:</span>
+                <span>SOURCE: <strong id="diag-source" class="text-emerald-400">LOCAL</strong></span>
+                <span>AUTH: <strong id="diag-auth" class="text-amber-400">PENDING</strong></span>
+                <span>LISTENER: <strong id="diag-listener" class="text-amber-400">UNSUBSCRIBED</strong></span>
+                <span>SNAPSHOT: <strong id="diag-snapshot" class="text-amber-400">WAITING</strong></span>
+                <span>DOC EXISTS: <strong id="diag-doc-exists" class="text-slate-400">NO</strong></span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-slate-400">
+                <span>PLAN: <strong id="diag-plan" class="text-slate-200">0</strong></span>
+                <span>RUN: <strong id="diag-run" class="text-slate-200">0</strong></span>
+                <span>COMP: <strong id="diag-comp" class="text-slate-200">0</strong></span>
+                <span>LAST SNAP: <strong id="diag-last-snap" class="text-slate-400">-</strong></span>
+                <span>LAST ERR: <strong id="diag-last-err" class="text-emerald-400">NONE</strong></span>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto pt-1 border-t border-slate-900 text-[10px] text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+            <span>FB AppID: <span id="diag-fb-appid" class="text-indigo-300">-</span></span>
+            <span>KG Namespace: <span id="diag-kg-appid" class="text-indigo-300">-</span></span>
+            <span>ProjectID: <span id="diag-project-id" class="text-indigo-300">-</span></span>
+            <span>RoomID: <span id="diag-room-id" class="text-indigo-300">-</span></span>
+            <span class="truncate">Path: <span id="diag-firestore-path" class="text-indigo-300">-</span></span>
+        </div>
+    </div>
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
@@ -218,7 +248,6 @@
             </div>
         </section>
 
-        <!-- Completed Logs Section -->
         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div class="p-6 border-b border-slate-200 bg-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
@@ -264,7 +293,6 @@
         </section>
     </main>
 
-    <!-- [UI 영역] 모달 모음 -->
     <div id="custom-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
             <h3 id="modal-title" class="text-md font-bold text-slate-900 mb-2">알림</h3>
@@ -371,7 +399,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5 (Rolled-Back Stable)</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.6 Redteam Diagnostic</p>
         </div>
     </footer>
 
@@ -403,6 +431,18 @@
         let currentRoomId = '제조2팀';
         let unsubscribeRoom = null;
         let isCloudAvailable = false;
+        let isReadOnlyDiagnosticMode = false; // READ-ONLY DIAGNOSTIC MODE FLAG
+
+        // REDTEAM DIAGNOSTIC STATE TRACKERS
+        let diagState = {
+            source: 'LOCAL',
+            authStatus: 'PENDING',
+            listenerStatus: 'UNSUBSCRIBED',
+            snapshotStatus: 'WAITING',
+            docExists: 'NO',
+            lastSnapshotTime: '-',
+            lastError: 'NONE'
+        };
 
         const defaultWorkers = ['김정식', '장동훈', '강권모', '장혜정', '디아나', '아나스타샤', '홍새힘', '김하은', '김지우', '안드레이'];
         const demoPlanData = [ 
@@ -428,34 +468,93 @@
             return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
         };
 
-        window.closeModal = () => document.getElementById('custom-modal').classList.add('hidden');
+        function updateFingerprintUI() {
+            const elSource = document.getElementById('diag-source');
+            const elAuth = document.getElementById('diag-auth');
+            const elListener = document.getElementById('diag-listener');
+            const elSnapshot = document.getElementById('diag-snapshot');
+            const elDocExists = document.getElementById('diag-doc-exists');
+            const elPlan = document.getElementById('diag-plan');
+            const elRun = document.getElementById('diag-run');
+            const elComp = document.getElementById('diag-comp');
+            const elLastSnap = document.getElementById('diag-last-snap');
+            const elLastErr = document.getElementById('diag-last-err');
+
+            const elFbAppId = document.getElementById('diag-fb-appid');
+            const elKgAppId = document.getElementById('diag-kg-appid');
+            const elProjectId = document.getElementById('diag-project-id');
+            const elRoomId = document.getElementById('diag-room-id');
+            const elPath = document.getElementById('diag-firestore-path');
+
+            if (elSource) {
+                elSource.innerText = diagState.source;
+                elSource.className = diagState.source === 'CLOUD' ? "text-indigo-400 font-bold" : "text-emerald-400 font-bold";
+            }
+            if (elAuth) {
+                elAuth.innerText = diagState.authStatus;
+                elAuth.className = diagState.authStatus === 'OK' ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
+            }
+            if (elListener) {
+                elListener.innerText = diagState.listenerStatus;
+                elListener.className = diagState.listenerStatus === 'LISTENER SUBSCRIBED' ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
+            }
+            if (elSnapshot) {
+                elSnapshot.innerText = diagState.snapshotStatus;
+                if (diagState.snapshotStatus === 'SNAPSHOT OK') elSnapshot.className = "text-emerald-400 font-bold";
+                else if (diagState.snapshotStatus.includes('ERROR')) elSnapshot.className = "text-rose-400 font-bold animate-pulse";
+                else elSnapshot.className = "text-amber-400 font-bold";
+            }
+            if (elDocExists) {
+                elDocExists.innerText = diagState.docExists;
+                elDocExists.className = diagState.docExists === 'YES' ? "text-emerald-400 font-bold" : "text-slate-400 font-bold";
+            }
+            if (elPlan) elPlan.innerText = planEquipments.length;
+            if (elRun) elRun.innerText = runningTasks.length;
+            if (elComp) elComp.innerText = completedLogs.filter(l => !l.isDeleted).length;
+            if (elLastSnap) elLastSnap.innerText = diagState.lastSnapshotTime;
+            if (elLastErr) elLastErr.innerText = diagState.lastError;
+
+            const rawApiKey = firebaseConfig?.apiKey || 'DEMO-KEY';
+            const maskedApiKey = rawApiKey.length > 8 ? rawApiKey.substring(0, 6) + '...' + rawApiKey.slice(-4) : rawApiKey;
+            if (elFbAppId) elFbAppId.innerText = maskedApiKey;
+            if (elKgAppId) elKgAppId.innerText = appId;
+            if (elProjectId) elProjectId.innerText = firebaseConfig?.projectId || 'demo-project';
+            if (elRoomId) elRoomId.innerText = currentRoomId;
+            if (elPath) elPath.innerText = `artifacts/${appId}/public/data/rooms/${currentRoomId.trim().toUpperCase()}`;
+        }
+
+        window.closeModal = () => document.getElementById('custom-modal')?.classList.add('hidden');
         window.closeConfirmModal = (result) => { 
-            document.getElementById('confirm-modal').classList.add('hidden');
+            document.getElementById('confirm-modal')?.classList.add('hidden');
             if (result && confirmCallback) confirmCallback();
             confirmCallback = null;
         };
-        window.openWorkerModal = () => { renderWorkerManageList(); document.getElementById('worker-modal').classList.remove('hidden'); document.getElementById('new-worker-input').focus(); };
-        window.closeWorkerModal = () => document.getElementById('worker-modal').classList.add('hidden');
-        window.openFirebaseModal = () => document.getElementById('firebase-modal').classList.remove('hidden');
-        window.closeFirebaseModal = () => document.getElementById('firebase-modal').classList.add('hidden');
+        window.openWorkerModal = () => { renderWorkerManageList(); document.getElementById('worker-modal')?.classList.remove('hidden'); document.getElementById('new-worker-input')?.focus(); };
+        window.closeWorkerModal = () => document.getElementById('worker-modal')?.classList.add('hidden');
+        window.openFirebaseModal = () => document.getElementById('firebase-modal')?.classList.remove('hidden');
+        window.closeFirebaseModal = () => document.getElementById('firebase-modal')?.classList.add('hidden');
         
         window.openKGSystemModal = () => {
             const now = new Date();
             const yyyy = now.getFullYear();
             const mm = String(now.getMonth() + 1).padStart(2, '0');
-            document.getElementById('kgs-month-input').value = `${yyyy}-${mm}`;
-            document.getElementById('kgsystem-modal').classList.remove('hidden');
+            const input = document.getElementById('kgs-month-input');
+            if (input) input.value = `${yyyy}-${mm}`;
+            document.getElementById('kgsystem-modal')?.classList.remove('hidden');
         };
-        window.closeKGSystemModal = () => document.getElementById('kgsystem-modal').classList.add('hidden');
+        window.closeKGSystemModal = () => document.getElementById('kgsystem-modal')?.classList.add('hidden');
         
         window.triggerEditLogTime = function(logId, currentMinutes) {
+            if (isReadOnlyDiagnosticMode) { showMessage('진단 모드 차단', '현재 Read-Only Diagnostic Mode가 활성화되어 있어 데이터 수정이 차단됩니다.'); return; }
             editingLogId = logId; editingActiveTaskId = null;
-            document.getElementById('edit-time-input').value = currentMinutes;
-            document.getElementById('edit-time-modal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('edit-time-input').focus(), 100);
+            const input = document.getElementById('edit-time-input');
+            if (input) input.value = currentMinutes;
+            document.getElementById('edit-time-modal')?.classList.remove('hidden');
+            setTimeout(() => document.getElementById('edit-time-input')?.focus(), 100);
         };
         
         window.triggerEditActiveTime = function(taskId) {
+            if (isReadOnlyDiagnosticMode) { showMessage('진단 모드 차단', '현재 Read-Only Diagnostic Mode가 활성화되어 있어 데이터 수정이 차단됩니다.'); return; }
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
             const now = new Date().getTime();
@@ -464,18 +563,32 @@
             const currentElapsedMins = Math.floor(currentElapsedMs / 60000);
             
             editingActiveTaskId = taskId; editingLogId = null;
-            document.getElementById('edit-time-input').value = currentElapsedMins;
-            document.getElementById('edit-time-modal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('edit-time-input').focus(), 100);
+            const input = document.getElementById('edit-time-input');
+            if (input) input.value = currentElapsedMins;
+            document.getElementById('edit-time-modal')?.classList.remove('hidden');
+            setTimeout(() => document.getElementById('edit-time-input')?.focus(), 100);
         };
         
         window.closeEditTimeModal = function() {
-            document.getElementById('edit-time-modal').classList.add('hidden');
+            document.getElementById('edit-time-modal')?.classList.add('hidden');
             editingLogId = null; editingActiveTaskId = null;
         };
         
-        function showMessage(title, body) { document.getElementById('modal-title').innerText = title; document.getElementById('modal-body').innerText = body; document.getElementById('custom-modal').classList.remove('hidden'); }
-        function showConfirm(title, body, callback) { document.getElementById('confirm-title').innerText = title; document.getElementById('confirm-body').innerText = body; confirmCallback = callback; document.getElementById('confirm-modal').classList.remove('hidden'); }
+        function showMessage(title, body) { 
+            const tEl = document.getElementById('modal-title');
+            const bEl = document.getElementById('modal-body');
+            if (tEl) tEl.innerText = title; 
+            if (bEl) bEl.innerText = body; 
+            document.getElementById('custom-modal')?.classList.remove('hidden'); 
+        }
+        function showConfirm(title, body, callback) { 
+            const tEl = document.getElementById('confirm-title');
+            const bEl = document.getElementById('confirm-body');
+            if (tEl) tEl.innerText = title; 
+            if (bEl) bEl.innerText = body; 
+            confirmCallback = callback; 
+            document.getElementById('confirm-modal')?.classList.remove('hidden'); 
+        }
         function showToast(msg, icon = 'fa-circle-info') { 
             const container = document.getElementById('toastContainer');
             if (!container) return;
@@ -498,6 +611,12 @@
                 localStorage.setItem('activeWorkersList', JSON.stringify(activeWorkersList));
                 localStorage.setItem(`room_${currentRoomId}_data`, JSON.stringify({ runningTasks, completedLogs, planEquipments, activeWorkersList }));
             } catch (e) {}
+
+            if (isReadOnlyDiagnosticMode) {
+                console.warn("[Redteam Diagnostic] Read-Only Mode Active: Blocked Cloud Write.");
+                return;
+            }
+
             if (isMetaUpdate && currentUser && db && isCloudAvailable) {
                 try { await setDoc(getRoomDocRef(currentRoomId), { planEquipments, activeWorkersList, updatedAt: Date.now() }, { merge: true }); } catch(e) {}
             }
@@ -513,13 +632,19 @@
                     const parsed = JSON.parse(storedData);
                     if (parsed.runningTasks) runningTasks = parsed.runningTasks;
                     if (parsed.completedLogs) completedLogs = parsed.completedLogs;
-                    if (parsed.planEquipments) { planEquipments = parsed.planEquipments; document.getElementById('cnt-loaded-items').innerText = planEquipments.length; }
+                    if (parsed.planEquipments) { planEquipments = parsed.planEquipments; const el = document.getElementById('cnt-loaded-items'); if (el) el.innerText = planEquipments.length; }
                     if (parsed.activeWorkersList) activeWorkersList = parsed.activeWorkersList;
                 }
             } catch (e) {}
+            updateFingerprintUI();
         }
 
         async function updateTaskInCloudSecurely(actionType, payload) {
+            if (isReadOnlyDiagnosticMode) {
+                showMessage('진단 모드 차단', '현재 Read-Only Diagnostic Mode 활성화 상태로 인해 클라우드 쓰기 작업이 차단되었습니다.');
+                return;
+            }
+
             if (!currentUser || !db || !isCloudAvailable) {
                 if (actionType === 'PUNCH_IN') runningTasks.unshift(payload);
                 else if (actionType === 'PAUSE_TOGGLE') {
@@ -556,6 +681,7 @@
                     if(t) { t.startTime = payload.newStartTime; }
                 }
                 renderActiveTasks(); renderCompletedLogs(); saveRoomState();
+                updateFingerprintUI();
                 return;
             }
 
@@ -610,7 +736,10 @@
                     }
                 });
             } catch (e) {
-                console.error(e); showToast("네트워크 지연으로 작업 처리에 실패했습니다. 다시 시도해주세요.", "fa-triangle-exclamation");
+                console.error(e);
+                diagState.lastError = e.code || e.message;
+                updateFingerprintUI();
+                showToast("네트워크 지연으로 작업 처리에 실패했습니다. 다시 시도해주세요.", "fa-triangle-exclamation");
             }
         }
 
@@ -637,7 +766,8 @@
             await updateTaskInCloudSecurely('PUNCH_IN', newTask);
 
             selectedWorker = ''; selectedProcess = ''; selectedEquipments = [];
-            document.getElementById('equipment-search').value = '';
+            const searchEl = document.getElementById('equipment-search');
+            if (searchEl) searchEl.value = '';
             filterEquipments(); renderWorkers(); selectProcess(''); renderSelectedEquipmentsList(); updateStatusText();
             playSound(1000, 0.1); showToast("공정이 시작되었습니다.", "fa-play");
         }
@@ -728,6 +858,7 @@
 
         function updateStatusText() {
             const span = document.getElementById('status-panel');
+            if (!span) return;
             if (selectedWorker || selectedProcess) { 
                 span.textContent = `[대기] 작업자: ${selectedWorker || '미선택'} | 공정: ${selectedProcess || '미선택'}`; 
                 span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400"; 
@@ -762,6 +893,7 @@
 
         async function handleAddWorker() {
             const input = document.getElementById('new-worker-input');
+            if (!input) return;
             const name = input.value.trim();
             if (!name) { showMessage('입력 오류', '추가할 작업자 이름을 입력해 주세요.'); return; }
             if (activeWorkersList.includes(name)) { showMessage('중복 오류', `'${name}'님은 이미 등록되어 있습니다.`); return; }
@@ -783,7 +915,8 @@
             const container = document.getElementById('worker-manage-list');
             const countSpan = document.getElementById('cnt-workers-num');
             if (!container) return;
-            container.innerHTML = ''; countSpan.innerText = activeWorkersList.length;
+            container.innerHTML = ''; 
+            if (countSpan) countSpan.innerText = activeWorkersList.length;
             if (activeWorkersList.length === 0) { container.innerHTML = `<div class="col-span-full py-4 text-center text-slate-400 text-xs italic">등록된 작업자가 없습니다.</div>`; return; }
             activeWorkersList.forEach(w => {
                 const item = document.createElement('div');
@@ -814,8 +947,10 @@
         }
 
         function filterEquipments() {
-            const query = (document.getElementById('equipment-search')?.value || '').toLowerCase().trim();
-            const selectedDivision = document.getElementById('select-division-filter')?.value || '';
+            const searchEl = document.getElementById('equipment-search');
+            const query = (searchEl?.value || '').toLowerCase().trim();
+            const divEl = document.getElementById('select-division-filter');
+            const selectedDivision = divEl?.value || '';
             const select = document.getElementById('select-equipment');
             if(!select) return; select.innerHTML = '';
             if (planEquipments.length === 0) { select.innerHTML = `<option value="">생산계획을 먼저 로드하세요...</option>`; return; }
@@ -879,7 +1014,10 @@
             if (!container) return; container.innerHTML = '';
             if (runningTasks.length === 0) {
                 container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 text-xs italic">현재 활성화된 작업이 없습니다.</div>`;
-                document.getElementById('cnt-active-workers').innerText = 0; return;
+                const cEl = document.getElementById('cnt-active-workers');
+                if (cEl) cEl.innerText = 0;
+                updateFingerprintUI();
+                return;
             }
             runningTasks.forEach(task => {
                 const isPaused = task.paused;
@@ -930,12 +1068,15 @@
                     </div>`;
                 container.appendChild(card);
             });
-            document.getElementById('cnt-active-workers').innerText = runningTasks.length;
+            const cEl = document.getElementById('cnt-active-workers');
+            if (cEl) cEl.innerText = runningTasks.length;
+            updateFingerprintUI();
         }
 
         function renderCompletedLogs() {
             const tbody = document.getElementById('log-table-body');
-            const selectedLogDiv = document.getElementById('log-division-filter') ? document.getElementById('log-division-filter').value : '';
+            const logFilterEl = document.getElementById('log-division-filter');
+            const selectedLogDiv = logFilterEl ? logFilterEl.value : '';
             if(!tbody) return; tbody.innerHTML = '';
             
             const filteredLogs = completedLogs.filter(item => {
@@ -945,7 +1086,11 @@
                 return eqs.some(eq => (eq.division || 'ACM') === selectedLogDiv);
             });
 
-            if (filteredLogs.length === 0) { tbody.innerHTML = `<tr id="empty-log-tr"><td colspan="8" class="py-8 text-center text-slate-400 italic">완료된 공정 기록이 존재하지 않습니다.</td></tr>`; return; }
+            if (filteredLogs.length === 0) { 
+                tbody.innerHTML = `<tr id="empty-log-tr"><td colspan="8" class="py-8 text-center text-slate-400 italic">완료된 공정 기록이 존재하지 않습니다.</td></tr>`; 
+                updateFingerprintUI();
+                return; 
+            }
 
             filteredLogs.forEach((item, index) => {
                 const tr = document.createElement('tr');
@@ -990,6 +1135,7 @@
                     </td>`;
                 tbody.appendChild(tr);
             });
+            updateFingerprintUI();
         }
 
         function normalizeEquipmentName(name) {
@@ -1055,7 +1201,8 @@
         }
 
         function exportLogsToExcel() {
-            const selectedLogDiv = document.getElementById('log-division-filter').value;
+            const logDivEl = document.getElementById('log-division-filter');
+            const selectedLogDiv = logDivEl ? logDivEl.value : '';
             const targetLogs = completedLogs.filter(item => {
                 if (item.isDeleted) return false;
                 if (!selectedLogDiv) return true;
@@ -1066,7 +1213,6 @@
 
             const wb = XLSX.utils.book_new();
 
-            // 1. 상세 내역 시트
             const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간 (분)', '소요 공수 (M/D)'];
             let rows = [header];
             targetLogs.forEach((item, index) => {
@@ -1141,7 +1287,6 @@
                 const wStats = monthlyStats[month].workers;
                 const eStats = monthlyStats[month].equipments;
                 
-                // 2. 작업자별 통계 시트
                 const wStatHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 세부 작업 내역 (대수/분/MD)', '총 투입 시간 (분)', '총 투입 공수 (M/D)'];
                 let wStatRows = [wStatHeader];
 
@@ -1169,10 +1314,11 @@
                 applyExcelStyle(wsWorkerStat, wStatRows.length, wStatHeader.length);
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
-                // 3. 장비별 통계 시트
+                // [가독성 개선] 장비별 그룹 교차 배경색 적용을 위한 행 생성
                 const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '장비별 총 공수 (분 / M/D)', '한대분 전체 완료 평균 공수 (참고)'];
                 let eStatRows = [eStatHeader];
                 
+                let equipGroupIndex = 0;
                 Object.keys(eStats).sort().forEach(equip => {
                     const data = eStats[equip];
                     
@@ -1198,11 +1344,81 @@
                         ]);
                         isFirstRowForEquip = false;
                     });
+                    equipGroupIndex++;
                 });
+
                 const wsEquipStat = XLSX.utils.aoa_to_sheet(eStatRows);
                 wsEquipStat['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: eStatRows.length - 1, c: eStatHeader.length - 1 } }) };
+                
+                // 장비 모델명과 사업부 컬럼 세로 셀 병합(Merge) 설정
+                if (!wsEquipStat['!merges']) wsEquipStat['!merges'] = [];
+                let mergeStartRow = 1;
+                let currentEquipNameForMerge = '';
+                
+                for (let R = 1; R < eStatRows.length; ++R) {
+                    const currentEquip = eStatRows[R][0];
+                    if (currentEquip !== currentEquipNameForMerge) {
+                        if (R - mergeStartRow > 1) {
+                            // 모델명이 같은 행들이 연속되면 0번 컬럼(장비 모델명)과 1번 컬럼(사업부) 병합
+                            wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 0 }, e: { r: R - 1, c: 0 } });
+                            wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 1 }, e: { r: R - 1, c: 1 } });
+                        }
+                        currentEquipNameForMerge = currentEquip;
+                        mergeStartRow = R;
+                    }
+                }
+                // 마지막 그룹 처리
+                if (eStatRows.length - mergeStartRow > 1) {
+                    wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 0 }, e: { r: eStatRows.length - 1, c: 0 } });
+                    wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 1 }, e: { r: eStatRows.length - 1, c: 1 } });
+                }
+
+                // 장비 그룹 단위 배경색(Zebra Striping by Group) 적용 커스텀 로직
+                let currentGroupColorToggle = false;
+                let currentEquipTracker = '';
+                for (let R = 1; R < eStatRows.length; ++R) {
+                    const equipNameInRow = eStatRows[R][0];
+                    if (equipNameInRow !== currentEquipTracker) {
+                        currentEquipTracker = equipNameInRow;
+                        currentGroupColorToggle = !currentGroupColorToggle;
+                    }
+                    const groupColorHex = currentGroupColorToggle ? "F1F5F9" : "FFFFFF"; // 슬레이트 연한 회색과 흰색 교차
+
+                    for (let C = 0; C < eStatHeader.length; ++C) {
+                        const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
+                        if (!wsEquipStat[cellRef]) wsEquipStat[cellRef] = { v: '', t: 's' };
+                        
+                        let alignment = { vertical: "center", wrapText: true };
+                        if (typeof wsEquipStat[cellRef].v === 'number') alignment.horizontal = "right";
+                        else alignment.horizontal = "center";
+
+                        wsEquipStat[cellRef].s = {
+                            font: { name: "맑은 고딕", sz: 10, color: { rgb: "333333" } },
+                            fill: { fgColor: { rgb: groupColorHex } },
+                            alignment: alignment,
+                            border: {
+                                top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                                bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                                left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                                right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+                            }
+                        };
+                    }
+                }
+                // 헤더 스타일 별도 적용
+                for (let C = 0; C < eStatHeader.length; ++C) {
+                    const cellRef = XLSX.utils.encode_cell({ c: C, r: 0 });
+                    if (wsEquipStat[cellRef]) {
+                        wsEquipStat[cellRef].s = {
+                            font: { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 },
+                            fill: { fgColor: { rgb: "1E293B" } },
+                            alignment: { vertical: "center", horizontal: "center" },
+                            border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'thin', color: { rgb: 'CBD5E1' } }, left: { style: 'thin', color: { rgb: 'CBD5E1' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+                        };
+                    }
+                }
+
                 autoFitSheetColumns(wsEquipStat);
-                applyExcelStyle(wsEquipStat, eStatRows.length, eStatHeader.length);
                 XLSX.utils.book_append_sheet(wb, wsEquipStat, `장비별통계_${month}`);
             });
 
@@ -1249,7 +1465,8 @@
         }
 
         async function processKGSystemExport() {
-            const yearMonth = document.getElementById('kgs-month-input').value; 
+            const monthInput = document.getElementById('kgs-month-input');
+            const yearMonth = monthInput ? monthInput.value : ''; 
             if (!yearMonth) { showMessage('오류', '대상 월을 선택하세요.'); return; }
 
             const logsForMonth = completedLogs.filter(l => l.date && l.date.startsWith(yearMonth));
@@ -1294,7 +1511,7 @@
                 uniqueSerialNumberCount: uniqueSns
             };
 
-            if (isCloudAvailable && db) {
+            if (isCloudAvailable && db && !isReadOnlyDiagnosticMode) {
                 try {
                     showToast("Firestore 연동 데이터 스냅샷 생성 중...", "fa-spinner");
                     const batchArray = [writeBatch(db)];
@@ -1325,6 +1542,8 @@
                     showMessage('스냅샷 생성 실패', '클라우드에 데이터를 저장하지 못했습니다.');
                     return;
                 }
+            } else if (isReadOnlyDiagnosticMode) {
+                showToast("Read-Only 모드: 클라우드 스냅샷 저장이 진단 차단되었습니다.", "fa-eye");
             }
 
             const exportData = { summary: summary, records: mappedRecords };
@@ -1345,8 +1564,33 @@
         function setupEventListeners() {
             document.getElementById('btn-confirm-action')?.addEventListener('click', () => closeConfirmModal(true));
 
+            document.getElementById('btn-toggle-fingerprint')?.addEventListener('click', () => {
+                const banner = document.getElementById('diagnostic-fingerprint-banner');
+                if (banner) {
+                    banner.classList.toggle('hidden');
+                    updateFingerprintUI();
+                    showToast(banner.classList.contains('hidden') ? "진단 Fingerprint 숨김" : "진단 Fingerprint 표시됨", "fa-fingerprint");
+                }
+            });
+
+            document.getElementById('btn-toggle-readonly')?.addEventListener('click', () => {
+                isReadOnlyDiagnosticMode = !isReadOnlyDiagnosticMode;
+                const label = document.getElementById('readonly-mode-label');
+                const btn = document.getElementById('btn-toggle-readonly');
+                if (isReadOnlyDiagnosticMode) {
+                    if (label) label.innerText = "Read-Only ON (Secure)";
+                    if (btn) btn.className = "px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 rounded-xl text-xs font-bold border border-rose-700 transition flex items-center gap-1.5";
+                    showToast("READ-ONLY DIAGNOSTIC MODE 활성화: 모든 클라우드 WRITE가 안전하게 차단됩니다.", "fa-eye");
+                } else {
+                    if (label) label.innerText = "Read-Only OFF";
+                    if (btn) btn.className = "px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center gap-1.5";
+                    showToast("READ-ONLY DIAGNOSTIC MODE 비활성화됨", "fa-unlock");
+                }
+            });
+
             document.getElementById('btnJoinRoom')?.addEventListener('click', () => {
-                const roomVal = document.getElementById('roomInput').value.trim().toUpperCase();
+                const roomInput = document.getElementById('roomInput');
+                const roomVal = roomInput ? roomInput.value.trim().toUpperCase() : '제조2팀';
                 if (roomVal) {
                     currentRoomId = roomVal; window.location.hash = encodeURIComponent(currentRoomId);
                     if (isCloudAvailable) subscribeToRoom(currentRoomId);
@@ -1355,6 +1599,7 @@
                         updateDivisionFilters(); renderEquipmentDropdown(); renderWorkerManageList();
                     }
                     showToast(`라인/룸코드 ${currentRoomId} 접속 완료`, 'fa-right-to-bracket');
+                    updateFingerprintUI();
                 }
             });
 
@@ -1372,7 +1617,8 @@
             document.getElementById('btn-cancel-firebase-modal')?.addEventListener('click', window.closeFirebaseModal);
             
             document.getElementById('btn-save-firebase-config')?.addEventListener('click', async () => {
-                const raw = document.getElementById('firebase-config-input').value.trim();
+                const cfgInput = document.getElementById('firebase-config-input');
+                const raw = cfgInput ? cfgInput.value.trim() : '';
                 if (!raw) { showMessage('입력 오류', 'Firebase Config 정보를 입력해 주세요.'); return; }
                 try {
                     const parsed = JSON.parse(raw);
@@ -1385,7 +1631,10 @@
             });
 
             document.getElementById('btn-clear-firebase-config')?.addEventListener('click', () => {
-                localStorage.removeItem('custom_firebase_config'); document.getElementById('firebase-config-input').value = ''; showToast("커스텀 설정이 삭제되었습니다.", "fa-trash");
+                localStorage.removeItem('custom_firebase_config'); 
+                const cfgInput = document.getElementById('firebase-config-input');
+                if (cfgInput) cfgInput.value = ''; 
+                showToast("커스텀 설정이 삭제되었습니다.", "fa-trash");
             });
 
             const dropZone = document.getElementById('drop-zone');
@@ -1425,7 +1674,8 @@
 
             document.getElementById('btn-save-edited-time')?.addEventListener('click', async () => {
                 if (!editingLogId && !editingActiveTaskId) return;
-                const newVal = parseInt(document.getElementById('edit-time-input').value, 10);
+                const timeInput = document.getElementById('edit-time-input');
+                const newVal = parseInt(timeInput ? timeInput.value : '0', 10);
                 if (isNaN(newVal) || newVal < 0) {
                     showToast("유효한 분 단위 시간을 입력해주세요.", "fa-triangle-exclamation");
                     return;
@@ -1453,11 +1703,27 @@
             });
 
             document.getElementById('btn-load-demo')?.addEventListener('click', async () => {
-                planEquipments = JSON.parse(JSON.stringify(demoPlanData)); document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
-                const badge = document.getElementById('load-status-badge'); badge.innerText = "데모 세팅 완료"; badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800";
-                document.getElementById('equipment-search').value = ''; document.getElementById('select-division-filter').value = '';
-                selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); renderEquipmentDropdown(); await saveRoomState(true);
+                planEquipments = JSON.parse(JSON.stringify(demoPlanData)); 
+                const cntEl = document.getElementById('cnt-loaded-items');
+                if (cntEl) cntEl.innerText = planEquipments.length;
+                const badge = document.getElementById('load-status-badge'); 
+                if (badge) {
+                    badge.innerText = "데모 세팅 완료"; 
+                    badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800";
+                }
+                const searchEl = document.getElementById('equipment-search');
+                if (searchEl) searchEl.value = ''; 
+                const divFilterEl = document.getElementById('select-division-filter');
+                if (divFilterEl) divFilterEl.value = '';
+                selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); renderEquipmentDropdown(); 
+                
+                if (isReadOnlyDiagnosticMode) {
+                    showToast("Read-Only 모드: 데모 계획이 로컬 진단에만 반영되고 Firestore 쓰기는 차단되었습니다.", "fa-eye");
+                } else {
+                    await saveRoomState(true);
+                }
                 showMessage('데모 세팅 완료', '데모 데이터가 로드되었습니다.');
+                updateFingerprintUI();
             });
 
             document.getElementById('btn-export-logs')?.addEventListener('click', exportLogsToExcel);
@@ -1512,12 +1778,27 @@
                     }
 
                     if (parsedPlan.length > 0) {
-                        planEquipments = parsedPlan; document.getElementById('cnt-loaded-items').innerText = planEquipments.length;
+                        planEquipments = parsedPlan; 
+                        const cntEl = document.getElementById('cnt-loaded-items');
+                        if (cntEl) cntEl.innerText = planEquipments.length;
                         const badge = document.getElementById('load-status-badge');
-                        badge.innerText = `생산계획 연동 완료 (${planEquipments.length}건)`; badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
-                        document.getElementById('equipment-search').value = ''; document.getElementById('select-division-filter').value = '';
-                        selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); filterEquipments(); await saveRoomState(true);
+                        if (badge) {
+                            badge.innerText = `생산계획 연동 완료 (${planEquipments.length}건)`; 
+                            badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
+                        }
+                        const searchEl = document.getElementById('equipment-search');
+                        if (searchEl) searchEl.value = ''; 
+                        const divFilterEl = document.getElementById('select-division-filter');
+                        if (divFilterEl) divFilterEl.value = '';
+                        selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); filterEquipments(); 
+                        
+                        if (isReadOnlyDiagnosticMode) {
+                            showToast("Read-Only 모드: 엑셀 계획이 로컬 진단 메모리에만 로드되고 클라우드 쓰기는 차단되었습니다.", "fa-eye");
+                        } else {
+                            await saveRoomState(true);
+                        }
                         showMessage('엑셀 파싱 성공', `${planEquipments.length}개의 장비 목록을 인식하여 적용했습니다.`);
+                        updateFingerprintUI();
                     } else { showMessage('파싱 경고', '엑셀 파일에서 유효한 데이터 행을 찾을 수 없습니다.'); }
                 } catch (err) { console.error(err); showMessage('파일 오류', '엑셀 파일을 읽는 중 오류가 발생했습니다.'); }
             };
@@ -1534,22 +1815,61 @@
         function renderEquipmentDropdown() { filterEquipments(); }
 
         function subscribeToRoom(roomId) {
-            if (unsubscribeRoom) unsubscribeRoom();
-            if (!db || !currentUser) return;
+            if (unsubscribeRoom) {
+                unsubscribeRoom();
+                unsubscribeRoom = null;
+            }
+            diagState.listenerStatus = 'UNSUBSCRIBED';
+            updateFingerprintUI();
 
-            unsubscribeRoom = onSnapshot(getRoomDocRef(roomId), (snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.data();
-                    runningTasks = data.runningTasks || [];
-                    completedLogs = data.completedLogs || [];
-                    if (data.activeWorkersList) activeWorkersList = data.activeWorkersList;
-                    if (data.planEquipments) { planEquipments = data.planEquipments; document.getElementById('cnt-loaded-items').innerText = planEquipments.length; }
-                    
-                    renderWorkers(); renderActiveTasks(); renderCompletedLogs();
-                    updateDivisionFilters(); renderEquipmentDropdown(); renderWorkerManageList();
-                    document.getElementById('cloud-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span><span>실시간 연동 가동중 (${escapeHTML(currentRoomId)})</span>`;
+            if (!db || !currentUser) {
+                diagState.source = 'LOCAL';
+                updateFingerprintUI();
+                return;
+            }
+
+            diagState.source = 'CLOUD';
+            diagState.listenerStatus = 'LISTENER SUBSCRIBED';
+            updateFingerprintUI();
+
+            const docRef = getRoomDocRef(roomId);
+
+            unsubscribeRoom = onSnapshot(docRef, 
+                (snapshot) => {
+                    diagState.snapshotStatus = 'SNAPSHOT OK';
+                    diagState.lastSnapshotTime = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+                    diagState.lastError = 'NONE';
+
+                    if (snapshot.exists()) {
+                        diagState.docExists = 'YES';
+                        const data = snapshot.data();
+                        runningTasks = data.runningTasks || [];
+                        completedLogs = data.completedLogs || [];
+                        if (data.activeWorkersList) activeWorkersList = data.activeWorkersList;
+                        if (data.planEquipments) { 
+                            planEquipments = data.planEquipments; 
+                            const cntEl = document.getElementById('cnt-loaded-items');
+                            if (cntEl) cntEl.innerText = planEquipments.length; 
+                        }
+                        
+                        renderWorkers(); renderActiveTasks(); renderCompletedLogs();
+                        updateDivisionFilters(); renderEquipmentDropdown(); renderWorkerManageList();
+                    } else {
+                        diagState.docExists = 'NO';
+                    }
+                    updateFingerprintUI();
+                    const badgeEl = document.getElementById('cloud-status-badge');
+                    if (badgeEl) {
+                        badgeEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span><span>실시간 연동 가동중 (${escapeHTML(currentRoomId)})</span>`;
+                    }
+                },
+                (error) => {
+                    diagState.snapshotStatus = 'SNAPSHOT ERROR';
+                    diagState.lastError = error.code || error.message;
+                    updateFingerprintUI();
+                    console.error("[Redteam Diagnostic] Snapshot Error:", error);
                 }
-            });
+            );
         }
 
         async function initAuth() {
@@ -1569,16 +1889,25 @@
                 }
                 
                 isCloudAvailable = true;
+                diagState.authStatus = 'OK';
+                updateFingerprintUI();
             } catch (err) {
                 console.warn("오프라인 로컬 모드로 전환됩니다: ", err.message);
                 isCloudAvailable = false;
+                diagState.authStatus = 'FAILED (LOCAL)';
+                diagState.lastError = err.message;
                 loadLocalRoomState();
+                updateFingerprintUI();
                 return;
             }
             
             onAuthStateChanged(auth, (user) => {
                 currentUser = user; 
-                if (user) subscribeToRoom(currentRoomId);
+                if (user) {
+                    diagState.authStatus = 'OK';
+                    updateFingerprintUI();
+                    subscribeToRoom(currentRoomId);
+                }
             });
         }
 
@@ -1587,6 +1916,7 @@
             renderWorkers();
             setupEventListeners();
             startLocalTimerLoop();
+            updateFingerprintUI();
             await initAuth();
         });
     </script>
