@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.6 (Redteam 2차 보안 및 Fail-Closed)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.6 (Redteam 3차 보안 및 Fail-Closed 강화)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.6 Fail-Closed
+                                v5.6 Fail-Closed 3차
                             </span>
                         </h1>
                         <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 진단 퍼블릭 Fingerprint & Fail-Closed 방어</p>
@@ -406,7 +406,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.6 Redteam Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.6 Redteam Fail-Closed 3차</p>
         </div>
     </footer>
 
@@ -438,7 +438,10 @@
         let currentRoomId = '제조2팀';
         let unsubscribeRoom = null;
         let isCloudAvailable = false;
-        let isForcedReadOnlyMode = false; // ?mode=readonly flag
+        
+        // REDTEAM READ-ONLY STATE VARS (요청 2: 변수 분리)
+        let isUrlForcedReadOnlyMode = false; // ?mode=readonly (영구 해제 불가)
+        let isManualReadOnlyMode = false;  // 수동 토글 (ON/OFF 가능)
 
         // REDTEAM DIAGNOSTIC STATE TRACKERS
         let diagState = {
@@ -513,28 +516,33 @@
         }
 
         function updateWriteButtonsState() {
-            const canWrite = !isForcedReadOnlyMode && diagState.authStatus === 'OK' && diagState.snapshotStatus === 'SNAPSHOT OK';
+            // 요청 1, 2: WRITE 허용조건은 URL 강제모드 및 수동모드가 모두 false이고, AUTH OK + SNAPSHOT OK + DOC EXISTS === YES 일 때만 가능
+            const canWrite = !isUrlForcedReadOnlyMode && !isManualReadOnlyMode && diagState.authStatus === 'OK' && diagState.snapshotStatus === 'SNAPSHOT OK' && diagState.docExists === 'YES';
             
             const btnPunchIn = document.getElementById('btn-punch-in');
             const btnPauseAll = document.getElementById('btn-pause-all');
             const btnResumeAll = document.getElementById('btn-resume-all');
             const btnClearLogs = document.getElementById('btn-clear-logs');
             const btnLoadDemo = document.getElementById('btn-load-demo');
-            const fileUploader = document.getElementById('file-uploader');
 
             if (btnPunchIn) btnPunchIn.disabled = !canWrite;
             if (btnPauseAll) btnPauseAll.disabled = !canWrite;
             if (btnResumeAll) btnResumeAll.disabled = !canWrite;
             if (btnClearLogs) btnClearLogs.disabled = !canWrite;
+            if (btnLoadDemo) btnLoadDemo.disabled = !canWrite;
         }
 
         function checkFailClosedCanWrite() {
-            if (isForcedReadOnlyMode) {
+            if (isUrlForcedReadOnlyMode) {
                 showMessage('Read-Only 모드 차단', '현재 ?mode=readonly 상태로 기동되어 모든 쓰기 작업이 영구 차단되었습니다.');
                 return false;
             }
-            if (diagState.authStatus !== 'OK' || diagState.snapshotStatus !== 'SNAPSHOT OK') {
-                showMessage('Fail-Closed 차단', '클라우드 원장이 동기화되지 않았습니다 (FAIL-CLOSED).\n데이터 유실 방지를 위해 작업 기록 및 수정이 금지됩니다.');
+            if (isManualReadOnlyMode) {
+                showMessage('Read-Only 모드 차단', '수동 Read-Only 모드가 켜져 있어 쓰기 작업이 차단되었습니다.');
+                return false;
+            }
+            if (diagState.authStatus !== 'OK' || diagState.snapshotStatus !== 'SNAPSHOT OK' || diagState.docExists !== 'YES') {
+                showMessage('Fail-Closed 차단', '클라우드 원장이 동기화되지 않았거나 존재하지 않는 룸 문서입니다 (FAIL-CLOSED).\n신규 Room 자동 생성이 차단되어 작업 기록 및 수정이 금지됩니다.');
                 return false;
             }
             return true;
@@ -568,7 +576,8 @@
             }
             if (elListener) {
                 elListener.innerText = diagState.listenerStatus;
-                elListener.className = diagState.listenerStatus.includes('SUBSCRIBED') ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
+                // 요청 3: 정확히 "LISTENER SUBSCRIBED"와 일치할 때만 초록색
+                elListener.className = diagState.listenerStatus === 'LISTENER SUBSCRIBED' ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
             }
             if (elSnapshot) {
                 elSnapshot.innerText = diagState.snapshotStatus;
@@ -586,7 +595,7 @@
             if (elLastSnap) elLastSnap.innerText = diagState.lastSnapshotTime;
             if (elLastErr) elLastErr.innerText = diagState.lastError;
 
-            // Masked AppId (Never show apiKey)
+            // 요청: FB AppID에 apiKey 표시 버그 수정 (firebaseConfig.appId 일부 마스킹, 절대 apiKey 표시 안 함)
             const rawAppId = firebaseConfig?.appId || firebaseConfig?.projectId || 'DEMO-APP';
             const maskedAppId = rawAppId.length > 8 ? rawAppId.substring(0, 4) + '...' + rawAppId.slice(-4) : rawAppId;
             if (elFbAppId) elFbAppId.innerText = maskedAppId;
@@ -674,13 +683,6 @@
         }
         function playSound(freq = 800, duration = 0.08) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'sine'; osc.frequency.value = freq; gain.gain.value = 0.08; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + duration); } catch (e) {} }
 
-        async function saveRoomState(isMetaUpdate = false) {
-            if (!checkFailClosedCanWrite()) return;
-            if (isMetaUpdate && currentUser && db && isCloudAvailable) {
-                try { await setDoc(getRoomDocRef(currentRoomId), { planEquipments, activeWorkersList, updatedAt: Date.now() }, { merge: true }); } catch(e) {}
-            }
-        }
-
         async function updateTaskInCloudSecurely(actionType, payload) {
             if (!checkFailClosedCanWrite()) return;
 
@@ -688,9 +690,12 @@
             try {
                 await runTransaction(db, async (transaction) => {
                     const sfDoc = await transaction.get(roomRef);
-                    let currentData = sfDoc.exists() ? sfDoc.data() : {};
-                    let currentRunning = currentData.runningTasks || [];
-                    let currentLogs = currentData.completedLogs || [];
+                    if (!sfDoc.exists()) {
+                        throw new Error("FAIL-CLOSED: Room document does not exist. Automatic creation blocked.");
+                    }
+                    let currentData = sfDoc.data() || {};
+                    let currentRunning = Array.isArray(currentData.runningTasks) ? currentData.runningTasks : [];
+                    let currentLogs = Array.isArray(currentData.completedLogs) ? currentData.completedLogs : [];
 
                     if (actionType === 'PUNCH_IN') currentRunning.unshift(payload);
                     else if (actionType === 'PAUSE_TOGGLE') {
@@ -728,17 +733,13 @@
                         if (idx > -1) { currentRunning[idx].startTime = payload.newStartTime; }
                     }
 
-                    if (sfDoc.exists()) {
-                        transaction.update(roomRef, { runningTasks: currentRunning, completedLogs: currentLogs, updatedAt: Date.now() });
-                    } else {
-                        transaction.set(roomRef, { runningTasks: currentRunning, completedLogs: currentLogs, updatedAt: Date.now() });
-                    }
+                    transaction.update(roomRef, { runningTasks: currentRunning, completedLogs: currentLogs, updatedAt: Date.now() });
                 });
             } catch (e) {
                 console.error(e);
                 diagState.lastError = e.code || e.message;
                 updateFingerprintUI();
-                showToast("네트워크 지연으로 작업 처리에 실패했습니다. 다시 시도해주세요.", "fa-triangle-exclamation");
+                showToast("네트워크 지연 또는 Fail-Closed 권한 제한으로 처리에 실패했습니다.", "fa-triangle-exclamation");
             }
         }
 
@@ -864,8 +865,8 @@
         function updateStatusText() {
             const span = document.getElementById('status-panel');
             if (!span) return;
-            if (diagState.snapshotStatus !== 'SNAPSHOT OK') {
-                span.textContent = "클라우드 동기화 대기 중 (작업 기록 잠금)";
+            if (diagState.snapshotStatus !== 'SNAPSHOT OK' || diagState.docExists !== 'YES') {
+                span.textContent = "클라우드 동기화 대기 중 / 문서 미존재 (작업 기록 금지)";
                 span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400";
                 return;
             }
@@ -898,8 +899,8 @@
             if (!checkFailClosedCanWrite()) return;
             activeWorkersList = activeWorkersList.filter(w => w !== name);
             if (selectedWorker === name) { selectedWorker = ''; updateStatusText(); }
-            renderWorkers(); renderWorkerManageList(); await saveRoomState(true);
-            showToast(`작업자 '${name}'님이 삭제되었습니다.`, "fa-trash");
+            renderWorkers(); renderWorkerManageList();
+            showToast(`작업자 '${name}'님이 로컬 목록에서 제외되었습니다.`, "fa-trash");
         };
 
         async function handleAddWorker() {
@@ -910,8 +911,8 @@
             if (!name) { showMessage('입력 오류', '추가할 작업자 이름을 입력해 주세요.'); return; }
             if (activeWorkersList.includes(name)) { showMessage('중복 오류', `'${name}'님은 이미 등록되어 있습니다.`); return; }
             activeWorkersList.push(name); input.value = '';
-            renderWorkers(); renderWorkerManageList(); await saveRoomState(true);
-            showToast(`새 작업자 '${name}'님이 추가되었습니다.`, "fa-user-plus");
+            renderWorkers(); renderWorkerManageList();
+            showToast(`작업자 '${name}'님이 추가되었습니다.`, "fa-user-plus");
         }
 
         async function handleResetWorkers() {
@@ -919,7 +920,7 @@
             showConfirm('작업자 명단 복원', '제조2팀 기본 10명 명단으로 초기화하시겠습니까?', async () => {
                 activeWorkersList = [...defaultWorkers];
                 if (!activeWorkersList.includes(selectedWorker)) { selectedWorker = ''; updateStatusText(); }
-                renderWorkers(); renderWorkerManageList(); await saveRoomState(true);
+                renderWorkers(); renderWorkerManageList();
                 showToast('기본 명단으로 초기화되었습니다.', 'fa-rotate-left');
             });
         }
@@ -1268,13 +1269,12 @@
                     if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division }];
                     wStat.totalEquips += eqList.length;
 
-                    const minsPerEq = elapsedMins / (eqList.length > 0 ? eqList.length : 1);
-
+                    // 요청 5: 다중 S/N 공수 균등배분(minsPerEq) 삭제 및 원본 공유 시간 보존
                     eqList.forEach(eq => {
                         const eqName = normalizeEquipmentName(eq.equipment || '미지정');
                         if (!wStat.equipsDetail[eqName]) wStat.equipsDetail[eqName] = { count: 0, mins: 0 };
                         wStat.equipsDetail[eqName].count += 1;
-                        wStat.equipsDetail[eqName].mins += minsPerEq;
+                        wStat.equipsDetail[eqName].mins += elapsedMins; // 작업 전체 시간을 그대로 집계
 
                         const divName = eq.division || 'ACM';
                         const cskSn = eq.cskSn || '-';
@@ -1286,7 +1286,7 @@
                         
                         if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0 };
                         eStat.processes[process].count += 1;
-                        eStat.processes[process].minutes += minsPerEq;
+                        eStat.processes[process].minutes += elapsedMins; // 공유공수/미배분공수 보존
 
                         if (cskSn && cskSn !== '-') {
                             if (!eStat.cskProcessLogs[cskSn]) eStat.cskProcessLogs[cskSn] = new Set();
@@ -1309,7 +1309,7 @@
                     
                     const equipDetailStrs = Object.entries(data.equipsDetail).map(([name, info]) => {
                         const md = parseFloat((info.mins / 60 / 8).toFixed(4));
-                        return `[${name}] ${info.count}대 / ${Math.round(info.mins)}분 / ${md} M/D`;
+                        return `[${name}] ${info.count}건 / ${Math.round(info.mins)}분 / ${md} M/D`;
                     }).join('\n');
 
                     wStatRows.push([
@@ -1327,7 +1327,8 @@
                 applyExcelStyle(wsWorkerStat, wStatRows.length, wStatHeader.length);
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
-                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '장비별 총 공수 (분 / M/D)', '한대분 전체 완료 평균 공수 (참고)'];
+                // 요청 5: "한대분 전체 완료 평균 공수" 명칭을 "관측공수 참고값(단순 산술)"으로 변경
+                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '장비별 누적 투입 공수 (분 / M/D)', '관측공수 참고값 (단순 산술)'];
                 let eStatRows = [eStatHeader];
                 
                 Object.keys(eStats).sort().forEach(equip => {
@@ -1577,22 +1578,23 @@
                 }
             });
 
+            // 요청 2: 수동 Read-Only 토글은 ON/OFF 전환 가능하도록 분리
             document.getElementById('btn-toggle-readonly')?.addEventListener('click', () => {
-                if (isForcedReadOnlyMode) {
-                    showMessage('모드 고정', '?mode=readonly 파라미터가 적용되어 있어 해제할 수 없습니다.');
+                if (isUrlForcedReadOnlyMode) {
+                    showMessage('모드 고정', '?mode=readonly 파라미터가 적용되어 있어 수동 해제할 수 없습니다.');
                     return;
                 }
-                isForcedReadOnlyMode = !isForcedReadOnlyMode;
+                isManualReadOnlyMode = !isManualReadOnlyMode;
                 const label = document.getElementById('readonly-mode-label');
                 const btn = document.getElementById('btn-toggle-readonly');
-                if (isForcedReadOnlyMode) {
-                    if (label) label.innerText = "Read-Only ON (Forced)";
+                if (isManualReadOnlyMode) {
+                    if (label) label.innerText = "Read-Only ON (Manual)";
                     if (btn) btn.className = "px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 rounded-xl text-xs font-bold border border-rose-700 transition flex items-center gap-1.5";
-                    showToast("READ-ONLY ON 활성화: 모든 WRITE 작업이 차단됩니다.", "fa-eye");
+                    showToast("수동 READ-ONLY ON 활성화: 모든 WRITE 작업이 차단됩니다.", "fa-eye");
                 } else {
                     if (label) label.innerText = "Read-Only OFF";
                     if (btn) btn.className = "px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center gap-1.5";
-                    showToast("READ-ONLY 비활성화됨", "fa-unlock");
+                    showToast("수동 READ-ONLY 비활성화됨", "fa-unlock");
                 }
                 updateWriteButtonsState();
             });
@@ -1734,7 +1736,6 @@
                 const divFilterEl = document.getElementById('select-division-filter');
                 if (divFilterEl) divFilterEl.value = '';
                 selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); renderEquipmentDropdown(); 
-                await saveRoomState(true);
                 showMessage('데모 세팅 완료', '데모 데이터가 로드되었습니다.');
                 updateFingerprintUI();
             });
@@ -1808,7 +1809,6 @@
                         const divFilterEl = document.getElementById('select-division-filter');
                         if (divFilterEl) divFilterEl.value = '';
                         selectedEquipments = []; renderSelectedEquipmentsList(); updateDivisionFilters(); filterEquipments(); 
-                        await saveRoomState(true);
                         showMessage('엑셀 파싱 성공', `${planEquipments.length}개의 장비 목록을 인식하여 적용했습니다.`);
                         updateFingerprintUI();
                     } else { showMessage('파싱 경고', '엑셀 파일에서 유효한 데이터 행을 찾을 수 없습니다.'); }
@@ -1824,11 +1824,12 @@
             } catch (e) {}
         }
         
+        // 요청 10: ?mode=readonly 감지 시 영구 고정
         function checkUrlReadOnlyMode() {
             try {
                 const params = new URLSearchParams(window.location.search);
                 if (params.get('mode') === 'readonly') {
-                    isForcedReadOnlyMode = true;
+                    isUrlForcedReadOnlyMode = true;
                     const label = document.getElementById('readonly-mode-label');
                     const btn = document.getElementById('btn-toggle-readonly');
                     if (label) label.innerText = "Read-Only ON (Forced)";
@@ -1848,7 +1849,7 @@
                 unsubscribeRoom = null;
             }
             
-            // Reset per-room snapshot status before new subscribe
+            // 요청 4: 새 Room subscribe 시작 시 상태 및 데이터 초기화 (Stale State 제거)
             diagState.listenerStatus = 'UNSUBSCRIBED';
             diagState.snapshotStatus = 'WAITING';
             diagState.docExists = 'NO';
@@ -1856,6 +1857,16 @@
             runningTasks = [];
             completedLogs = [];
             planEquipments = [];
+            activeWorkersList = [...defaultWorkers]; // 작업자 명단도 기본값으로 초기화
+
+            const cntEl = document.getElementById('cnt-loaded-items');
+            if (cntEl) cntEl.innerText = 0;
+            const loadBadge = document.getElementById('load-status-badge');
+            if (loadBadge) {
+                loadBadge.innerText = "계획 미등록";
+                loadBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500";
+            }
+
             updateFingerprintUI();
             updateCloudStatusBadges("연결 대기중 (" + roomId + ")", false);
 
@@ -1877,9 +1888,10 @@
                     diagState.lastSnapshotTime = new Date().toLocaleTimeString('ko-KR', { hour12: false });
                     diagState.lastError = 'NONE';
 
+                    // 요청 5, 6: snapshot.exists() === false 또는 필드 미존재 시 빈 배열로 리셋
                     if (snapshot.exists()) {
                         diagState.docExists = 'YES';
-                        const data = snapshot.data();
+                        const data = snapshot.data() || {};
                         runningTasks = Array.isArray(data.runningTasks) ? data.runningTasks : [];
                         completedLogs = Array.isArray(data.completedLogs) ? data.completedLogs : [];
                         activeWorkersList = Array.isArray(data.activeWorkersList) && data.activeWorkersList.length > 0 ? data.activeWorkersList : [...defaultWorkers];
@@ -1892,6 +1904,7 @@
                         runningTasks = [];
                         completedLogs = [];
                         planEquipments = [];
+                        activeWorkersList = [...defaultWorkers];
                         const cntEl = document.getElementById('cnt-loaded-items');
                         if (cntEl) cntEl.innerText = 0;
                     }
@@ -1904,7 +1917,9 @@
                     renderWorkerManageList();
                     updateStatusText();
                     updateFingerprintUI();
-                    updateCloudStatusBadges("실시간 연동 가동중 (" + roomId + ")", true);
+                    // 요청 1: DOC EXISTS === YES일 때만 정상 실시간 연동 뱃지 활성화
+                    const isFullyReady = diagState.snapshotStatus === 'SNAPSHOT OK' && diagState.docExists === 'YES';
+                    updateCloudStatusBadges(isFullyReady ? "실시간 연동 가동중 (" + roomId + ")" : "문서 대기중 (" + roomId + ")", isFullyReady);
                 },
                 (error) => {
                     diagState.snapshotStatus = 'SNAPSHOT ERROR';
@@ -1913,6 +1928,7 @@
                     runningTasks = [];
                     completedLogs = [];
                     planEquipments = [];
+                    activeWorkersList = [...defaultWorkers];
                     updateFingerprintUI();
                     updateCloudStatusBadges("동기화 오류 발생", false);
                     renderActiveTasks();
