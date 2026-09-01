@@ -447,10 +447,10 @@
         let unsubscribeRoom = null;
         let isCloudAvailable = false;
         
-        // REDTEAM READ-ONLY STATE VARS (요청 2: 변수 분리)
-        let isUrlForcedReadOnlyMode = false; // ?mode=readonly (영구 해제 불가)
-        let isManualReadOnlyMode = false;  // 수동 토글 (ON/OFF 가능)
-        let isAdminMode = false; // ?mode=admin (기준정보 수정 권한)
+        // REDTEAM READ-ONLY STATE VARS 
+        let isUrlForcedReadOnlyMode = false;
+        let isManualReadOnlyMode = false;  
+        let isAdminMode = false; 
 
         // REDTEAM DIAGNOSTIC STATE TRACKERS
         let diagState = {
@@ -525,7 +525,6 @@
         }
 
         function updateWriteButtonsState() {
-            // 요청 1, 2: WRITE 허용조건은 URL 강제모드 및 수동모드가 모두 false이고, AUTH OK + SNAPSHOT OK + DOC EXISTS === YES 일 때만 가능
             const canWrite = !isUrlForcedReadOnlyMode && !isManualReadOnlyMode && diagState.authStatus === 'OK' && diagState.snapshotStatus === 'SNAPSHOT OK' && diagState.docExists === 'YES';
             
             const btnPunchIn = document.getElementById('btn-punch-in');
@@ -538,7 +537,6 @@
             if (btnPauseAll) btnPauseAll.disabled = !canWrite;
             if (btnResumeAll) btnResumeAll.disabled = !canWrite;
             if (btnClearLogs) btnClearLogs.disabled = !canWrite;
-            // Load demo only available if admin AND canWrite
             if (btnLoadDemo) btnLoadDemo.disabled = !(canWrite && isAdminMode);
         }
 
@@ -586,7 +584,6 @@
             }
             if (elListener) {
                 elListener.innerText = diagState.listenerStatus;
-                // 요청 3: 정확히 "LISTENER SUBSCRIBED"와 일치할 때만 초록색
                 elListener.className = diagState.listenerStatus === 'LISTENER SUBSCRIBED' ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
             }
             if (elSnapshot) {
@@ -605,7 +602,6 @@
             if (elLastSnap) elLastSnap.innerText = diagState.lastSnapshotTime;
             if (elLastErr) elLastErr.innerText = diagState.lastError;
 
-            // 요청: FB AppID에 apiKey 표시 버그 수정 (firebaseConfig.appId 일부 마스킹, 절대 apiKey 표시 안 함)
             const rawAppId = firebaseConfig?.appId || firebaseConfig?.projectId || 'DEMO-APP';
             const maskedAppId = rawAppId.length > 8 ? rawAppId.substring(0, 4) + '...' + rawAppId.slice(-4) : rawAppId;
             if (elFbAppId) elFbAppId.innerText = maskedAppId;
@@ -615,7 +611,6 @@
             if (elPath) elPath.innerText = `artifacts/${appId}/public/data/rooms/${getRoomNormId(currentRoomId)}`;
         }
 
-        // --- 관리자 전용 클라우드 동기화 래퍼 함수 ---
         async function updateAdminDataInCloud(fieldsToUpdate) {
             if (!checkFailClosedCanWrite()) return false;
             if (!isAdminMode) {
@@ -635,7 +630,6 @@
                 return false;
             }
         }
-        // ------------------------------------------
 
         window.closeModal = () => document.getElementById('custom-modal')?.classList.add('hidden');
         window.closeConfirmModal = (result) => { 
@@ -729,7 +723,6 @@
                     let currentRunning = Array.isArray(currentData.runningTasks) ? currentData.runningTasks : [];
                     let currentLogs = Array.isArray(currentData.completedLogs) ? currentData.completedLogs : [];
 
-                    // 깊은 복사본 활용 (트랜잭션 재시도 오염 방지)
                     let newRunning = JSON.parse(JSON.stringify(currentRunning));
                     let newLogs = JSON.parse(JSON.stringify(currentLogs));
 
@@ -804,7 +797,6 @@
             
             const success = await updateTaskInCloudSecurely('PUNCH_IN', newTask);
             if (success) {
-                // 성공 시 화면 즉각 렌더링 갱신
                 selectedWorker = ''; selectedProcess = ''; selectedEquipments = [];
                 const searchEl = document.getElementById('equipment-search');
                 if (searchEl) searchEl.value = '';
@@ -981,7 +973,6 @@
             activeWorkersList.forEach(w => {
                 const item = document.createElement('div');
                 item.className = "flex justify-between items-center bg-white px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm";
-                // 요청 B: 관리자일 때만 삭제(휴지통) 버튼 노출
                 item.innerHTML = `<span class="truncate">${escapeHTML(w)}</span>` + 
                                  (isAdminMode ? `<button type="button" onclick="deleteWorkerName('${escapeHTML(w)}')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash-can text-xs"></i></button>` : '');
                 container.appendChild(item);
@@ -1209,6 +1200,13 @@
             return name.trim();
         }
 
+        function getCleanWorkerName(name) {
+            if (!name) return '미지정';
+            // "관리자(수동)"이나 "(수동)" 등을 이름에서 제거하여 순수 이름만 남김
+            let cleaned = name.replace(/\s*\(?관리자\(수동\)\)?/g, '').replace(/\s*\(?수동\)?/g, '').trim();
+            return cleaned || name; 
+        }
+
         function autoFitSheetColumns(worksheet) {
             const objectKeys = Object.keys(worksheet);
             const colWidths = {};
@@ -1285,8 +1283,10 @@
                 const mainModel = normalizeEquipmentName(eqList[0]?.equipment || '미지정');
                 const itemMD = parseFloat((item.elapsedMinutes / 60 / 8).toFixed(4));
 
+                const cleanWorkerName = getCleanWorkerName(item.worker);
+
                 rows.push([
-                    index + 1, item.date, item.worker, mainModel, `${unitCount}대`, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, itemMD
+                    index + 1, item.date, cleanWorkerName, mainModel, `${unitCount}대`, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, itemMD
                 ]);
             });
             const wsDetail = XLSX.utils.aoa_to_sheet(rows);
@@ -1302,7 +1302,7 @@
                     const monthKey = `${dateParts[0]}-${dateParts[1]}`;
                     if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { workers: {}, equipments: {}, sharedJobs: [] };
                     
-                    const worker = log.worker;
+                    const worker = getCleanWorkerName(log.worker);
                     const process = log.process || '미지정';
                     const elapsedMins = log.elapsedMinutes;
                     
@@ -1317,7 +1317,6 @@
                     if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division, cskSn: log.cskSn }];
                     wStat.totalEquips += eqList.length;
 
-                    // REDTEAM 4차: eqList.length 에 따라 분기처리 (직접귀속 vs 공유미배분)
                     if (eqList.length === 1) {
                         const eq = eqList[0];
                         const eqName = normalizeEquipmentName(eq.equipment || '미지정');
@@ -1333,14 +1332,13 @@
                         let eStat = monthlyStats[monthKey].equipments[eqName];
                         if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0 };
                         eStat.processes[process].count += 1;
-                        eStat.processes[process].minutes += elapsedMins; // 직접귀속공수
+                        eStat.processes[process].minutes += elapsedMins; 
                     } 
                     else if (eqList.length > 1) {
-                        // 다중 S/N 작업 시 공유_미배분공수 Pool에 1회만 저장
                         monthlyStats[monthKey].sharedJobs.push({
                             workLogId: log.workLogId || log.id,
                             date: log.date,
-                            worker: log.worker,
+                            worker: getCleanWorkerName(log.worker),
                             process: process,
                             elapsedMinutes: elapsedMins,
                             equipModels: [...new Set(eqList.map(e => normalizeEquipmentName(e.equipment || '미지정')))].join(', '),
@@ -1382,7 +1380,6 @@
                 applyExcelStyle(wsWorkerStat, wStatRows.length, wStatHeader.length);
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
-                // REDTEAM 4차: 평균 공수 제거 및 장비별 통계 출력
                 const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '장비별 누적 직접귀속공수 (분 / M/D)'];
                 let eStatRows = [eStatHeader];
                 
@@ -1477,7 +1474,6 @@
                 autoFitSheetColumns(wsEquipStat);
                 XLSX.utils.book_append_sheet(wb, wsEquipStat, `장비별통계_${month}`);
 
-                // REDTEAM 4차: 공유/미배분 공수 시트 추가
                 if (sharedJobs.length > 0) {
                     const sHeader = ['No.', '작업일자', '작업자', '작업 공정', '관련 장비 모델 목록', '관련 CSK S/N 목록', '소요 시간 (분)', '소요 공수 (M/D)', '작업 Log ID'];
                     let sRows = [sHeader];
@@ -1881,7 +1877,6 @@
         function checkUrlModes() {
             try {
                 const params = new URLSearchParams(window.location.search);
-                // READ ONLY
                 if (params.get('mode') === 'readonly') {
                     isUrlForcedReadOnlyMode = true;
                     const label = document.getElementById('readonly-mode-label');
@@ -1892,7 +1887,6 @@
                         btn.disabled = true;
                     }
                 }
-                // ADMIN MODE
                 if (params.get('mode') === 'admin') {
                     isAdminMode = true;
                     const badge = document.getElementById('admin-mode-badge');
@@ -1907,7 +1901,6 @@
                     const workerAdminBadge = document.getElementById('worker-admin-badge');
                     if (workerAdminBadge) workerAdminBadge.classList.remove('hidden');
                 } else {
-                    // 일반 사용자: 생산계획 업로드 버튼 숨김
                     const adminPlanControls = document.getElementById('admin-plan-controls');
                     if (adminPlanControls) adminPlanControls.style.display = 'none';
                 }
@@ -1922,7 +1915,6 @@
                 unsubscribeRoom = null;
             }
             
-            // 요청 4: 새 Room subscribe 시작 시 상태 및 데이터 초기화 (Stale State 제거)
             diagState.listenerStatus = 'UNSUBSCRIBED';
             diagState.snapshotStatus = 'WAITING';
             diagState.docExists = 'NO';
@@ -1997,7 +1989,6 @@
                         }
                     }
 
-                    // 단방향 렌더링
                     renderWorkers(); 
                     renderActiveTasks(); 
                     renderCompletedLogs();
