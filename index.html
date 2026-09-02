@@ -165,7 +165,7 @@
 
                 <div class="space-y-1.5">
                     <div class="flex justify-between items-center">
-                        <label class="block text-xs font-bold text-slate-600">1단계. 작업자 선택</label>
+                        <label class="block text-xs font-bold text-slate-600">1단계. 작업자 선택 (다중 선택 가능)</label>
                         <button id="btn-open-worker-modal" type="button" class="text-[11px] text-indigo-600 font-bold hover:text-indigo-800 transition flex items-center gap-1 active:scale-95">
                             <i class="fa-solid fa-user-gear"></i> 작업자 관리
                         </button>
@@ -194,7 +194,8 @@
                     <label class="block text-xs font-bold text-slate-600">3단계. 투입 공정 선택</label>
                     <div class="space-y-1">
                         <span class="text-[10px] font-bold text-slate-400 block">기본 조립 공정</span>
-                        <div class="grid grid-cols-1">
+                        <div class="grid grid-cols-1 gap-2">
+                            <button type="button" onclick="selectProcess('하네스')" class="py-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1.5">🔌 하네스</button>
                             <button type="button" onclick="selectProcess('취부')" class="py-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1.5">🛠️ 취부 작업</button>
                         </div>
                     </div>
@@ -223,7 +224,6 @@
                 </div>
             </div>
 
-            <!-- Column 2 & 3: Active Tasks -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 lg:col-span-2 flex flex-col justify-between">
                 <div>
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
@@ -472,7 +472,9 @@
 
         let activeWorkersList = [...defaultWorkers];
         let planEquipments = [];
-        let selectedWorker = '';
+        
+        // 작업자 다중 선택 배열
+        let selectedWorkers = []; 
         let selectedProcess = '';
         let selectedEquipments = [];
         let confirmCallback = null;
@@ -726,7 +728,14 @@
                     let newRunning = JSON.parse(JSON.stringify(currentRunning));
                     let newLogs = JSON.parse(JSON.stringify(currentLogs));
 
-                    if (actionType === 'PUNCH_IN') newRunning.unshift(payload);
+                    // 중요: 여기서 넘어오는 payload가 Array(이전 구버전 호환)이든 Object(신규 단일버전)이든 완벽히 단일로 넣어줍니다.
+                    if (actionType === 'PUNCH_IN') {
+                        if (Array.isArray(payload)) {
+                            newRunning.unshift(...payload);
+                        } else {
+                            newRunning.unshift(payload);
+                        }
+                    }
                     else if (actionType === 'PAUSE_TOGGLE') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
                         if (idx > -1) { newRunning[idx].paused = payload.paused; newRunning[idx].pausedAt = payload.pausedAt; newRunning[idx].totalPausedDuration = payload.totalPausedDuration; }
@@ -776,32 +785,56 @@
 
         async function triggerPunchIn() {
             if (!checkFailClosedCanWrite()) return;
-            if (!selectedWorker || selectedEquipments.length === 0 || !selectedProcess) {
+            
+            if (selectedWorkers.length === 0 || selectedEquipments.length === 0 || !selectedProcess) {
                 showMessage('입력 오류', '작업자, 대상 장비, 투입 공정을 모두 선택해 주십시오.'); return;
             }
 
             let duplicatedItems = [];
-            selectedEquipments.forEach(item => {
-                const exists = runningTasks.find(t => t.worker === selectedWorker && t.process === selectedProcess && (t.equipments||[]).some(eq => eq.id === item.id));
-                if (exists) duplicatedItems.push(`[${item.division || 'ACM'}] ${item.equipment}`);
+            selectedWorkers.forEach(worker => {
+                selectedEquipments.forEach(item => {
+                    const exists = runningTasks.find(t => {
+                        const workersInTask = t.workerList || t.worker.split(',').map(w => w.trim());
+                        return workersInTask.includes(worker) && t.process === selectedProcess && (t.equipments||[]).some(eq => eq.id === item.id);
+                    });
+                    if (exists) duplicatedItems.push(`[${worker}]님의 [${item.division || 'ACM'}] ${item.equipment}`);
+                });
             });
-            if (duplicatedItems.length > 0) { showMessage('중복 경고', `${selectedWorker}님은 이미 해당 장비를 작업 중입니다:\n${duplicatedItems.join('\n')}`); return; }
+            
+            if (duplicatedItems.length > 0) { 
+                showMessage('중복 경고', `해당 인원이 동일 장비-공정에서 이미 작업 중입니다:\n${duplicatedItems.join('\n')}`); 
+                return; 
+            }
 
             const timestamp = new Date().getTime();
+            
+            // 작업자가 몇 명이든 "하나의 이름(문자열)"으로 이어 붙입니다.
+            const combinedWorkers = selectedWorkers.join(', ');
+            
+            // **배열 구조(map)를 사용하지 않고 단일 객체 하나만 만듭니다.**
             const newTask = {
                 id: 'task_' + timestamp + '_' + Math.random().toString(36).substr(2, 5),
-                worker: selectedWorker, process: selectedProcess, startTime: timestamp,
-                paused: false, pausedAt: null, totalPausedDuration: 0,
+                worker: combinedWorkers,         // 예: "장동훈, 김정식"
+                workerList: [...selectedWorkers], // 통계 처리용 원본 배열 백업
+                process: selectedProcess, 
+                startTime: timestamp,
+                paused: false, 
+                pausedAt: null, 
+                totalPausedDuration: 0,
                 equipments: selectedEquipments.map(item => ({ id: item.id, equipment: item.equipment, division: item.division, cskSn: item.cskSn, deliveryDate: item.deliveryDate }))
             };
             
+            // 배열로 넣지 않고 "단일 객체(newTask)"로 전송합니다.
             const success = await updateTaskInCloudSecurely('PUNCH_IN', newTask);
+            
             if (success) {
-                selectedWorker = ''; selectedProcess = ''; selectedEquipments = [];
+                selectedWorkers = []; 
+                selectedProcess = ''; 
+                selectedEquipments = [];
                 const searchEl = document.getElementById('equipment-search');
                 if (searchEl) searchEl.value = '';
                 filterEquipments(); renderWorkers(); selectProcess(''); renderSelectedEquipmentsList(); updateStatusText();
-                playSound(1000, 0.1); showToast("공정이 시작되었습니다.", "fa-play");
+                playSound(1000, 0.1); showToast(`공정이 정상적으로 시작되었습니다.`, "fa-play");
             }
         }
 
@@ -820,8 +853,8 @@
             }
             const success = await updateTaskInCloudSecurely('PAUSE_TOGGLE', updatedPayload);
             if(success) {
-                 if (updatedPayload.paused) { playSound(500, 0.1); showToast(`${task.worker} 작업 일시정지됨`, "fa-pause"); }
-                 else { playSound(900, 0.1); showToast(`${task.worker} 작업 재개됨`, "fa-play"); }
+                 if (updatedPayload.paused) { playSound(500, 0.1); showToast(`작업 일시정지됨`, "fa-pause"); }
+                 else { playSound(900, 0.1); showToast(`작업 재개됨`, "fa-play"); }
             }
         };
 
@@ -860,7 +893,9 @@
             const finishedJob = {
                 id: newLogId,
                 workLogId: newLogId,
-                worker: task.worker, process: task.process,
+                worker: task.worker, 
+                workerList: task.workerList || task.worker.split(',').map(w=>w.trim()),
+                process: task.process,
                 startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
                 endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
                 elapsedMinutes: elapsedMinutes, elapsedHours: elapsedHours,
@@ -872,7 +907,7 @@
             };
 
             const success = await updateTaskInCloudSecurely('PUNCH_OUT', { taskId: taskId, finishedJob: finishedJob });
-            if(success) { playSound(1200, 0.2); showToast(`${finishedJob.worker}님 완료 처리 성공!`, "fa-check"); }
+            if(success) { playSound(1200, 0.2); showToast(`완료 처리 성공!`, "fa-check"); }
         };
 
         window.triggerDeleteLog = function(logId) {
@@ -889,9 +924,24 @@
             grid.innerHTML = '';
             activeWorkersList.forEach(w => {
                 const btn = document.createElement('button');
-                btn.type = 'button'; btn.innerText = w; 
-                btn.className = selectedWorker === w ? "py-2.5 border-2 border-indigo-600 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black shadow-sm transition" : "py-2.5 border border-slate-200 bg-white text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-50 transition active:scale-95";
-                btn.onclick = () => { selectedWorker = w; renderWorkers(); updateStatusText(); };
+                btn.type = 'button'; 
+                btn.innerText = w; 
+                
+                // 클릭된 작업자(배열에 포함)는 보라색으로 하이라이트
+                btn.className = selectedWorkers.includes(w) 
+                    ? "py-2.5 border-2 border-indigo-600 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black shadow-sm transition" 
+                    : "py-2.5 border border-slate-200 bg-white text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-50 transition active:scale-95";
+                
+                // 토글 동작
+                btn.onclick = () => { 
+                    if (selectedWorkers.includes(w)) {
+                        selectedWorkers = selectedWorkers.filter(sw => sw !== w); // 해제
+                    } else {
+                        selectedWorkers.push(w); // 선택 추가
+                    }
+                    renderWorkers(); 
+                    updateStatusText(); 
+                };
                 grid.appendChild(btn);
             });
         }
@@ -904,8 +954,9 @@
                 span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400";
                 return;
             }
-            if (selectedWorker || selectedProcess) { 
-                span.textContent = `[대기] 작업자: ${selectedWorker || '미선택'} | 공정: ${selectedProcess || '미선택'}`; 
+            if (selectedWorkers.length > 0 || selectedProcess) { 
+                const workerText = selectedWorkers.length > 0 ? selectedWorkers.join(', ') : '미선택';
+                span.textContent = `[대기] 작업자: ${workerText} | 공정: ${selectedProcess || '미선택'}`; 
                 span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400"; 
             } else { 
                 span.textContent = "현재 대기 상태 (준비 완료)"; 
@@ -933,7 +984,10 @@
             const newList = activeWorkersList.filter(w => w !== name);
             const success = await updateAdminDataInCloud({ activeWorkersList: newList });
             if (success) {
-                if (selectedWorker === name) { selectedWorker = ''; updateStatusText(); }
+                if (selectedWorkers.includes(name)) { 
+                    selectedWorkers = selectedWorkers.filter(w => w !== name); 
+                    updateStatusText(); 
+                }
                 showToast(`작업자 '${name}'님이 삭제되었습니다.`, "fa-trash");
             }
         };
@@ -957,7 +1011,8 @@
             showConfirm('작업자 명단 복원', '제조2팀 기본 10명 명단으로 초기화하시겠습니까?', async () => {
                 const success = await updateAdminDataInCloud({ activeWorkersList: defaultWorkers });
                 if (success) {
-                    if (!defaultWorkers.includes(selectedWorker)) { selectedWorker = ''; updateStatusText(); }
+                    selectedWorkers = selectedWorkers.filter(w => defaultWorkers.includes(w)); 
+                    updateStatusText();
                     showToast('기본 명단으로 초기화되었습니다.', 'fa-rotate-left');
                 }
             });
@@ -1081,6 +1136,7 @@
 
                 let procBadge = 'bg-slate-600/20 text-slate-400 border-slate-50/30';
                 if (task.process === '취부') procBadge = 'bg-blue-600/20 text-blue-400 border-blue-500/30';
+                else if (task.process === '하네스') procBadge = 'bg-purple-600/20 text-purple-400 border-purple-500/30';
                 else if (task.process.includes('결선')) procBadge = 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30';
                 else if (task.process.includes('BOX')) procBadge = 'bg-amber-600/20 text-amber-400 border-amber-500/30';
 
@@ -1150,7 +1206,8 @@
                 tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
                 
                 let badgeClass = "bg-blue-50 text-blue-800 border-blue-200";
-                if (item.process.includes('결선')) badgeClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                if (item.process === '하네스') badgeClass = "bg-purple-50 text-purple-800 border-purple-200";
+                else if (item.process.includes('결선')) badgeClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
                 else if (item.process.includes('BOX')) badgeClass = "bg-amber-50 text-amber-800 border-amber-200";
 
                 let eqList = item.equipments || [];
@@ -1202,7 +1259,6 @@
 
         function getCleanWorkerName(name) {
             if (!name) return '미지정';
-            // "관리자(수동)"이나 "(수동)" 등을 이름에서 제거하여 순수 이름만 남김
             let cleaned = name.replace(/\s*\(?관리자\(수동\)\)?/g, '').replace(/\s*\(?수동\)?/g, '').trim();
             return cleaned || name; 
         }
@@ -1302,29 +1358,38 @@
                     const monthKey = `${dateParts[0]}-${dateParts[1]}`;
                     if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { workers: {}, equipments: {}, sharedJobs: [] };
                     
-                    const worker = getCleanWorkerName(log.worker);
                     const process = log.process || '미지정';
                     const elapsedMins = log.elapsedMinutes;
                     
-                    if (!monthlyStats[monthKey].workers[worker]) {
-                        monthlyStats[monthKey].workers[worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {} };
-                    }
-                    let wStat = monthlyStats[monthKey].workers[worker];
-                    wStat.totalJobs += 1;
-                    wStat.totalMinutes += elapsedMins;
-                    
                     let eqList = log.equipments || [];
                     if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division, cskSn: log.cskSn }];
-                    wStat.totalEquips += eqList.length;
+                    
+                    // 다중 작업자 통계를 위한 배열 파싱 (개별 작업자에게 각각 동일한 공수/실적 부여)
+                    const workersInLog = log.workerList && log.workerList.length > 0 ? log.workerList : log.worker.split(',').map(w => w.trim());
+                    
+                    workersInLog.forEach(rawWorker => {
+                        const worker = getCleanWorkerName(rawWorker);
+                        if (!monthlyStats[monthKey].workers[worker]) {
+                            monthlyStats[monthKey].workers[worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {} };
+                        }
+                        let wStat = monthlyStats[monthKey].workers[worker];
+                        wStat.totalJobs += 1;
+                        wStat.totalMinutes += elapsedMins;
+                        wStat.totalEquips += eqList.length;
 
+                        if (eqList.length === 1) {
+                            const eqName = normalizeEquipmentName(eqList[0].equipment || '미지정');
+                            if (!wStat.equipsDetail[eqName]) wStat.equipsDetail[eqName] = { count: 0, mins: 0 };
+                            wStat.equipsDetail[eqName].count += 1;
+                            wStat.equipsDetail[eqName].mins += elapsedMins;
+                        }
+                    });
+
+                    // 장비별 통계는 다중 작업자와 무관하게 한 번만 집계
                     if (eqList.length === 1) {
                         const eq = eqList[0];
                         const eqName = normalizeEquipmentName(eq.equipment || '미지정');
                         
-                        if (!wStat.equipsDetail[eqName]) wStat.equipsDetail[eqName] = { count: 0, mins: 0 };
-                        wStat.equipsDetail[eqName].count += 1;
-                        wStat.equipsDetail[eqName].mins += elapsedMins;
-
                         const divName = eq.division || 'ACM';
                         if (!monthlyStats[monthKey].equipments[eqName]) {
                             monthlyStats[monthKey].equipments[eqName] = { division: divName, processes: {} };
@@ -1338,7 +1403,7 @@
                         monthlyStats[monthKey].sharedJobs.push({
                             workLogId: log.workLogId || log.id,
                             date: log.date,
-                            worker: getCleanWorkerName(log.worker),
+                            worker: log.worker, // 여러명일 경우 합쳐진 문자열 노출
                             process: process,
                             elapsedMinutes: elapsedMins,
                             equipModels: [...new Set(eqList.map(e => normalizeEquipmentName(e.equipment || '미지정')))].join(', '),
@@ -1514,7 +1579,7 @@
                 workLogId: log.workLogId || log.id, 
                 roomId: currentRoomId,
                 workDate: log.date,
-                workerName: log.worker,
+                workerName: log.worker, // 콤마 포함 복수 문자열 가능
                 workerId: null, 
                 division: [...new Set(eqList.map(e => e.division || 'ACM'))].join(', '),
                 equipmentModels: eqList.map(e => normalizeEquipmentName(e.equipment || '미지정')),
@@ -1545,14 +1610,26 @@
             const activeLogs = logsForMonth.filter(l => !l.isDeleted);
             const sourceCount = activeLogs.length;
             const sourceTotalMins = activeLogs.reduce((sum, l) => sum + l.elapsedMinutes, 0);
-            const sourceWorkers = new Set(activeLogs.map(l => l.worker)).size;
+            
+            const sourceWorkers = new Set();
+            activeLogs.forEach(l => {
+                const wList = l.workerList || l.worker.split(',').map(w => w.trim());
+                wList.forEach(w => sourceWorkers.add(w));
+            });
+            const sourceWorkerCount = sourceWorkers.size;
 
             const mappedRecords = logsForMonth.map(createStandardKGRecord);
             const activeMapped = mappedRecords.filter(r => r.status === 'COMPLETED');
 
             const kgsCount = activeMapped.length;
             const kgsTotalMins = activeMapped.reduce((sum, r) => sum + r.elapsedMinutes, 0);
-            const kgsWorkers = new Set(activeMapped.map(r => r.workerName)).size;
+            
+            const kgsWorkers = new Set();
+            activeMapped.forEach(r => {
+                const wList = r.workerName.split(',').map(w => w.trim());
+                wList.forEach(w => kgsWorkers.add(w));
+            });
+            const kgsWorkerCount = kgsWorkers.size;
 
             const allSns = [];
             activeLogs.forEach(l => {
@@ -1562,7 +1639,7 @@
             });
             const uniqueSns = new Set(allSns).size;
 
-            if (sourceCount !== kgsCount || sourceTotalMins !== kgsTotalMins || sourceWorkers !== kgsWorkers) {
+            if (sourceCount !== kgsCount || sourceTotalMins !== kgsTotalMins || sourceWorkerCount !== kgsWorkerCount) {
                 showMessage('데이터 검증 실패', `원본 작업로그 통계와 변환 데이터가 일치하지 않습니다.\n\n원본 건수: ${sourceCount} / KG 건수: ${kgsCount}\n원본 시간: ${sourceTotalMins} / KG 시간: ${kgsTotalMins}`);
                 return;
             }
@@ -1577,7 +1654,7 @@
                 validRecordCount: kgsCount,
                 totalElapsedMinutes: kgsTotalMins,
                 totalElapsedHours: parseFloat((kgsTotalMins/60).toFixed(4)),
-                activeWorkerCount: kgsWorkers,
+                activeWorkerCount: kgsWorkerCount,
                 uniqueSerialNumberCount: uniqueSns
             };
 
