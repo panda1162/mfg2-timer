@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.6 (Redteam 4차 - 관리자 동기화 및 공유공수)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.7 (Redteam 4차 - 임의 장비 추가)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.6 Fail-Closed 4차
+                                v5.7 Fail-Closed
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -152,7 +152,6 @@
 
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <!-- Column 1: Time Controller (Punch In) -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col space-y-5">
                 <div class="flex flex-col space-y-2 pb-3 border-b border-slate-100">
                     <h3 class="text-md font-bold text-slate-900 flex items-center gap-1.5">
@@ -174,7 +173,13 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label class="block text-xs font-bold text-slate-600">2단계. 제작 장비 선택 (다중 선택 가능)</label>
+                    <div class="flex justify-between items-center">
+                        <label class="block text-xs font-bold text-slate-600">2단계. 제작 장비 선택 (다중 선택 가능)</label>
+                        <!-- 직접입력 기능 추가 버튼 -->
+                        <button id="btn-open-manual-equip" type="button" class="text-[11px] text-indigo-600 font-bold hover:text-indigo-800 transition flex items-center gap-1 active:scale-95">
+                            <i class="fa-solid fa-keyboard"></i> 임의 장비 직접입력
+                        </button>
+                    </div>
                     <div class="grid grid-cols-3 gap-2">
                         <select id="select-division-filter" class="col-span-1 px-2 py-2.5 border border-slate-300 rounded-xl text-xs font-extrabold bg-white text-indigo-700 focus:ring-2 focus:ring-indigo-500">
                             <option value="">사업부 전체</option>
@@ -337,6 +342,38 @@
         </div>
     </div>
 
+    <!-- [수동 장비 추가] 임의 장비 직접입력 모달 창 -->
+    <div id="manual-equip-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
+            <h3 class="text-md font-bold text-slate-900 mb-2"><i class="fa-solid fa-plus-circle text-indigo-600"></i> 임의 장비 직접 입력</h3>
+            <p class="text-xs text-slate-500 leading-relaxed mb-4">생산계획(엑셀)에 없는 장비를 수동으로 추가합니다.</p>
+            
+            <div class="space-y-3 mb-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">사업부</label>
+                    <select id="manual-eq-div" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+                        <option value="ACM">ACM</option>
+                        <option value="Abatement">Abatement</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">장비 모델명 (필수)</label>
+                    <input type="text" id="manual-eq-name" placeholder="예: DTLR-TDS-CUSTOM" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">CSK S/N (선택)</label>
+                    <input type="text" id="manual-eq-sn" placeholder="예: 수동입력 또는 12345" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button onclick="closeManualEquipModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">취소</button>
+                <button id="btn-add-manual-equip" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm">장비 추가하기</button>
+            </div>
+        </div>
+    </div>
+
     <div id="worker-modal" class="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -414,7 +451,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.6 Redteam Fail-Closed 4차</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.7 Redteam Fail-Closed 4차 (임의 장비 수동추가)</p>
         </div>
     </footer>
 
@@ -441,7 +478,6 @@
         let firebaseConfig = null;
         
         if (MY_CUSTOM_FIREBASE_CONFIG && MY_CUSTOM_FIREBASE_CONFIG.apiKey && !MY_CUSTOM_FIREBASE_CONFIG.apiKey.includes("여기에_")) {
-            // 하드코딩된 설정이 제대로 입력되었다면 최우선으로 사용합니다.
             firebaseConfig = MY_CUSTOM_FIREBASE_CONFIG;
         }
         else if (typeof __firebase_config !== 'undefined') {
@@ -488,7 +524,6 @@
         let activeWorkersList = [...defaultWorkers];
         let planEquipments = [];
         
-        // 작업자 다중 선택 배열
         let selectedWorkers = []; 
         let selectedProcess = '';
         let selectedEquipments = [];
@@ -658,6 +693,20 @@
         window.closeWorkerModal = () => document.getElementById('worker-modal')?.classList.add('hidden');
         window.openFirebaseModal = () => document.getElementById('firebase-modal')?.classList.remove('hidden');
         window.closeFirebaseModal = () => document.getElementById('firebase-modal')?.classList.add('hidden');
+        
+        window.openManualEquipModal = () => {
+            const nameEl = document.getElementById('manual-eq-name');
+            const snEl = document.getElementById('manual-eq-sn');
+            const divEl = document.getElementById('manual-eq-div');
+            if(nameEl) nameEl.value = '';
+            if(snEl) snEl.value = '';
+            if(divEl) divEl.value = 'ACM';
+            document.getElementById('manual-equip-modal')?.classList.remove('hidden');
+            setTimeout(() => document.getElementById('manual-eq-name')?.focus(), 100);
+        };
+        window.closeManualEquipModal = () => {
+            document.getElementById('manual-equip-modal')?.classList.add('hidden');
+        };
         
         window.openKGSystemModal = () => {
             const now = new Date();
@@ -1829,6 +1878,35 @@
                 if (item) { selectedEquipments.push(item); renderSelectedEquipmentsList(); showToast(`장비 추가됨`, 'fa-circle-check'); }
                 e.target.value = '';
             });
+
+            // 임의 장비 직접입력 관련 이벤트 ------------------------------
+            document.getElementById('btn-open-manual-equip')?.addEventListener('click', window.openManualEquipModal);
+            
+            document.getElementById('btn-add-manual-equip')?.addEventListener('click', () => {
+                const nameEl = document.getElementById('manual-eq-name');
+                const divEl = document.getElementById('manual-eq-div');
+                const snEl = document.getElementById('manual-eq-sn');
+                
+                const eqName = nameEl ? nameEl.value.trim() : '';
+                if (!eqName) {
+                    showToast("장비 모델명을 입력해주세요.", "fa-triangle-exclamation");
+                    return;
+                }
+                
+                const newEq = {
+                    id: 'manual_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    division: divEl ? divEl.value : 'ACM',
+                    equipment: eqName,
+                    cskSn: (snEl && snEl.value.trim()) ? snEl.value.trim() : '수동입력',
+                    deliveryDate: '수동입력'
+                };
+                
+                selectedEquipments.push(newEq);
+                renderSelectedEquipmentsList();
+                showToast("임의 장비가 추가되었습니다.", "fa-check");
+                window.closeManualEquipModal();
+            });
+            // -------------------------------------------------------------
 
             document.getElementById('btn-punch-in')?.addEventListener('click', triggerPunchIn);
             document.getElementById('log-division-filter')?.addEventListener('change', renderCompletedLogs);
