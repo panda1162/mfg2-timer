@@ -569,6 +569,7 @@
         let confirmCallback = null;
         let editingLogId = null; 
         let editingActiveTaskId = null; 
+        let lastAutoPauseTime = ''; // 자동 일시정지 중복 실행 방지용
 
         let runningTasks = [];
         let completedLogs = [];
@@ -974,13 +975,20 @@
             }
         };
 
-        window.triggerPauseAll = async function() {
+        window.triggerPauseAll = async function(isAuto = false) {
             if (!checkFailClosedCanWrite()) return;
             if (runningTasks.length === 0) return;
             const hasPlaying = runningTasks.some(t => !t.paused);
-            if (!hasPlaying) { showToast("모든 작업이 이미 일시정지 상태입니다.", "fa-circle-info"); return; }
+            if (!hasPlaying) { 
+                if (isAuto !== true) showToast("모든 작업이 이미 일시정지 상태입니다.", "fa-circle-info"); 
+                return; 
+            }
             const success = await updateTaskInCloudSecurely('PAUSE_ALL', { timestamp: Date.now() });
-            if (success) { playSound(500, 0.1); showToast("현재 진행 중인 모든 작업이 일괄 정지되었습니다.", "fa-pause"); }
+            if (success) { 
+                playSound(500, 0.1); 
+                // 자동 모드일 경우 별도 안내 메시지 표출 (버튼 클릭 이벤트 객체 방지를 위해 === true 검사)
+                showToast(isAuto === true ? "휴식/식사 시간이 되어 모든 작업이 자동 정지되었습니다." : "현재 진행 중인 모든 작업이 일괄 정지되었습니다.", "fa-pause"); 
+            }
         };
 
         window.triggerResumeAll = async function() {
@@ -1218,11 +1226,28 @@
 
         function startLocalTimerLoop() {
             setInterval(() => {
-                const now = new Date().getTime();
+                const nowTime = new Date();
+                const nowMs = nowTime.getTime();
+                
+                // [자동 일시정지 로직] 설정된 시간에 일괄 정지 실행
+                const hh = String(nowTime.getHours()).padStart(2, '0');
+                const mm = String(nowTime.getMinutes()).padStart(2, '0');
+                const currentTimeStr = `${hh}:${mm}`;
+                const targetAutoPauseTimes = ['10:00', '11:50', '15:00', '16:50'];
+                
+                if (targetAutoPauseTimes.includes(currentTimeStr)) {
+                    if (lastAutoPauseTime !== currentTimeStr) {
+                        lastAutoPauseTime = currentTimeStr;
+                        window.triggerPauseAll(true); // 자동 일괄 정지 트리거
+                    }
+                } else {
+                    lastAutoPauseTime = ''; // 타겟 시간이 지나면 초기화
+                }
+
                 runningTasks.forEach(task => {
                     const el = document.getElementById(`span-timer-${task.id}`);
                     if (!el) return;
-                    let diff = task.paused ? (task.pausedAt - task.startTime - (task.totalPausedDuration||0)) : (now - task.startTime - (task.totalPausedDuration||0));
+                    let diff = task.paused ? (task.pausedAt - task.startTime - (task.totalPausedDuration||0)) : (nowMs - task.startTime - (task.totalPausedDuration||0));
                     if (diff < 0) diff = 0;
                     const sec = Math.floor((diff / 1000) % 60), min = Math.floor((diff / (1000 * 60)) % 60), hour = Math.floor((diff / (1000 * 60 * 60)) % 24);
                     const pad = (n) => String(n).padStart(2, '0');
