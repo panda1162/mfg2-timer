@@ -178,7 +178,6 @@
                 <div class="space-y-2">
                     <div class="flex justify-between items-center">
                         <label class="block text-xs font-bold text-slate-600">2단계. 제작 장비 선택 (다중 선택 가능)</label>
-                        <!-- 직접입력 기능 추가 버튼 -->
                         <button id="btn-open-manual-equip" type="button" class="text-[11px] text-indigo-600 font-bold hover:text-indigo-800 transition flex items-center gap-1 active:scale-95">
                             <i class="fa-solid fa-keyboard"></i> 임의 장비 직접입력
                         </button>
@@ -499,10 +498,6 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, doc, updateDoc, setDoc, getDoc, onSnapshot, runTransaction, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // ============================================================================
-        // [영구 설정 적용 구역] 클라우드 접속 정보 (Hardcoded Config)
-        // 아래 양식의 "여기에_..." 부분을 실제 사내 Firebase 키값으로 변경해 주세요.
-        // ============================================================================
         const MY_CUSTOM_FIREBASE_CONFIG = {
             apiKey: "AIzaSyAaxrRBDPlOEIlt6FC0zUdOS8FN70qbPQ4",
             authDomain: "mfg2-timer.firebaseapp.com",
@@ -511,7 +506,6 @@
             messagingSenderId: "164581870353",
             appId: "1:164581870353:web:e0d32912e5ec7df4409ab0"
         };
-        // ============================================================================
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-process-time-tracker';
         let firebaseConfig = null;
@@ -569,9 +563,7 @@
         let confirmCallback = null;
         let editingLogId = null; 
         let editingActiveTaskId = null; 
-        
-        let lastAutoPauseTime = ''; 
-        let lastAutoResumeTime = ''; 
+        let lastAutoResumeTime = ''; // 자동 일괄재개 중복 방지용
 
         let runningTasks = [];
         let completedLogs = [];
@@ -859,29 +851,21 @@
                             newRunning.unshift(payload);
                         }
                     }
-                    else if (actionType === 'TOGGLE_HOLD') {
-                        const idx = newRunning.findIndex(x => x.id === payload.id);
-                        if (idx > -1) { newRunning[idx].holdAutoResume = payload.hold; }
-                    }
                     else if (actionType === 'PAUSE_TOGGLE') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
-                        if (idx > -1) { 
-                            newRunning[idx].paused = payload.paused; 
-                            newRunning[idx].pausedAt = payload.pausedAt; 
-                            newRunning[idx].totalPausedDuration = payload.totalPausedDuration; 
-                            // 개별적으로 수동 재개시 보류 상태 해제
-                            if (!payload.paused) {
-                                newRunning[idx].holdAutoResume = false;
-                            }
-                        }
+                        if (idx > -1) { newRunning[idx].paused = payload.paused; newRunning[idx].pausedAt = payload.pausedAt; newRunning[idx].totalPausedDuration = payload.totalPausedDuration; }
                     } 
+                    else if (actionType === 'TOGGLE_HOLD') {
+                        const idx = newRunning.findIndex(x => x.id === payload.id);
+                        if (idx > -1) { newRunning[idx].isHeld = payload.isHeld; }
+                    }
                     else if (actionType === 'PAUSE_ALL') {
                         newRunning.forEach(task => { if (!task.paused) { task.paused = true; task.pausedAt = payload.timestamp; } });
                     }
                     else if (actionType === 'RESUME_ALL') {
-                        // 일괄 재개 시(수동/자동 무관), 보류가 설정되지 않은(holdAutoResume가 true가 아닌) 작업만 재개
-                        newRunning.forEach(task => { 
-                            if (task.paused && !task.holdAutoResume) { 
+                        newRunning.forEach(task => {
+                            // 보류(isHeld) 상태가 아닌 작업만 재개
+                            if (task.paused && !task.isHeld) { 
                                 task.totalPausedDuration += (payload.timestamp - task.pausedAt); 
                                 task.paused = false; 
                                 task.pausedAt = null; 
@@ -960,7 +944,7 @@
                 paused: false, 
                 pausedAt: null, 
                 totalPausedDuration: 0,
-                holdAutoResume: false, // 생성 시 기본적으로 보류 해제 상태
+                isHeld: false, // 새로 시작할 땐 보류 안함
                 equipments: selectedEquipments.map(item => ({ id: item.id, equipment: item.equipment, division: item.division, cskSn: item.cskSn, deliveryDate: item.deliveryDate }))
             };
             
@@ -982,6 +966,15 @@
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
             const now = new Date().getTime();
+            
+            // 만약 보류 상태에서 개별 재개(재생)버튼을 누르면 보류를 해제시키며 재개함
+            let wasHeld = false;
+            if (task.paused && task.isHeld) {
+                wasHeld = true;
+                // 보류 해제를 위해 payload에 isHeld: false를 같이 보냅니다 (밑의 update 로직이 TOGGLE_PAUSE에선 isHeld를 건들지 않으므로 임시로 두번 호출하거나 별도로 처리 필요 - 여기서는 편의상 TOGGLE_HOLD 후 TOGGLE_PAUSE 실행)
+                await updateTaskInCloudSecurely('TOGGLE_HOLD', { id: taskId, isHeld: false });
+            }
+
             let updatedPayload = { id: task.id, paused: task.paused, pausedAt: task.pausedAt, totalPausedDuration: task.totalPausedDuration || 0 };
 
             if (!task.paused) {
@@ -993,7 +986,7 @@
             const success = await updateTaskInCloudSecurely('PAUSE_TOGGLE', updatedPayload);
             if(success) {
                  if (updatedPayload.paused) { playSound(500, 0.1); showToast(`작업 일시정지됨`, "fa-pause"); }
-                 else { playSound(900, 0.1); showToast(`작업 재개됨`, "fa-play"); }
+                 else { playSound(900, 0.1); showToast(wasHeld ? `보류 해제 및 작업 재개됨` : `작업 재개됨`, "fa-play"); }
             }
         };
 
@@ -1001,14 +994,13 @@
             if (!checkFailClosedCanWrite()) return;
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
-            
-            const newHoldStatus = !task.holdAutoResume;
-            const success = await updateTaskInCloudSecurely('TOGGLE_HOLD', { id: taskId, hold: newHoldStatus });
+            const newHeldStatus = !task.isHeld;
+            const success = await updateTaskInCloudSecurely('TOGGLE_HOLD', { id: taskId, isHeld: newHeldStatus });
             if (success) {
-                if (newHoldStatus) {
-                    showToast("자동 재개 보류가 설정되었습니다.", "fa-lock");
+                if (newHeldStatus) {
+                    showToast("작업이 보류 상태로 설정되었습니다. 일괄 재개 시 제외됩니다.", "fa-lock");
                 } else {
-                    showToast("보류가 해제되었습니다.", "fa-unlock");
+                    showToast("작업 보류가 해제되었습니다.", "fa-unlock");
                 }
             }
         };
@@ -1031,15 +1023,16 @@
         window.triggerResumeAll = async function(isAuto = false) {
             if (!checkFailClosedCanWrite()) return;
             if (runningTasks.length === 0) return;
-            const hasPaused = runningTasks.some(t => t.paused && !t.holdAutoResume);
-            if (!hasPaused) { 
-                if (isAuto !== true) showToast("재개할 수 있는 작업이 없습니다. (보류 상태인 항목 제외)", "fa-circle-info"); 
+            // 보류 중이 아니면서 정지된 작업이 있는지 확인
+            const hasPausedNotHeld = runningTasks.some(t => t.paused && !t.isHeld);
+            if (!hasPausedNotHeld) { 
+                if (isAuto !== true) showToast("재개할 작업이 없습니다. (모든 정지된 작업이 보류 상태이거나 이미 진행 중)", "fa-circle-info"); 
                 return; 
             }
             const success = await updateTaskInCloudSecurely('RESUME_ALL', { timestamp: Date.now() });
             if (success) { 
                 playSound(900, 0.1); 
-                showToast(isAuto === true ? "휴식/식사 시간이 끝나 자동으로 일괄 재개되었습니다." : "일시정지된 작업이 일괄 재개되었습니다.", "fa-play"); 
+                showToast(isAuto === true ? "작업 시간이 되어 자동으로 일괄 재개되었습니다." : "보류되지 않은 일시정지 작업이 일괄 재개되었습니다.", "fa-play"); 
             }
         };
 
@@ -1272,33 +1265,22 @@
                 const nowTime = new Date();
                 const nowMs = nowTime.getTime();
                 
-                // [자동 일시정지 및 재개 로직] 설정된 시간에 일괄 정지/재개 실행
                 const hh = String(nowTime.getHours()).padStart(2, '0');
                 const mm = String(nowTime.getMinutes()).padStart(2, '0');
                 const currentTimeStr = `${hh}:${mm}`;
                 
-                const targetAutoPauseTimes = ['10:00', '11:50', '15:00', '16:50'];
+                // [자동 일괄 재개 로직] 07:50, 10:15, 12:50, 15:15
                 const targetAutoResumeTimes = ['07:50', '10:15', '12:50', '15:15'];
-                
-                // 일괄 정지 체크
-                if (targetAutoPauseTimes.includes(currentTimeStr)) {
-                    if (lastAutoPauseTime !== currentTimeStr) {
-                        lastAutoPauseTime = currentTimeStr;
-                        window.triggerPauseAll(true); // 자동 일괄 정지 트리거
-                    }
-                } else {
-                    lastAutoPauseTime = ''; 
-                }
-
-                // 일괄 재개 체크
                 if (targetAutoResumeTimes.includes(currentTimeStr)) {
                     if (lastAutoResumeTime !== currentTimeStr) {
                         lastAutoResumeTime = currentTimeStr;
                         window.triggerResumeAll(true); // 자동 일괄 재개 트리거
                     }
                 } else {
-                    lastAutoResumeTime = ''; 
+                    lastAutoResumeTime = ''; // 타겟 시간이 지나면 초기화
                 }
+                
+                // (기존 일괄 정지 로직이 있다면 여기 추가 유지)
 
                 runningTasks.forEach(task => {
                     const el = document.getElementById(`span-timer-${task.id}`);
@@ -1326,12 +1308,8 @@
                 const isPaused = task.paused;
                 const cardBgClass = isPaused ? "bg-slate-900/90 text-white p-5 rounded-2xl shadow-lg border border-slate-800 flex flex-col justify-between space-y-4 opacity-80" : "bg-slate-900 text-white p-5 rounded-2xl shadow-lg border border-slate-800 flex flex-col justify-between space-y-4 hover:shadow-indigo-950/20 hover:scale-[1.01] transition duration-200";
                 const pulseLightClass = isPaused ? "bg-amber-500 rounded-full w-2.5 h-2.5" : "w-2.5 h-2.5 rounded-full bg-red-500 pulse-red";
-                
-                // 보류 상태(holdAutoResume)에 따라 뱃지 내용 및 디자인 변경
-                const pauseBadgeText = isPaused ? (task.holdAutoResume ? "일시정지됨 (보류)" : "일시정지됨") : "실시간 가동중";
-                const pauseBadgeClass = isPaused 
-                    ? (task.holdAutoResume ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30") 
-                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                const pauseBadgeClass = isPaused ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                const pauseBadgeText = isPaused ? "일시정지됨" : "실시간 가동중";
 
                 let procBadge = 'bg-slate-600/20 text-slate-400 border-slate-50/30';
                 if (task.process === '취부') procBadge = 'bg-blue-600/20 text-blue-400 border-blue-500/30';
@@ -1349,6 +1327,13 @@
                         <div class="flex justify-between items-center"><span class="text-[10px] text-slate-400 font-bold whitespace-nowrap">CSK S/N</span><span class="text-[11px] font-mono-num font-bold text-indigo-300">${escapeHTML(eq.cskSn || '-')}</span></div>
                     </div>
                 `).join('');
+                
+                // 보류 버튼 (일시정지 상태일 때만 보류 버튼 활성화 가능하게 UI 구성)
+                const holdButtonHtml = isPaused ? `
+                    <button onclick="triggerToggleHold('${task.id}')" class="px-2 py-1 ${task.isHeld ? 'bg-rose-900/80 text-rose-300 border border-rose-700/50' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'} rounded-lg text-[10px] font-bold transition active:scale-95 shadow-sm">
+                        ${task.isHeld ? '🔒 보류 중' : '🔓 보류 설정'}
+                    </button>
+                ` : '';
 
                 const card = document.createElement('div');
                 card.className = cardBgClass;
@@ -1369,10 +1354,12 @@
                                 <button onclick="triggerEditActiveTime('${task.id}')" class="text-slate-500 hover:text-indigo-400 transition" title="진행 시간 수정"><i class="fa-solid fa-pen-to-square"></i></button>
                             </div>
                         </div>
-                        <div class="flex items-center gap-1.5">
-                            ${isPaused ? `<button onclick="triggerToggleHold('${task.id}')" class="px-3 py-2 ${task.holdAutoResume ? 'bg-rose-600 hover:bg-rose-700' : 'bg-slate-700 hover:bg-slate-600'} text-white rounded-xl text-xs font-extrabold transition active:scale-95 shadow-sm" title="자동 재개 방지">${task.holdAutoResume ? '🔒 보류중' : '🔓 보류'}</button>` : ''}
-                            <button onclick="triggerTogglePause('${task.id}')" class="px-3 py-2 ${isPaused ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'} rounded-xl text-xs font-extrabold transition active:scale-95 shadow-sm">${isPaused ? '▶ 재개' : '⏸ 일시정지'}</button>
-                            <button onclick="triggerPunchOut('${task.id}')" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-md transition active:scale-95">🏁 완료 처리</button>
+                        <div class="flex flex-col items-end gap-1.5">
+                            ${holdButtonHtml}
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="triggerTogglePause('${task.id}')" class="px-3 py-2 ${isPaused ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'} rounded-xl text-xs font-extrabold transition active:scale-95 shadow-sm">${isPaused ? '▶ 재개' : '⏸ 일시정지'}</button>
+                                <button onclick="triggerPunchOut('${task.id}')" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-md transition active:scale-95">🏁 완료 처리</button>
+                            </div>
                         </div>
                     </div>`;
                 container.appendChild(card);
@@ -1516,23 +1503,12 @@
             }
         }
 
-        // [추가] 엑셀 단축/지연 효율 텍스트 색상 적용 헬퍼 함수
-        function applyEfficiencyColor(ws, rowCount, colIdx) {
-            for (let R = 1; R < rowCount; ++R) {
-                const cellRef = XLSX.utils.encode_cell({ c: colIdx, r: R });
-                if (ws[cellRef] && ws[cellRef].v && ws[cellRef].s && ws[cellRef].s.font) {
-                    const val = String(ws[cellRef].v);
-                    if (val.includes('단축')) {
-                        ws[cellRef].s.font.color = { rgb: "2563EB" }; // 파란색 (Tailwind blue-600)
-                        ws[cellRef].s.font.bold = true;
-                    } else if (val.includes('지연')) {
-                        ws[cellRef].s.font.color = { rgb: "DC2626" }; // 빨간색 (Tailwind red-600)
-                        ws[cellRef].s.font.bold = true;
-                    } else if (val.includes('정상')) {
-                        ws[cellRef].s.font.color = { rgb: "059669" }; // 초록색 (Tailwind emerald-600)
-                        ws[cellRef].s.font.bold = true;
-                    }
-                }
+        // 특정 열의 글자 색상을 변경하는 헬퍼 함수
+        function updateCellFontColor(ws, rowIndex, colIndex, colorHex) {
+            const cellRef = XLSX.utils.encode_cell({ c: colIndex, r: rowIndex });
+            if (ws[cellRef] && ws[cellRef].s) {
+                ws[cellRef].s.font.color = { rgb: colorHex };
+                ws[cellRef].s.font.bold = true; // 효율 상태 눈에 잘 띄게 볼드 처리
             }
         }
 
@@ -1547,104 +1523,96 @@
             });
             if (targetLogs.length === 0) { showMessage('작업 이력 없음', '엑셀로 출력할 완료된 작업 이력이 없습니다.'); return; }
 
-            // [기능 추가] 지정된 기준 작업자의 최근 3개월 평균 작업 시간 산출 로직
-            const ninetyDaysAgo = new Date();
-            ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+            const wb = XLSX.utils.book_new();
             
-            const getStandardWorker = (process) => {
-                if (process === '취부') return '안드레이';
-                if (process.includes('결선')) return '장혜정';
-                if (process.includes('BOX')) return '장동훈';
-                return null;
-            };
+            // --- 1. 공정별 1대당 평균 기준 시간 산출 (최근 3개월 데이터 기반) ---
+            const stdTimes = {};
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-            const stdData = {};
-            // 전체 completedLogs를 순회하며 기준 데이터 수집 (필터링 전 원본 데이터 활용)
+            const targetWorkers = { '취부': '안드레이', '결선': '장혜정', 'BOX': '장동훈' };
+
             completedLogs.forEach(log => {
                 if (log.isDeleted) return;
                 const logDate = new Date(log.date);
-                if (logDate < ninetyDaysAgo) return; // 최근 3개월 데이터만 사용
-                
-                const stdWorker = getStandardWorker(log.process);
-                if (!stdWorker) return; // 기준 작업자가 정의되지 않은 공정은 패스
-                
-                const workersInLog = log.workerList && log.workerList.length > 0 ? log.workerList : log.worker.split(',').map(w => w.trim());
-                const cleanWorkers = workersInLog.map(w => getCleanWorkerName(w));
-                if (!cleanWorkers.includes(stdWorker)) return; // 기준 작업자가 수행한 기록이 아니면 패스
-                
-                let eqList = log.equipments || [];
-                if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment }];
-                if (eqList.length === 0) return;
-                
-                const mainModel = normalizeEquipmentName(eqList[0].equipment || '미지정');
-                // 다수 장비를 동시 작업했을 수 있으므로 1대당 소요 시간(분)으로 환산하여 집계
-                const timePerUnit = log.elapsedMinutes / Math.max(1, eqList.length);
-                
-                if (!stdData[mainModel]) stdData[mainModel] = {};
-                if (!stdData[mainModel][log.process]) stdData[mainModel][log.process] = { sum: 0, count: 0 };
-                
-                stdData[mainModel][log.process].sum += timePerUnit;
-                stdData[mainModel][log.process].count += 1;
+                if (logDate >= threeMonthsAgo) {
+                    let processGroup = log.process;
+                    if (log.process.includes('결선')) processGroup = '결선';
+                    if (log.process.includes('BOX')) processGroup = 'BOX';
+
+                    const targetWorker = targetWorkers[processGroup];
+                    if (targetWorker && (log.worker.includes(targetWorker) || (log.workerList && log.workerList.includes(targetWorker)))) {
+                        let eqList = log.equipments || [];
+                        if (eqList.length === 0 && log.equipment) eqList = [{ cskSn: log.cskSn }];
+                        const unitCount = Math.max(1, eqList.length);
+                        const minPerUnit = log.elapsedMinutes / unitCount; // 1대당 소요 분 환산
+
+                        if (!stdTimes[processGroup]) stdTimes[processGroup] = { totalMins: 0, count: 0 };
+                        stdTimes[processGroup].totalMins += minPerUnit;
+                        stdTimes[processGroup].count += 1;
+                    }
+                }
             });
 
-            // 산출된 누적 데이터를 평균내어 최종 기준 딕셔너리 생성
-            const standardTimes = {};
-            for (const model in stdData) {
-                standardTimes[model] = {};
-                for (const proc in stdData[model]) {
-                    standardTimes[model][proc] = Math.round(stdData[model][proc].sum / stdData[model][proc].count);
-                }
+            const stdAverages = {};
+            for (const [proc, data] of Object.entries(stdTimes)) {
+                stdAverages[proc] = data.totalMins / data.count; // 1대당 평균
             }
 
-            const wb = XLSX.utils.book_new();
-
-            // 엑셀 헤더에 기준 시간 비교 열 추가 (1대당 기준으로 변경)
-            const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간 (분)', '소요 공수 (M/D)', '1대당 기준 시간(분)', '1대당 시간 차이(분)', '효율 평가'];
+            // --- 2. 작업일보 상세내역 시트 생성 ---
+            const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간(분)', '1대당 소요 시간(분)', '1대당 표준 기준 시간(분)', '1대당 시간 차이(분)', '효율 상태', '소요 공수(M/D)'];
             let rows = [header];
+            const effStateColIndex = header.indexOf('효율 상태');
+            
             targetLogs.forEach((item, index) => {
                 let eqList = item.equipments || [];
                 if (eqList.length === 0 && item.equipment) eqList = [{ cskSn: item.cskSn }];
                 const cskSns = eqList.map(e => e.cskSn || '-').join(', ');
                 const unitCount = Math.max(1, eqList.length);
+                const actualMinPerUnit = item.elapsedMinutes / unitCount;
                 const mainModel = normalizeEquipmentName(eqList[0]?.equipment || '미지정');
                 const itemMD = parseFloat((item.elapsedMinutes / 60 / 8).toFixed(4));
-
                 const cleanWorkerName = getCleanWorkerName(item.worker);
 
-                // 개별 작업 로그의 기준 시간 대비 차이 및 상태 평가 (1대당 시간 기준 적용)
-                let stdTimeDisplay = '-';
-                let diffDisplay = '-';
-                let statusDisplay = '-';
+                let processGroup = item.process;
+                if (item.process.includes('결선')) processGroup = '결선';
+                if (item.process.includes('BOX')) processGroup = 'BOX';
+
+                let stdTimeStr = '-', diffStr = '-', effState = '-';
                 
-                const stdTimePerUnit = standardTimes[mainModel]?.[item.process];
-                if (stdTimePerUnit) {
-                    const actualTimePerUnit = Math.round(item.elapsedMinutes / unitCount);
-                    stdTimeDisplay = stdTimePerUnit;
-                    const diff = actualTimePerUnit - stdTimePerUnit;
+                if (stdAverages[processGroup]) {
+                    const stdMin = stdAverages[processGroup];
+                    stdTimeStr = stdMin.toFixed(1);
+                    const diff = actualMinPerUnit - stdMin; // 단축이면 마이너스, 지연이면 플러스
                     
-                    if (diff > 0) {
-                        diffDisplay = `+${diff}`;
-                        statusDisplay = '🔻 지연 (느림)';
-                    } else if (diff < 0) {
-                        diffDisplay = `${diff}`;
-                        statusDisplay = '🔺 단축 (빠름)';
+                    if (Math.abs(diff) <= 5) {
+                        effState = '정상'; diffStr = diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
+                    } else if (diff > 5) {
+                        effState = '지연'; diffStr = `+${diff.toFixed(1)}`;
                     } else {
-                        diffDisplay = '0';
-                        statusDisplay = '🔹 정상 (동일)';
+                        effState = '단축'; diffStr = `${diff.toFixed(1)}`;
                     }
                 }
 
                 rows.push([
-                    index + 1, item.date, cleanWorkerName, mainModel, `${unitCount}대`, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, itemMD, stdTimeDisplay, diffDisplay, statusDisplay
+                    index + 1, item.date, cleanWorkerName, mainModel, `${unitCount}대`, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, Math.round(actualMinPerUnit), stdTimeStr, diffStr, effState, itemMD
                 ]);
             });
             const wsDetail = XLSX.utils.aoa_to_sheet(rows);
             wsDetail['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: header.length - 1 } }) };
-            autoFitSheetColumns(wsDetail);
             applyExcelStyle(wsDetail, rows.length, header.length);
-            applyEfficiencyColor(wsDetail, rows.length, 13); // [추가] 상세 내역 색상 지정 (13번 인덱스)
+            autoFitSheetColumns(wsDetail);
+            
+            // 색상 적용 루프
+            for (let R = 1; R < rows.length; R++) {
+                const stateVal = rows[R][effStateColIndex];
+                if (stateVal === '단축') updateCellFontColor(wsDetail, R, effStateColIndex, "0000FF");
+                else if (stateVal === '지연') updateCellFontColor(wsDetail, R, effStateColIndex, "FF0000");
+                else if (stateVal === '정상') updateCellFontColor(wsDetail, R, effStateColIndex, "008000");
+            }
             XLSX.utils.book_append_sheet(wb, wsDetail, "작업일보_상세내역");
 
+            // --- 3. 월별 통계 데이터 집계 ---
             const monthlyStats = {};
             targetLogs.forEach(log => {
                 const dateParts = log.date.split('-');
@@ -1654,67 +1622,61 @@
                     
                     const process = log.process || '미지정';
                     const elapsedMins = log.elapsedMinutes;
-                    
                     let eqList = log.equipments || [];
                     if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division, cskSn: log.cskSn }];
-                    
-                    // [추가] 통계용 기준 시간 추출
                     const unitCount = Math.max(1, eqList.length);
-                    const mainModel = normalizeEquipmentName(eqList[0]?.equipment || '미지정');
-                    const stdTimePerUnit = standardTimes[mainModel]?.[process];
-                    let totalStdTime = 0;
-                    let hasStdTime = false;
-                    if (stdTimePerUnit) {
-                        totalStdTime = stdTimePerUnit * unitCount;
-                        hasStdTime = true;
-                    }
-
+                    const actualMinPerUnit = elapsedMins / unitCount;
+                    
+                    let processGroup = process;
+                    if (process.includes('결선')) processGroup = '결선';
+                    if (process.includes('BOX')) processGroup = 'BOX';
+                    const stdMin = stdAverages[processGroup] || null;
+                    
                     const workersInLog = log.workerList && log.workerList.length > 0 ? log.workerList : log.worker.split(',').map(w => w.trim());
                     
                     workersInLog.forEach(rawWorker => {
                         const worker = getCleanWorkerName(rawWorker);
                         if (!monthlyStats[monthKey].workers[worker]) {
-                            monthlyStats[monthKey].workers[worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {}, stdExpectedMins: 0, stdComparedActualMins: 0, stdUnitCount: 0 };
+                            monthlyStats[monthKey].workers[worker] = { 
+                                totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {},
+                                stdExpectedMins: 0, stdComparedActualMins: 0, stdUnitCount: 0 // 1대당 비교 누적용
+                            };
                         }
                         let wStat = monthlyStats[monthKey].workers[worker];
                         wStat.totalJobs += 1;
                         wStat.totalMinutes += elapsedMins;
                         wStat.totalEquips += eqList.length;
-
-                        // 기준 데이터가 있는 경우만 비교용으로 누적 합산 (1대당 평균 산출용)
-                        if (hasStdTime) {
-                            wStat.stdExpectedMins += totalStdTime;
+                        
+                        if (stdMin !== null) {
+                            wStat.stdExpectedMins += (stdMin * unitCount);
                             wStat.stdComparedActualMins += elapsedMins;
                             wStat.stdUnitCount += unitCount;
                         }
 
-                        if (eqList.length === 1) {
-                            const eqName = normalizeEquipmentName(eqList[0].equipment || '미지정');
-                            if (!wStat.equipsDetail[eqName]) wStat.equipsDetail[eqName] = { count: 0, mins: 0 };
-                            wStat.equipsDetail[eqName].count += 1;
-                            wStat.equipsDetail[eqName].mins += elapsedMins;
-                        }
+                        // 다중 장비 무관하게 모든 작업 내역을 표기 (공정명 포함)
+                        eqList.forEach(eq => {
+                            const eqName = normalizeEquipmentName(eq.equipment || '미지정');
+                            const detailKey = `[${eqName}] ${process}`;
+                            if (!wStat.equipsDetail[detailKey]) wStat.equipsDetail[detailKey] = { count: 0, mins: 0 };
+                            wStat.equipsDetail[detailKey].count += 1; // 대수
+                            wStat.equipsDetail[detailKey].mins += (elapsedMins / unitCount); // 1대분 배분 시간
+                        });
                     });
 
                     if (eqList.length === 1) {
                         const eq = eqList[0];
                         const eqName = normalizeEquipmentName(eq.equipment || '미지정');
-                        
                         const divName = eq.division || 'ACM';
                         if (!monthlyStats[monthKey].equipments[eqName]) {
                             monthlyStats[monthKey].equipments[eqName] = { division: divName, processes: {} };
                         }
                         let eStat = monthlyStats[monthKey].equipments[eqName];
-                        if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0, stdExpectedMins: 0, stdComparedActualMins: 0, stdUnitCount: 0 };
+                        if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0, stdUnitCount: 0, stdExpectedMins: 0 };
                         eStat.processes[process].count += 1;
                         eStat.processes[process].minutes += elapsedMins; 
-                        
-                        // 장비별 공정 통계에 기준 시간 누적 합산 (1대당 평균 산출용)
-                        if (hasStdTime) {
-                            eStat.processes[process].stdExpectedMins += totalStdTime;
-                            eStat.processes[process].stdComparedActualMins += elapsedMins;
-                            eStat.processes[process].stdUnitCount += unitCount;
-                            eStat.processes[process].hasStd = true;
+                        if (stdMin !== null) {
+                            eStat.processes[process].stdUnitCount += 1;
+                            eStat.processes[process].stdExpectedMins += stdMin;
                         }
                     } 
                     else if (eqList.length > 1) {
@@ -1736,66 +1698,59 @@
                 const eStats = monthlyStats[month].equipments;
                 const sharedJobs = monthlyStats[month].sharedJobs;
                 
-                const wStatHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 세부 작업 내역 (대수/분/MD)', '총 투입 시간 (분)', '총 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 시간 차이(분)', '종합 효율 평가'];
+                // --- 4. 작업자 통계 시트 ---
+                const wStatHeader = ['작업자명', '총 공정 완료 건수', '총 작업 대수 (대)', '장비 모델 및 공정별 세부 작업 내역', '총 투입 시간 (분)', '총 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 실제 시간(분)', '1대당 평균 시간 차이(분)', '종합 효율 평가'];
                 let wStatRows = [wStatHeader];
+                const wEffColIdx = wStatHeader.indexOf('종합 효율 평가');
 
                 Object.keys(wStats).sort().forEach(worker => {
                     const data = wStats[worker];
                     const totalMD = parseFloat((data.totalMinutes / 60 / 8).toFixed(4));
                     
-                    const equipDetailStrs = Object.entries(data.equipsDetail).map(([name, info]) => {
+                    const equipDetailStrs = Object.entries(data.equipsDetail).map(([detailKey, info]) => {
                         const md = parseFloat((info.mins / 60 / 8).toFixed(4));
-                        return `[${name}] ${info.count}건 / ${Math.round(info.mins)}분 / ${md} M/D`;
+                        return `${detailKey} : ${info.count}대 / ${Math.round(info.mins)}분 / ${md} M/D`;
                     }).join('\n');
 
-                    // 1대당 평균 시간으로 환산하여 통계 계산
-                    let stdDisplay = '-';
-                    let diffDisplay = '-';
-                    let statusDisplay = '-';
+                    let stdAvgStr = '-', actualAvgStr = '-', diffStr = '-', effState = '-';
                     if (data.stdUnitCount > 0) {
-                        const avgStdPerUnit = Math.round(data.stdExpectedMins / data.stdUnitCount);
-                        const avgActualPerUnit = Math.round(data.stdComparedActualMins / data.stdUnitCount);
-                        
-                        stdDisplay = avgStdPerUnit;
-                        const diff = avgActualPerUnit - avgStdPerUnit;
-                        
-                        if (diff > 0) {
-                            diffDisplay = `+${diff}`;
-                            statusDisplay = '🔻 지연 (느림)';
-                        } else if (diff < 0) {
-                            diffDisplay = `${diff}`;
-                            statusDisplay = '🔺 단축 (빠름)';
+                        const avgStd = data.stdExpectedMins / data.stdUnitCount;
+                        const avgActual = data.stdComparedActualMins / data.stdUnitCount;
+                        stdAvgStr = avgStd.toFixed(1);
+                        actualAvgStr = avgActual.toFixed(1);
+                        const diff = avgActual - avgStd;
+                        if (Math.abs(diff) <= 5) {
+                            effState = '정상'; diffStr = diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
+                        } else if (diff > 5) {
+                            effState = '지연'; diffStr = `+${diff.toFixed(1)}`;
                         } else {
-                            diffDisplay = '0';
-                            statusDisplay = '🔹 정상 (동일)';
+                            effState = '단축'; diffStr = `${diff.toFixed(1)}`;
                         }
                     }
 
                     wStatRows.push([
-                        worker, 
-                        data.totalJobs, 
-                        data.totalEquips, 
-                        equipDetailStrs, 
-                        Math.round(data.totalMinutes), 
-                        totalMD,
-                        stdDisplay,
-                        diffDisplay,
-                        statusDisplay
+                        worker, data.totalJobs, data.totalEquips, equipDetailStrs, Math.round(data.totalMinutes), totalMD, stdAvgStr, actualAvgStr, diffStr, effState
                     ]);
                 });
                 const wsWorkerStat = XLSX.utils.aoa_to_sheet(wStatRows);
                 wsWorkerStat['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: wStatRows.length - 1, c: wStatHeader.length - 1 } }) };
-                autoFitSheetColumns(wsWorkerStat);
                 applyExcelStyle(wsWorkerStat, wStatRows.length, wStatHeader.length);
-                applyEfficiencyColor(wsWorkerStat, wStatRows.length, 8); // [추가] 작업자통계 색상 지정 (8번 인덱스)
+                autoFitSheetColumns(wsWorkerStat);
+                for (let R = 1; R < wStatRows.length; R++) {
+                    const stateVal = wStatRows[R][wEffColIdx];
+                    if (stateVal === '단축') updateCellFontColor(wsWorkerStat, R, wEffColIdx, "0000FF");
+                    else if (stateVal === '지연') updateCellFontColor(wsWorkerStat, R, wEffColIdx, "FF0000");
+                    else if (stateVal === '정상') updateCellFontColor(wsWorkerStat, R, wEffColIdx, "008000");
+                }
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
-                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 시간 차이(분)', '효율 평가', '장비별 누적 직접귀속공수 (분 / M/D)'];
+                // --- 5. 장비별 통계 시트 ---
+                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 실제 시간(분)', '1대당 평균 시간 차이(분)', '종합 효율 평가', '장비별 누적 직접귀속공수 (분 / M/D)'];
                 let eStatRows = [eStatHeader];
+                const eEffColIdx = eStatHeader.indexOf('종합 효율 평가');
                 
                 Object.keys(eStats).sort().forEach(equip => {
                     const data = eStats[equip];
-                    
                     const totalEquipMinutes = Object.values(data.processes).reduce((sum, p) => sum + p.minutes, 0);
                     const totalEquipMD = parseFloat((totalEquipMinutes / 60 / 8).toFixed(4));
                     const totalEquipDisplay = `${Math.round(totalEquipMinutes)}분 (${totalEquipMD} M/D)`;
@@ -1805,32 +1760,24 @@
                         const pInfo = data.processes[proc];
                         const pMD = parseFloat((pInfo.minutes / 60 / 8).toFixed(4));
                         
-                        // 장비별 통계도 1대당 평균 시간 기준으로 환산
-                        let stdDisplay = '-';
-                        let diffDisplay = '-';
-                        let statusDisplay = '-';
-                        if (pInfo.hasStd && pInfo.stdUnitCount > 0) {
-                            const avgStdPerUnit = Math.round(pInfo.stdExpectedMins / pInfo.stdUnitCount);
-                            const avgActualPerUnit = Math.round(pInfo.stdComparedActualMins / pInfo.stdUnitCount);
-                            
-                            stdDisplay = avgStdPerUnit;
-                            const diff = avgActualPerUnit - avgStdPerUnit;
-                            
-                            if (diff > 0) {
-                                diffDisplay = `+${diff}`;
-                                statusDisplay = '🔻 지연 (느림)';
-                            } else if (diff < 0) {
-                                diffDisplay = `${diff}`;
-                                statusDisplay = '🔺 단축 (빠름)';
+                        let stdAvgStr = '-', actualAvgStr = '-', diffStr = '-', effState = '-';
+                        if (pInfo.stdUnitCount > 0) {
+                            const avgStd = pInfo.stdExpectedMins / pInfo.stdUnitCount;
+                            const avgActual = pInfo.minutes / pInfo.stdUnitCount;
+                            stdAvgStr = avgStd.toFixed(1);
+                            actualAvgStr = avgActual.toFixed(1);
+                            const diff = avgActual - avgStd;
+                            if (Math.abs(diff) <= 5) {
+                                effState = '정상'; diffStr = diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
+                            } else if (diff > 5) {
+                                effState = '지연'; diffStr = `+${diff.toFixed(1)}`;
                             } else {
-                                diffDisplay = '0';
-                                statusDisplay = '🔹 정상 (동일)';
+                                effState = '단축'; diffStr = `${diff.toFixed(1)}`;
                             }
                         }
 
                         eStatRows.push([
-                            equip, data.division, proc, pInfo.count, Math.round(pInfo.minutes), pMD,
-                            stdDisplay, diffDisplay, statusDisplay,
+                            equip, data.division, proc, pInfo.count, Math.round(pInfo.minutes), pMD, stdAvgStr, actualAvgStr, diffStr, effState,
                             isFirstRowForEquip ? totalEquipDisplay : ''
                         ]);
                         isFirstRowForEquip = false;
@@ -1843,6 +1790,7 @@
                 if (!wsEquipStat['!merges']) wsEquipStat['!merges'] = [];
                 let mergeStartRow = 1;
                 let currentEquipNameForMerge = '';
+                const lastColIdx = eStatHeader.length - 1;
                 
                 for (let R = 1; R < eStatRows.length; ++R) {
                     const currentEquip = eStatRows[R][0];
@@ -1850,7 +1798,7 @@
                         if (R - mergeStartRow > 1) {
                             wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 0 }, e: { r: R - 1, c: 0 } });
                             wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 1 }, e: { r: R - 1, c: 1 } });
-                            wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 9 }, e: { r: R - 1, c: 9 } }); // 6번 인덱스에서 9번으로 수정 (항목 추가됨)
+                            wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: lastColIdx }, e: { r: R - 1, c: lastColIdx } });
                         }
                         currentEquipNameForMerge = currentEquip;
                         mergeStartRow = R;
@@ -1859,7 +1807,7 @@
                 if (eStatRows.length - mergeStartRow > 1) {
                     wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 0 }, e: { r: eStatRows.length - 1, c: 0 } });
                     wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 1 }, e: { r: eStatRows.length - 1, c: 1 } });
-                    wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 9 }, e: { r: eStatRows.length - 1, c: 9 } }); // 6번 인덱스에서 9번으로 수정
+                    wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: lastColIdx }, e: { r: eStatRows.length - 1, c: lastColIdx } });
                 }
 
                 let currentGroupColorToggle = false;
@@ -1872,7 +1820,6 @@
                     }
                     const groupColorHex = currentGroupColorToggle ? "F1F5F9" : "FFFFFF";
 
-                    // 본문 데이터 행 스타일 적용
                     for (let C = 0; C < eStatHeader.length; ++C) {
                         const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
                         if (!wsEquipStat[cellRef]) wsEquipStat[cellRef] = { v: '', t: 's' };
@@ -1892,10 +1839,17 @@
                                 right: { style: 'thin', color: { rgb: 'CBD5E1' } }
                             }
                         };
+                        
+                        // 컬러 텍스트 덮어쓰기
+                        if (C === eEffColIdx) {
+                            const stateVal = wsEquipStat[cellRef].v;
+                            if (stateVal === '단축') wsEquipStat[cellRef].s.font.color = { rgb: "0000FF" };
+                            else if (stateVal === '지연') wsEquipStat[cellRef].s.font.color = { rgb: "FF0000" };
+                            else if (stateVal === '정상') wsEquipStat[cellRef].s.font.color = { rgb: "008000" };
+                            if (stateVal !== '-') wsEquipStat[cellRef].s.font.bold = true;
+                        }
                     }
                 }
-
-                // 헤더 행 스타일 적용 (0번째 행)
                 for (let C = 0; C < eStatHeader.length; ++C) {
                     const cellRef = XLSX.utils.encode_cell({ c: C, r: 0 });
                     if (wsEquipStat[cellRef]) {
@@ -1909,7 +1863,6 @@
                 }
 
                 autoFitSheetColumns(wsEquipStat);
-                applyEfficiencyColor(wsEquipStat, eStatRows.length, 8); // [추가] 장비별통계 색상 지정 (8번 인덱스)
                 XLSX.utils.book_append_sheet(wb, wsEquipStat, `장비별통계_${month}`);
 
                 if (sharedJobs.length > 0) {
@@ -2197,7 +2150,6 @@
                 e.target.value = '';
             });
 
-            // 임의 장비 직접입력 관련 이벤트 ------------------------------
             document.getElementById('btn-open-manual-equip')?.addEventListener('click', window.openManualEquipModal);
             
             document.getElementById('btn-add-manual-equip')?.addEventListener('click', () => {
@@ -2224,9 +2176,7 @@
                 showToast("임의 장비가 추가되었습니다.", "fa-check");
                 window.closeManualEquipModal();
             });
-            // -------------------------------------------------------------
 
-            // [생산계획 클라우드 수동 추가] 관련 이벤트 --------------------
             document.getElementById('btn-open-plan-add-modal')?.addEventListener('click', () => {
                 if (!checkFailClosedCanWrite() || !isAdminMode) {
                     showToast("생산계획 추가는 관리자 모드(?mode=admin)에서만 가능합니다.", "fa-lock");
@@ -2267,7 +2217,6 @@
                     window.closePlanEquipModal();
                 }
             });
-            // -------------------------------------------------------------
 
             document.getElementById('btn-punch-in')?.addEventListener('click', triggerPunchIn);
             document.getElementById('log-division-filter')?.addEventListener('change', renderCompletedLogs);
