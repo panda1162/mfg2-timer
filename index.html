@@ -490,7 +490,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.7 Redteam Fail-Closed 4차 (임의 장비 수동추가)</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.8 Redteam Fail-Closed</p>
         </div>
     </footer>
 
@@ -569,7 +569,9 @@
         let confirmCallback = null;
         let editingLogId = null; 
         let editingActiveTaskId = null; 
-        let lastAutoPauseTime = ''; // 자동 일시정지 중복 실행 방지용
+        
+        let lastAutoPauseTime = ''; 
+        let lastAutoResumeTime = ''; 
 
         let runningTasks = [];
         let completedLogs = [];
@@ -857,15 +859,34 @@
                             newRunning.unshift(payload);
                         }
                     }
+                    else if (actionType === 'TOGGLE_HOLD') {
+                        const idx = newRunning.findIndex(x => x.id === payload.id);
+                        if (idx > -1) { newRunning[idx].holdAutoResume = payload.hold; }
+                    }
                     else if (actionType === 'PAUSE_TOGGLE') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
-                        if (idx > -1) { newRunning[idx].paused = payload.paused; newRunning[idx].pausedAt = payload.pausedAt; newRunning[idx].totalPausedDuration = payload.totalPausedDuration; }
+                        if (idx > -1) { 
+                            newRunning[idx].paused = payload.paused; 
+                            newRunning[idx].pausedAt = payload.pausedAt; 
+                            newRunning[idx].totalPausedDuration = payload.totalPausedDuration; 
+                            // 개별적으로 수동 재개시 보류 상태 해제
+                            if (!payload.paused) {
+                                newRunning[idx].holdAutoResume = false;
+                            }
+                        }
                     } 
                     else if (actionType === 'PAUSE_ALL') {
                         newRunning.forEach(task => { if (!task.paused) { task.paused = true; task.pausedAt = payload.timestamp; } });
                     }
                     else if (actionType === 'RESUME_ALL') {
-                        newRunning.forEach(task => { if (task.paused) { task.totalPausedDuration += (payload.timestamp - task.pausedAt); task.paused = false; task.pausedAt = null; } });
+                        // 일괄 재개 시(수동/자동 무관), 보류가 설정되지 않은(holdAutoResume가 true가 아닌) 작업만 재개
+                        newRunning.forEach(task => { 
+                            if (task.paused && !task.holdAutoResume) { 
+                                task.totalPausedDuration += (payload.timestamp - task.pausedAt); 
+                                task.paused = false; 
+                                task.pausedAt = null; 
+                            } 
+                        });
                     }
                     else if (actionType === 'PUNCH_OUT') {
                         const idx = newRunning.findIndex(x => x.id === payload.taskId);
@@ -939,6 +960,7 @@
                 paused: false, 
                 pausedAt: null, 
                 totalPausedDuration: 0,
+                holdAutoResume: false, // 생성 시 기본적으로 보류 해제 상태
                 equipments: selectedEquipments.map(item => ({ id: item.id, equipment: item.equipment, division: item.division, cskSn: item.cskSn, deliveryDate: item.deliveryDate }))
             };
             
@@ -975,6 +997,22 @@
             }
         };
 
+        window.triggerToggleHold = async function(taskId) {
+            if (!checkFailClosedCanWrite()) return;
+            const task = runningTasks.find(t => t.id === taskId);
+            if (!task) return;
+            
+            const newHoldStatus = !task.holdAutoResume;
+            const success = await updateTaskInCloudSecurely('TOGGLE_HOLD', { id: taskId, hold: newHoldStatus });
+            if (success) {
+                if (newHoldStatus) {
+                    showToast("자동 재개 보류가 설정되었습니다.", "fa-lock");
+                } else {
+                    showToast("보류가 해제되었습니다.", "fa-unlock");
+                }
+            }
+        };
+
         window.triggerPauseAll = async function(isAuto = false) {
             if (!checkFailClosedCanWrite()) return;
             if (runningTasks.length === 0) return;
@@ -986,18 +1024,23 @@
             const success = await updateTaskInCloudSecurely('PAUSE_ALL', { timestamp: Date.now() });
             if (success) { 
                 playSound(500, 0.1); 
-                // 자동 모드일 경우 별도 안내 메시지 표출 (버튼 클릭 이벤트 객체 방지를 위해 === true 검사)
                 showToast(isAuto === true ? "휴식/식사 시간이 되어 모든 작업이 자동 정지되었습니다." : "현재 진행 중인 모든 작업이 일괄 정지되었습니다.", "fa-pause"); 
             }
         };
 
-        window.triggerResumeAll = async function() {
+        window.triggerResumeAll = async function(isAuto = false) {
             if (!checkFailClosedCanWrite()) return;
             if (runningTasks.length === 0) return;
-            const hasPaused = runningTasks.some(t => t.paused);
-            if (!hasPaused) { showToast("모든 작업이 이미 진행 중인 상태입니다.", "fa-circle-info"); return; }
+            const hasPaused = runningTasks.some(t => t.paused && !t.holdAutoResume);
+            if (!hasPaused) { 
+                if (isAuto !== true) showToast("재개할 수 있는 작업이 없습니다. (보류 상태인 항목 제외)", "fa-circle-info"); 
+                return; 
+            }
             const success = await updateTaskInCloudSecurely('RESUME_ALL', { timestamp: Date.now() });
-            if (success) { playSound(900, 0.1); showToast("일시정지된 모든 작업이 일괄 재개되었습니다.", "fa-play"); }
+            if (success) { 
+                playSound(900, 0.1); 
+                showToast(isAuto === true ? "휴식/식사 시간이 끝나 자동으로 일괄 재개되었습니다." : "일시정지된 작업이 일괄 재개되었습니다.", "fa-play"); 
+            }
         };
 
         window.triggerPunchOut = async function(taskId) {
@@ -1229,19 +1272,32 @@
                 const nowTime = new Date();
                 const nowMs = nowTime.getTime();
                 
-                // [자동 일시정지 로직] 설정된 시간에 일괄 정지 실행
+                // [자동 일시정지 및 재개 로직] 설정된 시간에 일괄 정지/재개 실행
                 const hh = String(nowTime.getHours()).padStart(2, '0');
                 const mm = String(nowTime.getMinutes()).padStart(2, '0');
                 const currentTimeStr = `${hh}:${mm}`;
-                const targetAutoPauseTimes = ['10:00', '11:50', '15:00', '16:50'];
                 
+                const targetAutoPauseTimes = ['10:00', '11:50', '15:00', '16:50'];
+                const targetAutoResumeTimes = ['07:50', '10:15', '12:50', '15:15'];
+                
+                // 일괄 정지 체크
                 if (targetAutoPauseTimes.includes(currentTimeStr)) {
                     if (lastAutoPauseTime !== currentTimeStr) {
                         lastAutoPauseTime = currentTimeStr;
                         window.triggerPauseAll(true); // 자동 일괄 정지 트리거
                     }
                 } else {
-                    lastAutoPauseTime = ''; // 타겟 시간이 지나면 초기화
+                    lastAutoPauseTime = ''; 
+                }
+
+                // 일괄 재개 체크
+                if (targetAutoResumeTimes.includes(currentTimeStr)) {
+                    if (lastAutoResumeTime !== currentTimeStr) {
+                        lastAutoResumeTime = currentTimeStr;
+                        window.triggerResumeAll(true); // 자동 일괄 재개 트리거
+                    }
+                } else {
+                    lastAutoResumeTime = ''; 
                 }
 
                 runningTasks.forEach(task => {
@@ -1270,8 +1326,12 @@
                 const isPaused = task.paused;
                 const cardBgClass = isPaused ? "bg-slate-900/90 text-white p-5 rounded-2xl shadow-lg border border-slate-800 flex flex-col justify-between space-y-4 opacity-80" : "bg-slate-900 text-white p-5 rounded-2xl shadow-lg border border-slate-800 flex flex-col justify-between space-y-4 hover:shadow-indigo-950/20 hover:scale-[1.01] transition duration-200";
                 const pulseLightClass = isPaused ? "bg-amber-500 rounded-full w-2.5 h-2.5" : "w-2.5 h-2.5 rounded-full bg-red-500 pulse-red";
-                const pauseBadgeClass = isPaused ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-                const pauseBadgeText = isPaused ? "일시정지됨" : "실시간 가동중";
+                
+                // 보류 상태(holdAutoResume)에 따라 뱃지 내용 및 디자인 변경
+                const pauseBadgeText = isPaused ? (task.holdAutoResume ? "일시정지됨 (보류)" : "일시정지됨") : "실시간 가동중";
+                const pauseBadgeClass = isPaused 
+                    ? (task.holdAutoResume ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30") 
+                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
 
                 let procBadge = 'bg-slate-600/20 text-slate-400 border-slate-50/30';
                 if (task.process === '취부') procBadge = 'bg-blue-600/20 text-blue-400 border-blue-500/30';
@@ -1310,6 +1370,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5">
+                            ${isPaused ? `<button onclick="triggerToggleHold('${task.id}')" class="px-3 py-2 ${task.holdAutoResume ? 'bg-rose-600 hover:bg-rose-700' : 'bg-slate-700 hover:bg-slate-600'} text-white rounded-xl text-xs font-extrabold transition active:scale-95 shadow-sm" title="자동 재개 방지">${task.holdAutoResume ? '🔒 보류중' : '🔓 보류'}</button>` : ''}
                             <button onclick="triggerTogglePause('${task.id}')" class="px-3 py-2 ${isPaused ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'} rounded-xl text-xs font-extrabold transition active:scale-95 shadow-sm">${isPaused ? '▶ 재개' : '⏸ 일시정지'}</button>
                             <button onclick="triggerPunchOut('${task.id}')" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-md transition active:scale-95">🏁 완료 처리</button>
                         </div>
