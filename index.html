@@ -1516,6 +1516,26 @@
             }
         }
 
+        // [추가] 엑셀 단축/지연 효율 텍스트 색상 적용 헬퍼 함수
+        function applyEfficiencyColor(ws, rowCount, colIdx) {
+            for (let R = 1; R < rowCount; ++R) {
+                const cellRef = XLSX.utils.encode_cell({ c: colIdx, r: R });
+                if (ws[cellRef] && ws[cellRef].v && ws[cellRef].s && ws[cellRef].s.font) {
+                    const val = String(ws[cellRef].v);
+                    if (val.includes('단축')) {
+                        ws[cellRef].s.font.color = { rgb: "2563EB" }; // 파란색 (Tailwind blue-600)
+                        ws[cellRef].s.font.bold = true;
+                    } else if (val.includes('지연')) {
+                        ws[cellRef].s.font.color = { rgb: "DC2626" }; // 빨간색 (Tailwind red-600)
+                        ws[cellRef].s.font.bold = true;
+                    } else if (val.includes('정상')) {
+                        ws[cellRef].s.font.color = { rgb: "059669" }; // 초록색 (Tailwind emerald-600)
+                        ws[cellRef].s.font.bold = true;
+                    }
+                }
+            }
+        }
+
         function exportLogsToExcel() {
             const logDivEl = document.getElementById('log-division-filter');
             const selectedLogDiv = logDivEl ? logDivEl.value : '';
@@ -1527,9 +1547,59 @@
             });
             if (targetLogs.length === 0) { showMessage('작업 이력 없음', '엑셀로 출력할 완료된 작업 이력이 없습니다.'); return; }
 
+            // [기능 추가] 지정된 기준 작업자의 최근 3개월 평균 작업 시간 산출 로직
+            const ninetyDaysAgo = new Date();
+            ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+            
+            const getStandardWorker = (process) => {
+                if (process === '취부') return '안드레이';
+                if (process.includes('결선')) return '장혜정';
+                if (process.includes('BOX')) return '장동훈';
+                return null;
+            };
+
+            const stdData = {};
+            // 전체 completedLogs를 순회하며 기준 데이터 수집 (필터링 전 원본 데이터 활용)
+            completedLogs.forEach(log => {
+                if (log.isDeleted) return;
+                const logDate = new Date(log.date);
+                if (logDate < ninetyDaysAgo) return; // 최근 3개월 데이터만 사용
+                
+                const stdWorker = getStandardWorker(log.process);
+                if (!stdWorker) return; // 기준 작업자가 정의되지 않은 공정은 패스
+                
+                const workersInLog = log.workerList && log.workerList.length > 0 ? log.workerList : log.worker.split(',').map(w => w.trim());
+                const cleanWorkers = workersInLog.map(w => getCleanWorkerName(w));
+                if (!cleanWorkers.includes(stdWorker)) return; // 기준 작업자가 수행한 기록이 아니면 패스
+                
+                let eqList = log.equipments || [];
+                if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment }];
+                if (eqList.length === 0) return;
+                
+                const mainModel = normalizeEquipmentName(eqList[0].equipment || '미지정');
+                // 다수 장비를 동시 작업했을 수 있으므로 1대당 소요 시간(분)으로 환산하여 집계
+                const timePerUnit = log.elapsedMinutes / Math.max(1, eqList.length);
+                
+                if (!stdData[mainModel]) stdData[mainModel] = {};
+                if (!stdData[mainModel][log.process]) stdData[mainModel][log.process] = { sum: 0, count: 0 };
+                
+                stdData[mainModel][log.process].sum += timePerUnit;
+                stdData[mainModel][log.process].count += 1;
+            });
+
+            // 산출된 누적 데이터를 평균내어 최종 기준 딕셔너리 생성
+            const standardTimes = {};
+            for (const model in stdData) {
+                standardTimes[model] = {};
+                for (const proc in stdData[model]) {
+                    standardTimes[model][proc] = Math.round(stdData[model][proc].sum / stdData[model][proc].count);
+                }
+            }
+
             const wb = XLSX.utils.book_new();
 
-            const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간 (분)', '소요 공수 (M/D)'];
+            // 엑셀 헤더에 기준 시간 비교 열 추가 (1대당 기준으로 변경)
+            const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간 (분)', '소요 공수 (M/D)', '1대당 기준 시간(분)', '1대당 시간 차이(분)', '효율 평가'];
             let rows = [header];
             targetLogs.forEach((item, index) => {
                 let eqList = item.equipments || [];
@@ -1541,14 +1611,38 @@
 
                 const cleanWorkerName = getCleanWorkerName(item.worker);
 
+                // 개별 작업 로그의 기준 시간 대비 차이 및 상태 평가 (1대당 시간 기준 적용)
+                let stdTimeDisplay = '-';
+                let diffDisplay = '-';
+                let statusDisplay = '-';
+                
+                const stdTimePerUnit = standardTimes[mainModel]?.[item.process];
+                if (stdTimePerUnit) {
+                    const actualTimePerUnit = Math.round(item.elapsedMinutes / unitCount);
+                    stdTimeDisplay = stdTimePerUnit;
+                    const diff = actualTimePerUnit - stdTimePerUnit;
+                    
+                    if (diff > 0) {
+                        diffDisplay = `+${diff}`;
+                        statusDisplay = '🔻 지연 (느림)';
+                    } else if (diff < 0) {
+                        diffDisplay = `${diff}`;
+                        statusDisplay = '🔺 단축 (빠름)';
+                    } else {
+                        diffDisplay = '0';
+                        statusDisplay = '🔹 정상 (동일)';
+                    }
+                }
+
                 rows.push([
-                    index + 1, item.date, cleanWorkerName, mainModel, `${unitCount}대`, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, itemMD
+                    index + 1, item.date, cleanWorkerName, mainModel, `${unitCount}대`, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, itemMD, stdTimeDisplay, diffDisplay, statusDisplay
                 ]);
             });
             const wsDetail = XLSX.utils.aoa_to_sheet(rows);
             wsDetail['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: header.length - 1 } }) };
             autoFitSheetColumns(wsDetail);
             applyExcelStyle(wsDetail, rows.length, header.length);
+            applyEfficiencyColor(wsDetail, rows.length, 13); // [추가] 상세 내역 색상 지정 (13번 인덱스)
             XLSX.utils.book_append_sheet(wb, wsDetail, "작업일보_상세내역");
 
             const monthlyStats = {};
@@ -1564,17 +1658,35 @@
                     let eqList = log.equipments || [];
                     if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division, cskSn: log.cskSn }];
                     
+                    // [추가] 통계용 기준 시간 추출
+                    const unitCount = Math.max(1, eqList.length);
+                    const mainModel = normalizeEquipmentName(eqList[0]?.equipment || '미지정');
+                    const stdTimePerUnit = standardTimes[mainModel]?.[process];
+                    let totalStdTime = 0;
+                    let hasStdTime = false;
+                    if (stdTimePerUnit) {
+                        totalStdTime = stdTimePerUnit * unitCount;
+                        hasStdTime = true;
+                    }
+
                     const workersInLog = log.workerList && log.workerList.length > 0 ? log.workerList : log.worker.split(',').map(w => w.trim());
                     
                     workersInLog.forEach(rawWorker => {
                         const worker = getCleanWorkerName(rawWorker);
                         if (!monthlyStats[monthKey].workers[worker]) {
-                            monthlyStats[monthKey].workers[worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {} };
+                            monthlyStats[monthKey].workers[worker] = { totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {}, stdExpectedMins: 0, stdComparedActualMins: 0, stdUnitCount: 0 };
                         }
                         let wStat = monthlyStats[monthKey].workers[worker];
                         wStat.totalJobs += 1;
                         wStat.totalMinutes += elapsedMins;
                         wStat.totalEquips += eqList.length;
+
+                        // 기준 데이터가 있는 경우만 비교용으로 누적 합산 (1대당 평균 산출용)
+                        if (hasStdTime) {
+                            wStat.stdExpectedMins += totalStdTime;
+                            wStat.stdComparedActualMins += elapsedMins;
+                            wStat.stdUnitCount += unitCount;
+                        }
 
                         if (eqList.length === 1) {
                             const eqName = normalizeEquipmentName(eqList[0].equipment || '미지정');
@@ -1593,9 +1705,17 @@
                             monthlyStats[monthKey].equipments[eqName] = { division: divName, processes: {} };
                         }
                         let eStat = monthlyStats[monthKey].equipments[eqName];
-                        if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0 };
+                        if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0, stdExpectedMins: 0, stdComparedActualMins: 0, stdUnitCount: 0 };
                         eStat.processes[process].count += 1;
                         eStat.processes[process].minutes += elapsedMins; 
+                        
+                        // 장비별 공정 통계에 기준 시간 누적 합산 (1대당 평균 산출용)
+                        if (hasStdTime) {
+                            eStat.processes[process].stdExpectedMins += totalStdTime;
+                            eStat.processes[process].stdComparedActualMins += elapsedMins;
+                            eStat.processes[process].stdUnitCount += unitCount;
+                            eStat.processes[process].hasStd = true;
+                        }
                     } 
                     else if (eqList.length > 1) {
                         monthlyStats[monthKey].sharedJobs.push({
@@ -1616,7 +1736,7 @@
                 const eStats = monthlyStats[month].equipments;
                 const sharedJobs = monthlyStats[month].sharedJobs;
                 
-                const wStatHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 세부 작업 내역 (대수/분/MD)', '총 투입 시간 (분)', '총 투입 공수 (M/D)'];
+                const wStatHeader = ['작업자명', '총 공정 완료 건수', '총 작업 장비 수량', '장비 모델별 세부 작업 내역 (대수/분/MD)', '총 투입 시간 (분)', '총 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 시간 차이(분)', '종합 효율 평가'];
                 let wStatRows = [wStatHeader];
 
                 Object.keys(wStats).sort().forEach(worker => {
@@ -1628,22 +1748,49 @@
                         return `[${name}] ${info.count}건 / ${Math.round(info.mins)}분 / ${md} M/D`;
                     }).join('\n');
 
+                    // 1대당 평균 시간으로 환산하여 통계 계산
+                    let stdDisplay = '-';
+                    let diffDisplay = '-';
+                    let statusDisplay = '-';
+                    if (data.stdUnitCount > 0) {
+                        const avgStdPerUnit = Math.round(data.stdExpectedMins / data.stdUnitCount);
+                        const avgActualPerUnit = Math.round(data.stdComparedActualMins / data.stdUnitCount);
+                        
+                        stdDisplay = avgStdPerUnit;
+                        const diff = avgActualPerUnit - avgStdPerUnit;
+                        
+                        if (diff > 0) {
+                            diffDisplay = `+${diff}`;
+                            statusDisplay = '🔻 지연 (느림)';
+                        } else if (diff < 0) {
+                            diffDisplay = `${diff}`;
+                            statusDisplay = '🔺 단축 (빠름)';
+                        } else {
+                            diffDisplay = '0';
+                            statusDisplay = '🔹 정상 (동일)';
+                        }
+                    }
+
                     wStatRows.push([
                         worker, 
                         data.totalJobs, 
                         data.totalEquips, 
                         equipDetailStrs, 
                         Math.round(data.totalMinutes), 
-                        totalMD
+                        totalMD,
+                        stdDisplay,
+                        diffDisplay,
+                        statusDisplay
                     ]);
                 });
                 const wsWorkerStat = XLSX.utils.aoa_to_sheet(wStatRows);
                 wsWorkerStat['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: wStatRows.length - 1, c: wStatHeader.length - 1 } }) };
                 autoFitSheetColumns(wsWorkerStat);
                 applyExcelStyle(wsWorkerStat, wStatRows.length, wStatHeader.length);
+                applyEfficiencyColor(wsWorkerStat, wStatRows.length, 8); // [추가] 작업자통계 색상 지정 (8번 인덱스)
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
-                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '장비별 누적 직접귀속공수 (분 / M/D)'];
+                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 시간 차이(분)', '효율 평가', '장비별 누적 직접귀속공수 (분 / M/D)'];
                 let eStatRows = [eStatHeader];
                 
                 Object.keys(eStats).sort().forEach(equip => {
@@ -1658,8 +1805,32 @@
                         const pInfo = data.processes[proc];
                         const pMD = parseFloat((pInfo.minutes / 60 / 8).toFixed(4));
                         
+                        // 장비별 통계도 1대당 평균 시간 기준으로 환산
+                        let stdDisplay = '-';
+                        let diffDisplay = '-';
+                        let statusDisplay = '-';
+                        if (pInfo.hasStd && pInfo.stdUnitCount > 0) {
+                            const avgStdPerUnit = Math.round(pInfo.stdExpectedMins / pInfo.stdUnitCount);
+                            const avgActualPerUnit = Math.round(pInfo.stdComparedActualMins / pInfo.stdUnitCount);
+                            
+                            stdDisplay = avgStdPerUnit;
+                            const diff = avgActualPerUnit - avgStdPerUnit;
+                            
+                            if (diff > 0) {
+                                diffDisplay = `+${diff}`;
+                                statusDisplay = '🔻 지연 (느림)';
+                            } else if (diff < 0) {
+                                diffDisplay = `${diff}`;
+                                statusDisplay = '🔺 단축 (빠름)';
+                            } else {
+                                diffDisplay = '0';
+                                statusDisplay = '🔹 정상 (동일)';
+                            }
+                        }
+
                         eStatRows.push([
                             equip, data.division, proc, pInfo.count, Math.round(pInfo.minutes), pMD,
+                            stdDisplay, diffDisplay, statusDisplay,
                             isFirstRowForEquip ? totalEquipDisplay : ''
                         ]);
                         isFirstRowForEquip = false;
@@ -1679,7 +1850,7 @@
                         if (R - mergeStartRow > 1) {
                             wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 0 }, e: { r: R - 1, c: 0 } });
                             wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 1 }, e: { r: R - 1, c: 1 } });
-                            wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 6 }, e: { r: R - 1, c: 6 } });
+                            wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 9 }, e: { r: R - 1, c: 9 } }); // 6번 인덱스에서 9번으로 수정 (항목 추가됨)
                         }
                         currentEquipNameForMerge = currentEquip;
                         mergeStartRow = R;
@@ -1688,7 +1859,7 @@
                 if (eStatRows.length - mergeStartRow > 1) {
                     wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 0 }, e: { r: eStatRows.length - 1, c: 0 } });
                     wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 1 }, e: { r: eStatRows.length - 1, c: 1 } });
-                    wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 6 }, e: { r: eStatRows.length - 1, c: 6 } });
+                    wsEquipStat['!merges'].push({ s: { r: mergeStartRow, c: 9 }, e: { r: eStatRows.length - 1, c: 9 } }); // 6번 인덱스에서 9번으로 수정
                 }
 
                 let currentGroupColorToggle = false;
@@ -1701,6 +1872,7 @@
                     }
                     const groupColorHex = currentGroupColorToggle ? "F1F5F9" : "FFFFFF";
 
+                    // 본문 데이터 행 스타일 적용
                     for (let C = 0; C < eStatHeader.length; ++C) {
                         const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
                         if (!wsEquipStat[cellRef]) wsEquipStat[cellRef] = { v: '', t: 's' };
@@ -1722,6 +1894,8 @@
                         };
                     }
                 }
+
+                // 헤더 행 스타일 적용 (0번째 행)
                 for (let C = 0; C < eStatHeader.length; ++C) {
                     const cellRef = XLSX.utils.encode_cell({ c: C, r: 0 });
                     if (wsEquipStat[cellRef]) {
@@ -1735,6 +1909,7 @@
                 }
 
                 autoFitSheetColumns(wsEquipStat);
+                applyEfficiencyColor(wsEquipStat, eStatRows.length, 8); // [추가] 장비별통계 색상 지정 (8번 인덱스)
                 XLSX.utils.book_append_sheet(wb, wsEquipStat, `장비별통계_${month}`);
 
                 if (sharedJobs.length > 0) {
