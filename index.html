@@ -966,7 +966,6 @@
                     }
                     else if (actionType === 'RESUME_ALL') {
                         newRunning.forEach(task => {
-                            // 보류(isHeld) 상태가 아닌 작업만 재개
                             if (task.paused && !task.isHeld) { 
                                 task.totalPausedDuration += (payload.timestamp - task.pausedAt); 
                                 task.paused = false; 
@@ -1041,21 +1040,16 @@
                 return; 
             }
 
-            // [추가된 로직] 이미 완료된 이력(S/N 기준) 중복 체크
             let alreadyCompletedItems = [];
             selectedEquipments.forEach(item => {
-                // S/N이 고유하지 않은 임의/기본값인 경우 중복 체크에서 제외
                 if (!item.cskSn || item.cskSn === '-' || item.cskSn === '수동입력' || item.cskSn.includes('하네스_')) return;
                 
                 const alreadyDone = completedLogs.find(log => {
                     if (log.isDeleted) return false;
-                    // 공정 이름이 완전히 동일한지 체크
                     if (log.process !== selectedProcess) return false;
                     
                     let eqList = log.equipments || [];
                     if (eqList.length === 0 && log.equipment) eqList = [{ cskSn: log.cskSn }];
-                    
-                    // 동일한 S/N이 포함되어 있는지 확인
                     return eqList.some(eq => eq.cskSn === item.cskSn);
                 });
                 
@@ -1081,7 +1075,7 @@
                 paused: false, 
                 pausedAt: null, 
                 totalPausedDuration: 0,
-                isHeld: false, // 새로 시작할 땐 보류 안함
+                isHeld: false,
                 equipments: selectedEquipments.map(item => ({ id: item.id, equipment: item.equipment, division: item.division, cskSn: item.cskSn, deliveryDate: item.deliveryDate }))
             };
             
@@ -1104,11 +1098,9 @@
             if (!task) return;
             const now = new Date().getTime();
             
-            // 만약 보류 상태에서 개별 재개(재생)버튼을 누르면 보류를 해제시키며 재개함
             let wasHeld = false;
             if (task.paused && task.isHeld) {
                 wasHeld = true;
-                // 보류 해제를 위해 payload에 isHeld: false를 같이 보냅니다 (밑의 update 로직이 TOGGLE_PAUSE에선 isHeld를 건들지 않으므로 임시로 두번 호출하거나 별도로 처리 필요 - 여기서는 편의상 TOGGLE_HOLD 후 TOGGLE_PAUSE 실행)
                 await updateTaskInCloudSecurely('TOGGLE_HOLD', { id: taskId, isHeld: false });
             }
 
@@ -1160,7 +1152,6 @@
         window.triggerResumeAll = async function(isAuto = false) {
             if (!checkFailClosedCanWrite()) return;
             if (runningTasks.length === 0) return;
-            // 보류 중이 아니면서 정지된 작업이 있는지 확인
             const hasPausedNotHeld = runningTasks.some(t => t.paused && !t.isHeld);
             if (!hasPausedNotHeld) { 
                 if (isAuto !== true) showToast("재개할 작업이 없습니다. (모든 정지된 작업이 보류 상태이거나 이미 진행 중)", "fa-circle-info"); 
@@ -1405,27 +1396,27 @@
                 const hh = String(nowTime.getHours()).padStart(2, '0');
                 const mm = String(nowTime.getMinutes()).padStart(2, '0');
                 const currentTimeStr = `${hh}:${mm}`;
-
+                
                 // [자동 일괄 정지 로직] 10:00, 11:50, 15:00
                 const targetAutoPauseTimes = ['10:00', '11:50', '15:00'];
                 if (targetAutoPauseTimes.includes(currentTimeStr)) {
                     if (lastAutoPauseTime !== currentTimeStr) {
                         lastAutoPauseTime = currentTimeStr;
-                        window.triggerPauseAll(true); // 자동 일괄 정지 트리거
+                        window.triggerPauseAll(true);
                     }
                 } else {
-                    lastAutoPauseTime = ''; // 타겟 시간이 지나면 초기화
+                    lastAutoPauseTime = '';
                 }
-                
+
                 // [자동 일괄 재개 로직] 07:50, 10:15, 12:50, 15:15
                 const targetAutoResumeTimes = ['07:50', '10:15', '12:50', '15:15'];
                 if (targetAutoResumeTimes.includes(currentTimeStr)) {
                     if (lastAutoResumeTime !== currentTimeStr) {
                         lastAutoResumeTime = currentTimeStr;
-                        window.triggerResumeAll(true); // 자동 일괄 재개 트리거
+                        window.triggerResumeAll(true);
                     }
                 } else {
-                    lastAutoResumeTime = ''; // 타겟 시간이 지나면 초기화
+                    lastAutoResumeTime = '';
                 }
 
                 runningTasks.forEach(task => {
@@ -1456,7 +1447,7 @@
 
                         if (validStdCount > 0) {
                             const diffMins = Math.floor(diff / 60000);
-                            const overTime = diffMins - totalStdMins; // 기준시간 대비 차이
+                            const overTime = diffMins - totalStdMins; 
                             
                             if (overTime >= 30) {
                                 if (!task.paused && !task.isHeld) {
@@ -1507,7 +1498,6 @@
                     </div>
                 `).join('');
                 
-                // 보류 버튼 (일시정지 상태일 때만 보류 버튼 활성화 가능하게 UI 구성)
                 const holdButtonHtml = isPaused ? `
                     <button onclick="triggerToggleHold('${task.id}')" class="px-2 py-1 ${task.isHeld ? 'bg-rose-900/80 text-rose-300 border border-rose-700/50' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'} rounded-lg text-[10px] font-bold transition active:scale-95 shadow-sm">
                         ${task.isHeld ? '🔒 보류 중' : '🔓 보류 설정'}
@@ -1621,11 +1611,9 @@
 
         function normalizeEquipmentName(name) {
             if (!name) return '미지정';
-            // 기존의 "TDS010DC"로 무조건 자르는 로직을 제거하여 -02BC012 등 세부 모델명이 보존되도록 함
             return name.trim().toUpperCase();
         }
 
-        // --- 1. 고정된 공정 및 모델별 작업 기준 시간 ---
         const STANDARD_WORK_TIMES = {
             'TDS010DC-02BC012': { '결선(좌면)': 80, '결선(정면)': 60, '결선(우면)': 80, '최종결선': 250, 'BOX 준비작업': 100, 'BOX 결선': 300, '취부': 120 },
             'TDS010DC-02BC002': { '결선(좌면)': 60, '결선(정면)': 150, '결선(우면)': 60, '최종결선': 270, 'BOX 준비작업': 90, 'BOX 결선': 350, '취부': 150 },
@@ -1637,7 +1625,7 @@
             if (!model) return null;
             let normModel = model.trim().toUpperCase();
 
-            // [핵심 업데이트] 모델명에 특정 키워드가 포함되어 있으면 기준 시간표의 정확한 모델명으로 자동 매칭
+            // 유연한 모델명 매칭 로직 (축약어나 약칭이 있어도 정식 모델명으로 맵핑)
             if (normModel.includes('02BC012')) normModel = 'TDS010DC-02BC012';
             else if (normModel.includes('02BC002')) normModel = 'TDS010DC-02BC002';
             else if (normModel.includes('TCT020')) normModel = 'TCT020DC';
@@ -1646,7 +1634,6 @@
             if (STANDARD_WORK_TIMES[normModel] && STANDARD_WORK_TIMES[normModel][process]) {
                 return STANDARD_WORK_TIMES[normModel][process];
             }
-            // '전체 결선'의 경우 각 결선의 총합을 반환
             if (process === '전체 결선' && STANDARD_WORK_TIMES[normModel]) {
                 const t = STANDARD_WORK_TIMES[normModel];
                 return (t['결선(정면)']||0) + (t['결선(좌면)']||0) + (t['결선(우면)']||0) + (t['최종결선']||0);
@@ -1713,6 +1700,11 @@
             }
         }
 
+        // 지연 단축 강조 컬러 서식 함수 (직접 덮어쓰기 로직으로 개선됨)
+        function updateCellFontColor(ws, rowIndex, colIndex, colorHex) {
+            // 이 함수는 더이상 사용되지 않고 루프 내에서 직접 서식을 지정합니다 (안정성 강화)
+        }
+
         function exportLogsToExcel() {
             const logDivEl = document.getElementById('log-division-filter');
             const selectedLogDiv = logDivEl ? logDivEl.value : '';
@@ -1725,8 +1717,8 @@
             if (targetLogs.length === 0) { showMessage('작업 이력 없음', '엑셀로 출력할 완료된 작업 이력이 없습니다.'); return; }
 
             const wb = XLSX.utils.book_new();
-
-            // --- 2. 작업일보 상세내역 시트 생성 ---
+            
+            // --- 1. 작업일보 상세내역 시트 생성 ---
             const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간(분)', '1대당 소요 시간(분)', '1대당 표준 기준 시간(분)', '1대당 시간 차이(분)', '효율 상태', '소요 공수(M/D)'];
             let rows = [header];
             const effStateColIndex = header.indexOf('효율 상태');
@@ -1746,7 +1738,7 @@
                 const stdMin = getStandardTime(mainModel, item.process);
                 if (stdMin !== null) {
                     stdTimeStr = stdMin.toFixed(1);
-                    const diff = actualMinPerUnit - stdMin;
+                    const diff = actualMinPerUnit - stdMin; // 단축이면 마이너스, 지연이면 플러스
                     
                     if (Math.abs(diff) <= 5) {
                         effState = '정상'; diffStr = diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
@@ -1785,7 +1777,7 @@
             autoFitSheetColumns(wsDetail);
             XLSX.utils.book_append_sheet(wb, wsDetail, "작업일보_상세내역");
 
-            // --- 3. 월별 통계 데이터 집계 ---
+            // --- 2. 월별 통계 데이터 집계 (작업자 세분화 개편) ---
             const monthlyStats = {};
             targetLogs.forEach(log => {
                 const dateParts = log.date.split('-');
@@ -1798,34 +1790,32 @@
                     let eqList = log.equipments || [];
                     if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division, cskSn: log.cskSn }];
                     const unitCount = Math.max(1, eqList.length);
+                    const actualMinPerUnit = elapsedMins / unitCount;
                     
                     const workersInLog = log.workerList && log.workerList.length > 0 ? log.workerList : log.worker.split(',').map(w => w.trim());
                     
                     workersInLog.forEach(rawWorker => {
                         const worker = getCleanWorkerName(rawWorker);
                         if (!monthlyStats[monthKey].workers[worker]) {
-                            monthlyStats[monthKey].workers[worker] = { 
-                                totalJobs: 0, totalMinutes: 0, tasks: {}
-                            };
+                            monthlyStats[monthKey].workers[worker] = { totalMinutes: 0, tasks: {} };
                         }
                         let wStat = monthlyStats[monthKey].workers[worker];
-                        wStat.totalJobs += 1;
                         wStat.totalMinutes += elapsedMins;
                         
-                        // 작업자 통계에도 모델별, 공정별로 세분화하여 집계
+                        // 작업자 통계: 모델별, 공정별 완벽 세분화 집계
                         eqList.forEach(eq => {
                             const eqName = normalizeEquipmentName(eq.equipment || '미지정');
                             if (!wStat.tasks[eqName]) wStat.tasks[eqName] = {};
                             if (!wStat.tasks[eqName][process]) wStat.tasks[eqName][process] = { count: 0, actualMins: 0, stdExpectedMins: 0, stdUnitCount: 0 };
                             
                             let tStat = wStat.tasks[eqName][process];
-                            tStat.count += 1; 
-                            tStat.actualMins += (elapsedMins / unitCount); 
+                            tStat.count += 1; // 작업 대수 누적
+                            tStat.actualMins += actualMinPerUnit; // 대당 할당된 시간 누적
                             
                             const stdMin = getStandardTime(eqName, process);
                             if (stdMin !== null) {
                                 tStat.stdUnitCount += 1;
-                                tStat.stdExpectedMins += stdMin;
+                                tStat.stdExpectedMins += stdMin; // 기준 시간 매칭 시 누적
                             }
                         });
                     });
@@ -1841,7 +1831,7 @@
                         if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0, stdUnitCount: 0, stdExpectedMins: 0 };
                         
                         eStat.processes[process].count += 1;
-                        eStat.processes[process].minutes += (elapsedMins / unitCount); 
+                        eStat.processes[process].minutes += actualMinPerUnit; 
                         
                         const stdMin = getStandardTime(eqName, process);
                         if (stdMin !== null) {
@@ -1850,7 +1840,7 @@
                         }
                     });
 
-                    // 여러 대 묶음 작업 공유 기록
+                    // 다중 공유 분배
                     if (eqList.length > 1) {
                         monthlyStats[monthKey].sharedJobs.push({
                             workLogId: log.workLogId || log.id,
@@ -1870,7 +1860,7 @@
                 const eStats = monthlyStats[month].equipments;
                 const sharedJobs = monthlyStats[month].sharedJobs;
                 
-                // --- 4. 작업자 통계 시트 (세분화 개편) ---
+                // --- 3. 작업자 통계 시트 (세분화 개편) ---
                 const wStatHeader = ['작업자명', '장비 모델명', '작업 공정명', '작업 대수 (대)', '해당공정 총 소요시간 (분)', '해당공정 총 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 실제 시간(분)', '1대당 평균 시간 차이(분)', '효율 상태 평가', '작업자 종합 누적 시간(분 / M/D)'];
                 let wStatRows = [wStatHeader];
                 const wEffColIdx = wStatHeader.indexOf('효율 상태 평가');
@@ -1914,7 +1904,7 @@
                 const wsWorkerStat = XLSX.utils.aoa_to_sheet(wStatRows);
                 wsWorkerStat['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: wStatRows.length - 1, c: wStatHeader.length - 1 } }) };
                 
-                // 작업자명 병합 처리
+                // 작업자명 병합
                 if (!wsWorkerStat['!merges']) wsWorkerStat['!merges'] = [];
                 let wMergeStartRow = 1;
                 let currentWorkerForMerge = '';
@@ -1936,7 +1926,6 @@
                     wsWorkerStat['!merges'].push({ s: { r: wMergeStartRow, c: wLastColIdx }, e: { r: wStatRows.length - 1, c: wLastColIdx } });
                 }
 
-                // 배경색 및 테두리 적용 (Zebra 스타일 교차 적용)
                 let currentWGroupColorToggle = false;
                 let currentWorkerTracker = '';
                 for (let R = 1; R < wStatRows.length; ++R) {
@@ -1965,24 +1954,24 @@
                             }
                         };
                         
-                        // 컬러 하이라이트 (효율 상태)
+                        // 컬러 하이라이트 (효율 상태) 단축/지연/정상 컬러화
                         if (C === wEffColIdx) {
                             const stateVal = wsWorkerStat[cellRef].v;
                             if (stateVal === '단축') {
-                                wsWorkerStat[cellRef].s.fill = { fgColor: { rgb: "2563EB" } };
+                                wsWorkerStat[cellRef].s.fill = { fgColor: { rgb: "2563EB" } }; // 파란색
                                 wsWorkerStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
                             } else if (stateVal === '지연') {
-                                wsWorkerStat[cellRef].s.fill = { fgColor: { rgb: "DC2626" } };
+                                wsWorkerStat[cellRef].s.fill = { fgColor: { rgb: "DC2626" } }; // 빨간색
                                 wsWorkerStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
                             } else if (stateVal === '정상') {
-                                wsWorkerStat[cellRef].s.fill = { fgColor: { rgb: "16A34A" } };
+                                wsWorkerStat[cellRef].s.fill = { fgColor: { rgb: "16A34A" } }; // 초록색
                                 wsWorkerStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
                             }
                         }
                     }
                 }
                 
-                // 헤더 서식 적용
+                // 헤더 서식
                 for (let C = 0; C < wStatHeader.length; ++C) {
                     const cellRef = XLSX.utils.encode_cell({ c: C, r: 0 });
                     if (wsWorkerStat[cellRef]) {
@@ -1998,7 +1987,7 @@
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
 
-                // --- 5. 장비별 통계 시트 ---
+                // --- 4. 장비별 통계 시트 ---
                 const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '작업 총 대수 (대)', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 실제 시간(분)', '1대당 평균 시간 차이(분)', '효율 상태 평가', '장비별 누적 직접귀속공수 (분 / M/D)'];
                 let eStatRows = [eStatHeader];
                 const eEffColIdx = eStatHeader.indexOf('효율 상태 평가');
@@ -2093,18 +2082,15 @@
                             }
                         };
                         
-                        // 컬러 하이라이트 (효율 상태) 덮어쓰기
                         if (C === eEffColIdx) {
                             const stateVal = wsEquipStat[cellRef].v;
                             if (stateVal === '단축') {
                                 wsEquipStat[cellRef].s.fill = { fgColor: { rgb: "2563EB" } };
                                 wsEquipStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
-                            }
-                            else if (stateVal === '지연') {
+                            } else if (stateVal === '지연') {
                                 wsEquipStat[cellRef].s.fill = { fgColor: { rgb: "DC2626" } };
                                 wsEquipStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
-                            }
-                            else if (stateVal === '정상') {
+                            } else if (stateVal === '정상') {
                                 wsEquipStat[cellRef].s.fill = { fgColor: { rgb: "16A34A" } };
                                 wsEquipStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
                             }
@@ -2112,7 +2098,6 @@
                     }
                 }
                 
-                // 헤더 서식
                 for (let C = 0; C < eStatHeader.length; ++C) {
                     const cellRef = XLSX.utils.encode_cell({ c: C, r: 0 });
                     if (wsEquipStat[cellRef]) {
@@ -2456,7 +2441,7 @@
                 for (let i = 0; i < count; i++) {
                     const newEq = {
                         id: 'harness_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 5),
-                        division: 'ACM', // 하네스는 기본적으로 ACM으로 기록
+                        division: 'ACM', 
                         equipment: modelName,
                         cskSn: '하네스_일괄대수',
                         deliveryDate: '-'
