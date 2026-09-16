@@ -178,9 +178,14 @@
                 <div class="space-y-2">
                     <div class="flex justify-between items-center">
                         <label class="block text-xs font-bold text-slate-600">2단계. 제작 장비 선택 (다중 선택 가능)</label>
-                        <button id="btn-open-manual-equip" type="button" class="text-[11px] text-indigo-600 font-bold hover:text-indigo-800 transition flex items-center gap-1 active:scale-95">
-                            <i class="fa-solid fa-keyboard"></i> 임의 장비 직접입력
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-open-harness-equip" type="button" class="text-[11px] text-purple-600 font-bold hover:text-purple-800 transition flex items-center gap-1 active:scale-95">
+                                <i class="fa-solid fa-plug"></i> 하네스 대수입력
+                            </button>
+                            <button id="btn-open-manual-equip" type="button" class="text-[11px] text-indigo-600 font-bold hover:text-indigo-800 transition flex items-center gap-1 active:scale-95">
+                                <i class="fa-solid fa-keyboard"></i> 임의 장비 직접입력
+                            </button>
+                        </div>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
                         <select id="select-division-filter" class="col-span-1 px-2 py-2.5 border border-slate-300 rounded-xl text-xs font-extrabold bg-white text-indigo-700 focus:ring-2 focus:ring-indigo-500">
@@ -213,6 +218,7 @@
                             <button type="button" onclick="selectProcess('결선(좌면)')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">⚡ 결선(좌면)</button>
                             <button type="button" onclick="selectProcess('결선(우면)')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">⚡ 결선(우면)</button>
                             <button type="button" onclick="selectProcess('최종결선')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95">🏆 최종결선</button>
+                            <button type="button" onclick="selectProcess('전체 결선')" class="py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 col-span-2 sm:col-span-1">⚡ 전체 결선</button>
                         </div>
                     </div>
                     <div class="space-y-1">
@@ -372,6 +378,35 @@
             <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button onclick="closeManualEquipModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">취소</button>
                 <button id="btn-add-manual-equip" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm">장비 추가하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [하네스 전용 추가] 하네스 장비 간편 입력 모달 창 -->
+    <div id="harness-equip-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
+            <h3 class="text-md font-bold text-slate-900 mb-2"><i class="fa-solid fa-plug text-purple-600"></i> 하네스 전용 장비 간편 입력</h3>
+            <p class="text-xs text-slate-500 leading-relaxed mb-4">하네스 작업 전용 모델과 대수를 선택하여 한 번에 일괄 추가합니다.</p>
+            
+            <div class="space-y-3 mb-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">하네스 전용 모델</label>
+                    <select id="harness-eq-model" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+                        <option value="02BC012">02BC012</option>
+                        <option value="02BC002">02BC002</option>
+                        <option value="3BC2">3BC2</option>
+                        <option value="KLEAA">KLEAA</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">작업 대수 (숫자)</label>
+                    <input type="number" id="harness-eq-count" value="1" min="1" max="500" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button onclick="closeHarnessEquipModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">취소</button>
+                <button id="btn-add-harness-equip" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-sm">대수만큼 일괄 추가</button>
             </div>
         </div>
     </div>
@@ -564,6 +599,7 @@
         let editingLogId = null; 
         let editingActiveTaskId = null; 
         let lastAutoResumeTime = ''; // 자동 일괄재개 중복 방지용
+        let lastAutoPauseTime = '';  // 자동 일괄정지 중복 방지용
 
         let runningTasks = [];
         let completedLogs = [];
@@ -742,6 +778,15 @@
         };
         window.closeManualEquipModal = () => {
             document.getElementById('manual-equip-modal')?.classList.add('hidden');
+        };
+        
+        window.openHarnessEquipModal = () => {
+            const countEl = document.getElementById('harness-eq-count');
+            if(countEl) countEl.value = '1';
+            document.getElementById('harness-equip-modal')?.classList.remove('hidden');
+        };
+        window.closeHarnessEquipModal = () => {
+            document.getElementById('harness-equip-modal')?.classList.add('hidden');
         };
         
         window.openPlanEquipModal = () => {
@@ -1016,7 +1061,7 @@
             const success = await updateTaskInCloudSecurely('PAUSE_ALL', { timestamp: Date.now() });
             if (success) { 
                 playSound(500, 0.1); 
-                showToast(isAuto === true ? "휴식/식사 시간이 되어 모든 작업이 자동 정지되었습니다." : "현재 진행 중인 모든 작업이 일괄 정지되었습니다.", "fa-pause"); 
+                showToast(isAuto === true ? "지정된 시간이 되어 모든 작업이 자동 정지되었습니다." : "현재 진행 중인 모든 작업이 일괄 정지되었습니다.", "fa-pause"); 
             }
         };
 
@@ -1269,6 +1314,17 @@
                 const mm = String(nowTime.getMinutes()).padStart(2, '0');
                 const currentTimeStr = `${hh}:${mm}`;
                 
+                // [자동 일괄 정지 로직] 10:00, 11:50, 15:00
+                const targetAutoPauseTimes = ['10:00', '11:50', '15:00'];
+                if (targetAutoPauseTimes.includes(currentTimeStr)) {
+                    if (lastAutoPauseTime !== currentTimeStr) {
+                        lastAutoPauseTime = currentTimeStr;
+                        window.triggerPauseAll(true); // 자동 일괄 정지 트리거
+                    }
+                } else {
+                    lastAutoPauseTime = ''; // 타겟 시간이 지나면 초기화
+                }
+
                 // [자동 일괄 재개 로직] 07:50, 10:15, 12:50, 15:15
                 const targetAutoResumeTimes = ['07:50', '10:15', '12:50', '15:15'];
                 if (targetAutoResumeTimes.includes(currentTimeStr)) {
@@ -1279,8 +1335,6 @@
                 } else {
                     lastAutoResumeTime = ''; // 타겟 시간이 지나면 초기화
                 }
-                
-                // (기존 일괄 정지 로직이 있다면 여기 추가 유지)
 
                 runningTasks.forEach(task => {
                     const el = document.getElementById(`span-timer-${task.id}`);
@@ -1663,8 +1717,8 @@
                         });
                     });
 
-                    if (eqList.length === 1) {
-                        const eq = eqList[0];
+                    // 장비별 통계 누적 (1대든 여러대 묶음이든 모두 장비 통계에 합산하여 월별 총 대수 파악)
+                    eqList.forEach(eq => {
                         const eqName = normalizeEquipmentName(eq.equipment || '미지정');
                         const divName = eq.division || 'ACM';
                         if (!monthlyStats[monthKey].equipments[eqName]) {
@@ -1672,14 +1726,18 @@
                         }
                         let eStat = monthlyStats[monthKey].equipments[eqName];
                         if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0, stdUnitCount: 0, stdExpectedMins: 0 };
-                        eStat.processes[process].count += 1;
-                        eStat.processes[process].minutes += elapsedMins; 
+                        
+                        eStat.processes[process].count += 1; // 대수 1 증가
+                        eStat.processes[process].minutes += (elapsedMins / unitCount); // 대당 배분된 시간 더하기
+                        
                         if (stdMin !== null) {
                             eStat.processes[process].stdUnitCount += 1;
                             eStat.processes[process].stdExpectedMins += stdMin;
                         }
-                    } 
-                    else if (eqList.length > 1) {
+                    });
+
+                    // 여러 대 묶음 작업은 공유_미배분공수 시트에 참고용(상세 내역)으로도 남김
+                    if (eqList.length > 1) {
                         monthlyStats[monthKey].sharedJobs.push({
                             workLogId: log.workLogId || log.id,
                             date: log.date,
@@ -1745,7 +1803,7 @@
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
                 // --- 5. 장비별 통계 시트 ---
-                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '완료 건수', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 실제 시간(분)', '1대당 평균 시간 차이(분)', '종합 효율 평가', '장비별 누적 직접귀속공수 (분 / M/D)'];
+                const eStatHeader = ['장비 모델명', '사업부', '작업 공정명', '작업 총 대수 (대)', '공정별 투입 시간 (분)', '공정별 투입 공수 (M/D)', '1대당 평균 기준 시간(분)', '1대당 평균 실제 시간(분)', '1대당 평균 시간 차이(분)', '종합 효율 평가', '장비별 누적 직접귀속공수 (분 / M/D)'];
                 let eStatRows = [eStatHeader];
                 const eEffColIdx = eStatHeader.indexOf('종합 효율 평가');
                 
@@ -2151,6 +2209,7 @@
             });
 
             document.getElementById('btn-open-manual-equip')?.addEventListener('click', window.openManualEquipModal);
+            document.getElementById('btn-open-harness-equip')?.addEventListener('click', window.openHarnessEquipModal);
             
             document.getElementById('btn-add-manual-equip')?.addEventListener('click', () => {
                 const nameEl = document.getElementById('manual-eq-name');
@@ -2175,6 +2234,34 @@
                 renderSelectedEquipmentsList();
                 showToast("임의 장비가 추가되었습니다.", "fa-check");
                 window.closeManualEquipModal();
+            });
+
+            document.getElementById('btn-add-harness-equip')?.addEventListener('click', () => {
+                const modelEl = document.getElementById('harness-eq-model');
+                const countEl = document.getElementById('harness-eq-count');
+                
+                const modelName = modelEl ? modelEl.value : '02BC012';
+                const count = countEl ? parseInt(countEl.value, 10) : 1;
+                
+                if (isNaN(count) || count < 1) {
+                    showToast("유효한 작업 대수를 입력해주세요.", "fa-triangle-exclamation");
+                    return;
+                }
+                
+                for (let i = 0; i < count; i++) {
+                    const newEq = {
+                        id: 'harness_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 5),
+                        division: 'ACM', // 하네스는 기본적으로 ACM으로 기록
+                        equipment: modelName,
+                        cskSn: '하네스_일괄대수',
+                        deliveryDate: '-'
+                    };
+                    selectedEquipments.push(newEq);
+                }
+                
+                renderSelectedEquipmentsList();
+                showToast(`하네스 전용 장비 ${count}대가 추가되었습니다.`, "fa-check");
+                window.closeHarnessEquipModal();
             });
 
             document.getElementById('btn-open-plan-add-modal')?.addEventListener('click', () => {
