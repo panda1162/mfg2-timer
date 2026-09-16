@@ -1430,12 +1430,45 @@
 
                 runningTasks.forEach(task => {
                     const el = document.getElementById(`span-timer-${task.id}`);
+                    const delayBadge = document.getElementById(`delay-badge-${task.id}`);
                     if (!el) return;
                     let diff = task.paused ? (task.pausedAt - task.startTime - (task.totalPausedDuration||0)) : (nowMs - task.startTime - (task.totalPausedDuration||0));
                     if (diff < 0) diff = 0;
                     const sec = Math.floor((diff / 1000) % 60), min = Math.floor((diff / (1000 * 60)) % 60), hour = Math.floor((diff / (1000 * 60 * 60)) % 24);
                     const pad = (n) => String(n).padStart(2, '0');
                     el.innerText = `${pad(hour)}:${pad(min)}:${pad(sec)}`;
+
+                    // [추가] 실시간 30분 이상 지연 감지 및 뱃지 렌더링
+                    if (delayBadge) {
+                        let totalStdMins = 0;
+                        let validStdCount = 0;
+                        let eqList = task.equipments || [];
+                        if (eqList.length === 0 && task.equipment) eqList = [{ equipment: task.equipment }];
+                        
+                        eqList.forEach(eq => {
+                            const eqName = normalizeEquipmentName(eq.equipment);
+                            const stdMin = getStandardTime(eqName, task.process);
+                            if (stdMin !== null) {
+                                totalStdMins += stdMin;
+                                validStdCount++;
+                            }
+                        });
+
+                        if (validStdCount > 0) {
+                            const diffMins = Math.floor(diff / 60000);
+                            const overTime = diffMins - totalStdMins; // 기준시간 대비 차이
+                            
+                            if (overTime >= 30) {
+                                if (!task.paused && !task.isHeld) {
+                                    delayBadge.innerHTML = `<span class="text-[9px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1.5 py-0.5 rounded font-bold flex items-center gap-1 animate-pulse shadow-sm" title="기준 시간 대비 ${overTime}분 초과"><i class="fa-solid fa-triangle-exclamation"></i>지연중</span>`;
+                                } else {
+                                    delayBadge.innerHTML = `<span class="text-[9px] bg-rose-900/50 text-rose-500 border border-rose-800/50 px-1.5 py-0.5 rounded font-bold flex items-center gap-1" title="기준 시간 대비 ${overTime}분 초과 (정지됨)"><i class="fa-solid fa-triangle-exclamation"></i>지연(정지)</span>`;
+                                }
+                            } else {
+                                delayBadge.innerHTML = '';
+                            }
+                        }
+                    }
                 });
             }, 1000);
         }
@@ -1501,6 +1534,7 @@
                             <span class="text-[9px] text-slate-500 block font-bold mb-0.5">진행 시간</span>
                             <div class="flex items-center gap-2">
                                 <span id="span-timer-${task.id}" class="text-xl font-mono-num font-bold text-slate-200 tracking-wider shadow-sm">00:00:00</span>
+                                <div id="delay-badge-${task.id}"></div>
                                 <button onclick="triggerEditActiveTime('${task.id}')" class="text-slate-500 hover:text-indigo-400 transition" title="진행 시간 수정"><i class="fa-solid fa-pen-to-square"></i></button>
                             </div>
                         </div>
@@ -1587,11 +1621,30 @@
 
         function normalizeEquipmentName(name) {
             if (!name) return '미지정';
-            const upper = name.trim().toUpperCase();
-            if (upper.startsWith('TDS010DC') || upper.includes('TDS010DC')) {
-                return 'TDS010DC';
+            // 기존의 "TDS010DC"로 무조건 자르는 로직을 제거하여 -02BC012 등 세부 모델명이 보존되도록 함
+            return name.trim().toUpperCase();
+        }
+
+        // --- 1. 고정된 공정 및 모델별 작업 기준 시간 ---
+        const STANDARD_WORK_TIMES = {
+            'TDS010DC-02BC012': { '결선(좌면)': 80, '결선(정면)': 60, '결선(우면)': 80, '최종결선': 250, 'BOX 준비작업': 100, 'BOX 결선': 300, '취부': 120 },
+            'TDS010DC-02BC002': { '결선(좌면)': 60, '결선(정면)': 150, '결선(우면)': 60, '최종결선': 270, 'BOX 준비작업': 90, 'BOX 결선': 350, '취부': 150 },
+            'TCT020DC': { '결선(좌면)': 60, '결선(정면)': 100, '결선(우면)': 70, '최종결선': 350, 'BOX 준비작업': 150, 'BOX 결선': 350, '취부': 190 },
+            'DTLR-TDS-KLEAA': { '결선(좌면)': 100, '결선(정면)': 130, '결선(우면)': 80, '최종결선': 260, 'BOX 준비작업': 100, 'BOX 결선': 270, '취부': 160 }
+        };
+
+        function getStandardTime(model, process) {
+            if (!model) return null;
+            const normModel = model.trim().toUpperCase();
+            if (STANDARD_WORK_TIMES[normModel] && STANDARD_WORK_TIMES[normModel][process]) {
+                return STANDARD_WORK_TIMES[normModel][process];
             }
-            return name.trim();
+            // '전체 결선'의 경우 각 결선의 총합을 반환
+            if (process === '전체 결선' && STANDARD_WORK_TIMES[normModel]) {
+                const t = STANDARD_WORK_TIMES[normModel];
+                return (t['결선(정면)']||0) + (t['결선(좌면)']||0) + (t['결선(우면)']||0) + (t['최종결선']||0);
+            }
+            return null;
         }
 
         function getCleanWorkerName(name) {
@@ -1653,12 +1706,20 @@
             }
         }
 
-        // 특정 열의 글자 색상을 변경하는 헬퍼 함수
-        function updateCellFontColor(ws, rowIndex, colIndex, colorHex) {
+        // 엑셀 배경색 하이라이팅 서식 적용 헬퍼 함수
+        function updateCellHighlight(ws, rowIndex, colIndex, stateVal) {
             const cellRef = XLSX.utils.encode_cell({ c: colIndex, r: rowIndex });
             if (ws[cellRef] && ws[cellRef].s) {
-                ws[cellRef].s.font.color = { rgb: colorHex };
-                ws[cellRef].s.font.bold = true; // 효율 상태 눈에 잘 띄게 볼드 처리
+                if (stateVal === '단축') {
+                    ws[cellRef].s.fill = { fgColor: { rgb: "2563EB" } }; // 파란색 배경
+                    ws[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
+                } else if (stateVal === '지연') {
+                    ws[cellRef].s.fill = { fgColor: { rgb: "DC2626" } }; // 빨간색 배경
+                    ws[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
+                } else if (stateVal === '정상') {
+                    ws[cellRef].s.fill = { fgColor: { rgb: "16A34A" } }; // 초록색 배경
+                    ws[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
+                }
             }
         }
 
@@ -1674,40 +1735,6 @@
             if (targetLogs.length === 0) { showMessage('작업 이력 없음', '엑셀로 출력할 완료된 작업 이력이 없습니다.'); return; }
 
             const wb = XLSX.utils.book_new();
-            
-            // --- 1. 공정별 1대당 평균 기준 시간 산출 (최근 3개월 데이터 기반) ---
-            const stdTimes = {};
-            const threeMonthsAgo = new Date();
-            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-            const targetWorkers = { '취부': '안드레이', '결선': '장혜정', 'BOX': '장동훈' };
-
-            completedLogs.forEach(log => {
-                if (log.isDeleted) return;
-                const logDate = new Date(log.date);
-                if (logDate >= threeMonthsAgo) {
-                    let processGroup = log.process;
-                    if (log.process.includes('결선')) processGroup = '결선';
-                    if (log.process.includes('BOX')) processGroup = 'BOX';
-
-                    const targetWorker = targetWorkers[processGroup];
-                    if (targetWorker && (log.worker.includes(targetWorker) || (log.workerList && log.workerList.includes(targetWorker)))) {
-                        let eqList = log.equipments || [];
-                        if (eqList.length === 0 && log.equipment) eqList = [{ cskSn: log.cskSn }];
-                        const unitCount = Math.max(1, eqList.length);
-                        const minPerUnit = log.elapsedMinutes / unitCount; // 1대당 소요 분 환산
-
-                        if (!stdTimes[processGroup]) stdTimes[processGroup] = { totalMins: 0, count: 0 };
-                        stdTimes[processGroup].totalMins += minPerUnit;
-                        stdTimes[processGroup].count += 1;
-                    }
-                }
-            });
-
-            const stdAverages = {};
-            for (const [proc, data] of Object.entries(stdTimes)) {
-                stdAverages[proc] = data.totalMins / data.count; // 1대당 평균
-            }
 
             // --- 2. 작업일보 상세내역 시트 생성 ---
             const header = ['No.', '작업 일자', '작업자', '대표 장비 모델', '작업 대수', 'CSK S/N 목록', '작업 공정', '작업 시작 시각', '작업 종료 시각', '총 소요 시간(분)', '1대당 소요 시간(분)', '1대당 표준 기준 시간(분)', '1대당 시간 차이(분)', '효율 상태', '소요 공수(M/D)'];
@@ -1724,16 +1751,12 @@
                 const itemMD = parseFloat((item.elapsedMinutes / 60 / 8).toFixed(4));
                 const cleanWorkerName = getCleanWorkerName(item.worker);
 
-                let processGroup = item.process;
-                if (item.process.includes('결선')) processGroup = '결선';
-                if (item.process.includes('BOX')) processGroup = 'BOX';
-
                 let stdTimeStr = '-', diffStr = '-', effState = '-';
                 
-                if (stdAverages[processGroup]) {
-                    const stdMin = stdAverages[processGroup];
+                const stdMin = getStandardTime(mainModel, item.process);
+                if (stdMin !== null) {
                     stdTimeStr = stdMin.toFixed(1);
-                    const diff = actualMinPerUnit - stdMin; // 단축이면 마이너스, 지연이면 플러스
+                    const diff = actualMinPerUnit - stdMin; // 마이너스면 일찍 끝남(단축), 플러스면 늦게 끝남(지연)
                     
                     if (Math.abs(diff) <= 5) {
                         effState = '정상'; diffStr = diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
@@ -1756,9 +1779,7 @@
             // 색상 적용 루프
             for (let R = 1; R < rows.length; R++) {
                 const stateVal = rows[R][effStateColIndex];
-                if (stateVal === '단축') updateCellFontColor(wsDetail, R, effStateColIndex, "0000FF");
-                else if (stateVal === '지연') updateCellFontColor(wsDetail, R, effStateColIndex, "FF0000");
-                else if (stateVal === '정상') updateCellFontColor(wsDetail, R, effStateColIndex, "008000");
+                updateCellHighlight(wsDetail, R, effStateColIndex, stateVal);
             }
             XLSX.utils.book_append_sheet(wb, wsDetail, "작업일보_상세내역");
 
@@ -1775,21 +1796,28 @@
                     let eqList = log.equipments || [];
                     if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division, cskSn: log.cskSn }];
                     const unitCount = Math.max(1, eqList.length);
-                    const actualMinPerUnit = elapsedMins / unitCount;
-                    
-                    let processGroup = process;
-                    if (process.includes('결선')) processGroup = '결선';
-                    if (process.includes('BOX')) processGroup = 'BOX';
-                    const stdMin = stdAverages[processGroup] || null;
                     
                     const workersInLog = log.workerList && log.workerList.length > 0 ? log.workerList : log.worker.split(',').map(w => w.trim());
                     
+                    // 장비별 배분 처리 먼저 계산
+                    let logTotalStdExpectedMins = 0;
+                    let validStdUnitCount = 0;
+                    
+                    eqList.forEach(eq => {
+                        const eqName = normalizeEquipmentName(eq.equipment || '미지정');
+                        const stdMin = getStandardTime(eqName, process);
+                        if (stdMin !== null) {
+                            logTotalStdExpectedMins += stdMin;
+                            validStdUnitCount += 1;
+                        }
+                    });
+
                     workersInLog.forEach(rawWorker => {
                         const worker = getCleanWorkerName(rawWorker);
                         if (!monthlyStats[monthKey].workers[worker]) {
                             monthlyStats[monthKey].workers[worker] = { 
                                 totalJobs: 0, totalEquips: 0, totalMinutes: 0, equipsDetail: {},
-                                stdExpectedMins: 0, stdComparedActualMins: 0, stdUnitCount: 0 // 1대당 비교 누적용
+                                stdExpectedMins: 0, stdComparedActualMins: 0, stdUnitCount: 0 
                             };
                         }
                         let wStat = monthlyStats[monthKey].workers[worker];
@@ -1797,23 +1825,23 @@
                         wStat.totalMinutes += elapsedMins;
                         wStat.totalEquips += eqList.length;
                         
-                        if (stdMin !== null) {
-                            wStat.stdExpectedMins += (stdMin * unitCount);
-                            wStat.stdComparedActualMins += elapsedMins;
-                            wStat.stdUnitCount += unitCount;
+                        if (validStdUnitCount > 0) {
+                            wStat.stdExpectedMins += logTotalStdExpectedMins;
+                            wStat.stdComparedActualMins += (elapsedMins / unitCount) * validStdUnitCount;
+                            wStat.stdUnitCount += validStdUnitCount;
                         }
 
-                        // 다중 장비 무관하게 모든 작업 내역을 표기 (공정명 포함)
+                        // 다중 장비 무관하게 모든 작업 내역을 표기
                         eqList.forEach(eq => {
                             const eqName = normalizeEquipmentName(eq.equipment || '미지정');
                             const detailKey = `[${eqName}] ${process}`;
                             if (!wStat.equipsDetail[detailKey]) wStat.equipsDetail[detailKey] = { count: 0, mins: 0 };
-                            wStat.equipsDetail[detailKey].count += 1; // 대수
-                            wStat.equipsDetail[detailKey].mins += (elapsedMins / unitCount); // 1대분 배분 시간
+                            wStat.equipsDetail[detailKey].count += 1; 
+                            wStat.equipsDetail[detailKey].mins += (elapsedMins / unitCount); 
                         });
                     });
 
-                    // 장비별 통계 누적 (1대든 여러대 묶음이든 모두 장비 통계에 합산하여 월별 총 대수 파악)
+                    // 장비별 통계 누적
                     eqList.forEach(eq => {
                         const eqName = normalizeEquipmentName(eq.equipment || '미지정');
                         const divName = eq.division || 'ACM';
@@ -1823,16 +1851,17 @@
                         let eStat = monthlyStats[monthKey].equipments[eqName];
                         if (!eStat.processes[process]) eStat.processes[process] = { count: 0, minutes: 0, stdUnitCount: 0, stdExpectedMins: 0 };
                         
-                        eStat.processes[process].count += 1; // 대수 1 증가
-                        eStat.processes[process].minutes += (elapsedMins / unitCount); // 대당 배분된 시간 더하기
+                        eStat.processes[process].count += 1; // 대수 카운트
+                        eStat.processes[process].minutes += (elapsedMins / unitCount); // 대당 배분된 시간
                         
+                        const stdMin = getStandardTime(eqName, process);
                         if (stdMin !== null) {
                             eStat.processes[process].stdUnitCount += 1;
                             eStat.processes[process].stdExpectedMins += stdMin;
                         }
                     });
 
-                    // 여러 대 묶음 작업은 공유_미배분공수 시트에 참고용(상세 내역)으로도 남김
+                    // 여러 대 묶음 작업은 공유_미배분공수 시트에도 남김
                     if (eqList.length > 1) {
                         monthlyStats[monthKey].sharedJobs.push({
                             workLogId: log.workLogId || log.id,
@@ -1892,9 +1921,7 @@
                 autoFitSheetColumns(wsWorkerStat);
                 for (let R = 1; R < wStatRows.length; R++) {
                     const stateVal = wStatRows[R][wEffColIdx];
-                    if (stateVal === '단축') updateCellFontColor(wsWorkerStat, R, wEffColIdx, "0000FF");
-                    else if (stateVal === '지연') updateCellFontColor(wsWorkerStat, R, wEffColIdx, "FF0000");
-                    else if (stateVal === '정상') updateCellFontColor(wsWorkerStat, R, wEffColIdx, "008000");
+                    updateCellHighlight(wsWorkerStat, R, wEffColIdx, stateVal);
                 }
                 XLSX.utils.book_append_sheet(wb, wsWorkerStat, `작업자통계_${month}`);
 
@@ -1994,13 +2021,21 @@
                             }
                         };
                         
-                        // 컬러 텍스트 덮어쓰기
+                        // 컬러 하이라이트 덮어쓰기
                         if (C === eEffColIdx) {
                             const stateVal = wsEquipStat[cellRef].v;
-                            if (stateVal === '단축') wsEquipStat[cellRef].s.font.color = { rgb: "0000FF" };
-                            else if (stateVal === '지연') wsEquipStat[cellRef].s.font.color = { rgb: "FF0000" };
-                            else if (stateVal === '정상') wsEquipStat[cellRef].s.font.color = { rgb: "008000" };
-                            if (stateVal !== '-') wsEquipStat[cellRef].s.font.bold = true;
+                            if (stateVal === '단축') {
+                                wsEquipStat[cellRef].s.fill = { fgColor: { rgb: "2563EB" } }; // 파란색 배경
+                                wsEquipStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
+                            }
+                            else if (stateVal === '지연') {
+                                wsEquipStat[cellRef].s.fill = { fgColor: { rgb: "DC2626" } }; // 빨간색 배경
+                                wsEquipStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
+                            }
+                            else if (stateVal === '정상') {
+                                wsEquipStat[cellRef].s.fill = { fgColor: { rgb: "16A34A" } }; // 초록색 배경
+                                wsEquipStat[cellRef].s.font = { bold: true, color: { rgb: "FFFFFF" }, name: "맑은 고딕", sz: 10 };
+                            }
                         }
                     }
                 }
