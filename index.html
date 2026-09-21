@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.9 (QC 반려 재작업 관리)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.10.1 (하네스 팝업 수정)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.9 Rework
+                                v5.10 Rework+Harness
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -207,7 +207,7 @@
                     <div class="space-y-1">
                         <span class="text-[10px] font-bold text-slate-400 block">기본 조립 공정</span>
                         <div class="grid grid-cols-1 gap-2">
-                            <button type="button" onclick="selectProcess('하네스')" class="py-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1.5">🔌 하네스</button>
+                            <button id="btn-process-harness" type="button" onclick="const m=document.getElementById('harness-process-modal'); if(m){m.classList.remove('hidden');m.style.display='flex';}" class="py-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1.5">🔌 하네스 <span id="harness-selected-detail" class="text-[10px] text-purple-600"></span></button>
                             <button type="button" onclick="selectProcess('취부')" class="py-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold text-center hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1.5">🛠️ 취부 작업</button>
                         </div>
                     </div>
@@ -315,7 +315,7 @@
             </div>
         </section>
 
-        <!-- [V5.9] QC 반려 재작업 관리: QC는 V5를 사용하지 않는 전제, 제조2팀에 돌아온 재작업만 최소 입력 -->
+        <!-- [V5.10] QC 반려 재작업 관리: QC는 V5를 사용하지 않는 전제, 제조2팀에 돌아온 재작업만 최소 입력 -->
         <section id="rework-section" class="bg-white rounded-2xl border border-rose-200 shadow-sm overflow-hidden flex flex-col">
             <div class="p-6 border-b border-rose-100 bg-gradient-to-r from-rose-50 to-amber-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
@@ -334,9 +334,15 @@
             </div>
 
             <div class="p-5 border-b border-slate-200">
-                <div class="flex justify-between items-center mb-3">
-                    <h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-rotate text-rose-500 mr-1"></i> 현재 재작업 진행 중</h5>
-                    <span class="text-[10px] text-slate-400">완료 이력의 장비별 <strong class="text-rose-600">QC 재작업</strong> 버튼으로 시작</span>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                    <div>
+                        <h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-rotate text-rose-500 mr-1"></i> 현재 재작업 진행 중</h5>
+                        <span class="text-[10px] text-slate-400">일반 공정과 동일하게 휴게/점심/퇴근 시간에 자동 일시정지·재개됩니다.</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button id="btn-rework-pause-all" data-rework-write="true" type="button" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-[10px] font-black border border-amber-200"><i class="fa-solid fa-pause mr-1"></i>재작업 일괄정지</button>
+                        <button id="btn-rework-resume-all" data-rework-write="true" type="button" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black border border-emerald-200"><i class="fa-solid fa-play mr-1"></i>재작업 일괄재개</button>
+                    </div>
                 </div>
                 <div id="rework-active-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                     <div class="col-span-full py-5 text-center text-slate-400 text-xs italic">진행 중인 재작업이 없습니다.</div>
@@ -366,7 +372,30 @@
         </section>
     </main>
 
-    <!-- [V5.9] 재작업 시작 모달 -->
+    <!-- [V5.10] 하네스 세부작업 선택 모달 -->
+    <div id="harness-process-modal" class="fixed inset-0 bg-slate-900/50 z-[115] flex items-center justify-center hidden" style="display:none;">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl mx-4">
+            <div class="flex justify-between items-start gap-3 border-b border-slate-100 pb-3 mb-4">
+                <div>
+                    <h3 class="text-md font-black text-slate-900"><i class="fa-solid fa-plug text-purple-600 mr-1"></i> 하네스 세부작업 선택</h3>
+                    <p class="text-[11px] text-slate-500 mt-1">진행할 하네스 세부작업을 선택하세요.</p>
+                </div>
+                <button type="button" data-harness-close="1" class="text-slate-400 hover:text-slate-700 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-harness-detail="재단" class="py-3 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-black">✂️ 재단</button>
+                <button type="button" data-harness-detail="넘버링" class="py-3 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-black">🔢 넘버링</button>
+                <button type="button" data-harness-detail="압착" class="py-3 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-black">🔧 압착</button>
+                <button type="button" data-harness-detail="조작선" class="py-3 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-black">🧵 조작선</button>
+                <button type="button" data-harness-detail="사급 케이블" class="col-span-2 py-3 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-black">🔌 사급 케이블</button>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                <button type="button" data-harness-close="1" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [V5.10] 재작업 시작 모달 -->
     <div id="rework-modal" class="fixed inset-0 bg-slate-900/50 z-[110] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl mx-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-start gap-3 border-b border-slate-100 pb-3 mb-4">
@@ -623,7 +652,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.9 QC Rework Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.10 Rework+Harness Fail-Closed</p>
         </div>
     </footer>
 
@@ -693,6 +722,7 @@
         
         let selectedWorkers = []; 
         let selectedProcess = '';
+        let selectedProcessDetail = '';
         let selectedEquipments = [];
         let confirmCallback = null;
         let editingLogId = null; 
@@ -705,7 +735,7 @@
         let runningTasks = [];
         let completedLogs = [];
 
-        // [V5.9] QC 반려 재작업은 원 작업로그와 분리 저장하여 정상 제작공수와 재작업공수를 섞지 않습니다.
+        // [V5.10] QC 반려 재작업은 원 작업로그와 분리 저장하여 정상 제작공수와 재작업공수를 섞지 않습니다.
         let reworkTasks = [];
         let reworkLogs = [];
         let reworkModalContext = null;
@@ -1117,13 +1147,16 @@
             if (selectedWorkers.length === 0 || selectedEquipments.length === 0 || !selectedProcess) {
                 showMessage('입력 오류', '작업자, 대상 장비, 투입 공정을 모두 선택해 주십시오.'); return;
             }
+            if (selectedProcess === '하네스' && !selectedProcessDetail) {
+                showMessage('입력 오류', '하네스 세부작업(재단/넘버링/압착/조작선/사급 케이블)을 선택해 주십시오.'); return;
+            }
 
             let duplicatedItems = [];
             selectedWorkers.forEach(worker => {
                 selectedEquipments.forEach(item => {
                     const exists = runningTasks.find(t => {
                         const workersInTask = t.workerList || t.worker.split(',').map(w => w.trim());
-                        return workersInTask.includes(worker) && t.process === selectedProcess && (t.equipments||[]).some(eq => eq.id === item.id);
+                        return workersInTask.includes(worker) && t.process === selectedProcess && (t.processDetail || '') === (selectedProcessDetail || '') && (t.equipments||[]).some(eq => eq.id === item.id);
                     });
                     if (exists) duplicatedItems.push(`[${worker}]님의 [${item.division || 'ACM'}] ${item.equipment}`);
                 });
@@ -1141,6 +1174,7 @@
                 const alreadyDone = completedLogs.find(log => {
                     if (log.isDeleted) return false;
                     if (log.process !== selectedProcess) return false;
+                    if ((log.processDetail || '') !== (selectedProcessDetail || '')) return false;
                     
                     let eqList = log.equipments || [];
                     if (eqList.length === 0 && log.equipment) eqList = [{ cskSn: log.cskSn }];
@@ -1164,7 +1198,8 @@
                 id: 'task_' + timestamp + '_' + Math.random().toString(36).substr(2, 5),
                 worker: combinedWorkers, 
                 workerList: [...selectedWorkers], 
-                process: selectedProcess, 
+                process: selectedProcess,
+                processDetail: selectedProcessDetail || '',
                 startTime: timestamp,
                 paused: false, 
                 pausedAt: null, 
@@ -1177,7 +1212,8 @@
             
             if (success) {
                 selectedWorkers = []; 
-                selectedProcess = ''; 
+                selectedProcess = '';
+                selectedProcessDetail = '';
                 selectedEquipments = [];
                 const searchEl = document.getElementById('equipment-search');
                 if (searchEl) searchEl.value = '';
@@ -1278,6 +1314,7 @@
                 worker: task.worker, 
                 workerList: task.workerList || task.worker.split(',').map(w=>w.trim()),
                 process: task.process,
+                processDetail: task.processDetail || '',
                 startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
                 endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
                 elapsedMinutes: elapsedMinutes, elapsedHours: elapsedHours,
@@ -1301,7 +1338,7 @@
         };
 
         // =============================
-        // [V5.9] QC 반려 재작업 관리
+        // [V5.10] QC 반려 재작업 관리
         // =============================
         function getKstDateString(ts = Date.now()) {
             return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ts));
@@ -1394,7 +1431,7 @@
             const srcEl = document.getElementById('rw-modal-source');
             if (eqEl) eqEl.textContent = eq.equipment || '미지정';
             if (snEl) snEl.textContent = eq.cskSn || '-';
-            if (srcEl) srcEl.textContent = `${log.process || '미지정'} / ${cycleNo}차`;
+            if (srcEl) srcEl.textContent = `${getProcessDisplay(log.process, log.processDetail)} / ${cycleNo}차`;
             renderReworkWorkerGrid();
             renderReworkDefectGrid();
             document.getElementById('rework-modal')?.classList.remove('hidden');
@@ -1429,6 +1466,25 @@
                         if (idx < 0) throw new Error('REWORK_TASK_NOT_FOUND');
                         newTasks.splice(idx, 1);
                         newLogs.unshift(payload.finishedLog);
+                    } else if (actionType === 'PAUSE_ALL') {
+                        const ts = payload.timestamp || Date.now();
+                        newTasks.forEach(task => {
+                            if (!task.paused) {
+                                task.paused = true;
+                                task.pausedAt = ts;
+                                task.updatedAt = ts;
+                            }
+                        });
+                    } else if (actionType === 'RESUME_ALL') {
+                        const ts = payload.timestamp || Date.now();
+                        newTasks.forEach(task => {
+                            if (task.paused) {
+                                task.totalPausedDuration = (task.totalPausedDuration || 0) + Math.max(0, ts - (task.pausedAt || ts));
+                                task.paused = false;
+                                task.pausedAt = null;
+                                task.updatedAt = ts;
+                            }
+                        });
                     } else if (actionType === 'EDIT_LOG_TIME') {
                         const idx = newLogs.findIndex(l => l.id === payload.id);
                         if (idx > -1) {
@@ -1463,7 +1519,7 @@
                 reworkCaseId: 'RW-' + now + '-' + Math.random().toString(36).substr(2, 4).toUpperCase(),
                 cycleNo: ctx.cycleNo,
                 sourceWorkLogId: ctx.logId,
-                sourceProcess: ctx.log.process || '미지정',
+                sourceProcess: getProcessDisplay(ctx.log.process, ctx.log.processDetail),
                 equipmentKey: ctx.equipmentKey,
                 equipment: {
                     id: ctx.eq.id || '',
@@ -1477,6 +1533,9 @@
                 defectTypes: [...reworkSelectedDefects],
                 defectCount: reworkSelectedDefects.length,
                 startTime: now,
+                paused: false,
+                pausedAt: null,
+                totalPausedDuration: 0,
                 date: getKstDateString(now),
                 createdAt: now,
                 updatedAt: now
@@ -1489,12 +1548,41 @@
             }
         }
 
+        window.triggerPauseAllRework = async function(isAuto = false) {
+            if (!checkFailClosedCanWrite()) return;
+            if (reworkTasks.length === 0) return;
+            const hasPlaying = reworkTasks.some(t => !t.paused);
+            if (!hasPlaying) {
+                if (isAuto !== true) showToast('모든 재작업이 이미 일시정지 상태입니다.', 'fa-circle-info');
+                return;
+            }
+            const success = await updateReworkInCloudSecurely('PAUSE_ALL', { timestamp: Date.now() });
+            if (success && isAuto !== true) showToast('현재 진행 중인 재작업을 일괄 정지했습니다.', 'fa-pause');
+        };
+
+        window.triggerResumeAllRework = async function(isAuto = false) {
+            if (!checkFailClosedCanWrite()) return;
+            if (reworkTasks.length === 0) return;
+            const hasPaused = reworkTasks.some(t => t.paused);
+            if (!hasPaused) {
+                if (isAuto !== true) showToast('재개할 재작업이 없습니다.', 'fa-circle-info');
+                return;
+            }
+            const success = await updateReworkInCloudSecurely('RESUME_ALL', { timestamp: Date.now() });
+            if (success && isAuto !== true) showToast('일시정지된 재작업을 일괄 재개했습니다.', 'fa-play');
+        };
+
         window.triggerCompleteRework = async function(taskId) {
             if (!checkFailClosedCanWrite()) return;
             const task = reworkTasks.find(t => t.id === taskId);
             if (!task) return;
             const now = Date.now();
-            const elapsedMinutes = Math.max(0, Math.round((now - task.startTime) / 60000));
+            const totalPaused = task.totalPausedDuration || 0;
+            let elapsedMs = task.paused
+                ? ((task.pausedAt || now) - task.startTime - totalPaused)
+                : (now - task.startTime - totalPaused);
+            if (elapsedMs < 0) elapsedMs = 0;
+            const elapsedMinutes = Math.max(0, Math.round(elapsedMs / 60000));
             const finishedLog = {
                 id: 'rw_log_' + now + '_' + Math.random().toString(36).substr(2, 5),
                 reworkCaseId: task.reworkCaseId,
@@ -1564,10 +1652,18 @@
                         const card = document.createElement('div');
                         card.className = 'bg-slate-900 text-white rounded-2xl p-4 border border-slate-800 shadow-sm';
                         const defects = (task.defectTypes || ['상세미확인']).map(d => `<span class="px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[9px] font-bold">${escapeHTML(d)}</span>`).join(' ');
+                        const rwPaused = !!task.paused;
                         card.innerHTML = `
                             <div class="flex justify-between items-start gap-2">
-                                <div><span class="text-[9px] text-rose-300 font-bold">QC 반려 ${task.cycleNo || 1}차 재작업</span><h5 class="font-black text-sm mt-1">${escapeHTML(task.equipment?.equipment || '미지정')}</h5><p class="text-[10px] text-indigo-300 font-mono-num mt-0.5">S/N ${escapeHTML(task.equipment?.cskSn || '-')}</p></div>
-                                <span id="rw-timer-${task.id}" class="font-mono-num font-black text-lg text-amber-300">00:00:00</span>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[9px] text-rose-300 font-bold">QC 반려 ${task.cycleNo || 1}차 재작업</span>
+                                        <span class="text-[9px] px-1.5 py-0.5 rounded border ${rwPaused ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'}">${rwPaused ? '일시정지됨' : '실시간 가동중'}</span>
+                                    </div>
+                                    <h5 class="font-black text-sm mt-1">${escapeHTML(task.equipment?.equipment || '미지정')}</h5>
+                                    <p class="text-[10px] text-indigo-300 font-mono-num mt-0.5">S/N ${escapeHTML(task.equipment?.cskSn || '-')}</p>
+                                </div>
+                                <span id="rw-timer-${task.id}" class="font-mono-num font-black text-lg ${rwPaused ? 'text-slate-400' : 'text-amber-300'}">00:00:00</span>
                             </div>
                             <div class="mt-3 flex flex-wrap gap-1">${defects}</div>
                             <div class="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-400"><div>재작업자<br><strong class="text-slate-200">${escapeHTML(task.worker || '-')}</strong></div><div>원공정<br><strong class="text-slate-200">${escapeHTML(task.sourceProcess || '-')}</strong></div></div>
@@ -1630,6 +1726,11 @@
             });
         }
 
+        function getProcessDisplay(process, detail = '') {
+            if (process === '하네스' && detail) return `하네스 > ${detail}`;
+            return process || '미지정';
+        }
+
         function updateStatusText() {
             const span = document.getElementById('status-panel');
             if (!span) return;
@@ -1640,21 +1741,57 @@
             }
             if (selectedWorkers.length > 0 || selectedProcess) { 
                 const workerText = selectedWorkers.length > 0 ? selectedWorkers.join(', ') : '미선택';
-                span.textContent = `[대기] 작업자: ${workerText} | 공정: ${selectedProcess || '미선택'}`; 
+                span.textContent = `[대기] 작업자: ${workerText} | 공정: ${getProcessDisplay(selectedProcess, selectedProcessDetail)}`; 
                 span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-amber-400"; 
             } else { 
                 span.textContent = "현재 대기 상태 (준비 완료)"; 
                 span.className = "bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center text-xs font-semibold text-emerald-400"; 
             }
         }
-        
-        window.selectProcess = (p) => { 
-            selectedProcess = p; 
-            updateStatusText(); 
-            document.querySelectorAll('button[onclick^="selectProcess"]').forEach(btn => {
-                btn.classList.remove('border-2', 'border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
+
+        function resetProcessButtonStyles() {
+            document.querySelectorAll('button[onclick^="selectProcess"], #btn-process-harness').forEach(btn => {
+                btn.classList.remove('border-2', 'border-indigo-600', 'bg-indigo-50', 'text-indigo-700', 'border-purple-600', 'bg-purple-50', 'text-purple-700');
                 btn.classList.add('border', 'border-slate-200', 'bg-slate-50', 'text-slate-700');
             });
+        }
+
+        window.openHarnessProcessModal = function() {
+            const modal = document.getElementById('harness-process-modal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        };
+
+        window.closeHarnessProcessModal = function() {
+            const modal = document.getElementById('harness-process-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        };
+
+        window.selectHarnessDetail = function(detail) {
+            selectedProcess = '하네스';
+            selectedProcessDetail = detail;
+            closeHarnessProcessModal();
+            resetProcessButtonStyles();
+            const activeBtn = document.getElementById('btn-process-harness');
+            if (activeBtn) {
+                activeBtn.classList.remove('border', 'border-slate-200', 'bg-slate-50', 'text-slate-700');
+                activeBtn.classList.add('border-2', 'border-purple-600', 'bg-purple-50', 'text-purple-700');
+            }
+            const detailEl = document.getElementById('harness-selected-detail');
+            if (detailEl) detailEl.textContent = `(${detail})`;
+            updateStatusText();
+        };
+
+        window.selectProcess = (p) => { 
+            selectedProcess = p;
+            selectedProcessDetail = '';
+            const detailEl = document.getElementById('harness-selected-detail');
+            if (detailEl) detailEl.textContent = '';
+            updateStatusText(); 
+            resetProcessButtonStyles();
             if (p) {
                 const activeBtn = document.querySelector(`button[onclick="selectProcess('${p}')"]`);
                 if (activeBtn) {
@@ -1795,12 +1932,13 @@
                 const mm = String(nowTime.getMinutes()).padStart(2, '0');
                 const currentTimeStr = `${hh}:${mm}`;
                 
-                // [자동 일괄 정지 로직] 10:00, 11:50, 15:00
-                const targetAutoPauseTimes = ['10:00', '11:50', '15:00'];
+                // [V5.10 자동 일괄 정지] 일반 공정 + QC 재작업: 10:00, 11:50, 15:00, 16:50
+                const targetAutoPauseTimes = ['10:00', '11:50', '15:00', '16:50'];
                 if (targetAutoPauseTimes.includes(currentTimeStr)) {
                     if (lastAutoPauseTime !== currentTimeStr) {
                         lastAutoPauseTime = currentTimeStr;
                         window.triggerPauseAll(true);
+                        window.triggerPauseAllRework(true);
                     }
                 } else {
                     lastAutoPauseTime = '';
@@ -1812,6 +1950,7 @@
                     if (lastAutoResumeTime !== currentTimeStr) {
                         lastAutoResumeTime = currentTimeStr;
                         window.triggerResumeAll(true);
+                        window.triggerResumeAllRework(true);
                     }
                 } else {
                     lastAutoResumeTime = '';
@@ -1860,11 +1999,13 @@
                     }
                 });
 
-                // [V5.9] 재작업 타이머는 추가 터치 없이 시작~완료 경과시간을 표시합니다.
+                // [V5.10] 재작업 타이머는 추가 터치 없이 시작~완료 경과시간을 표시합니다.
                 reworkTasks.forEach(task => {
                     const el = document.getElementById(`rw-timer-${task.id}`);
                     if (!el) return;
-                    let diff = nowMs - task.startTime;
+                    let diff = task.paused
+                        ? ((task.pausedAt || nowMs) - task.startTime - (task.totalPausedDuration || 0))
+                        : (nowMs - task.startTime - (task.totalPausedDuration || 0));
                     if (diff < 0) diff = 0;
                     const sec = Math.floor((diff / 1000) % 60), min = Math.floor((diff / 60000) % 60), hour = Math.floor(diff / 3600000);
                     const pad = n => String(n).padStart(2, '0');
@@ -1922,7 +2063,7 @@
                             <h4 class="text-lg font-black mt-1.5 text-slate-100 flex flex-wrap items-center gap-2">
                                 <span>${escapeHTML(task.worker)}</span>
                                 <button onclick="triggerEditActiveWorker('${task.id}')" class="text-slate-500 hover:text-indigo-400 transition ml-0.5" title="작업자 수정"><i class="fa-solid fa-pen-to-square text-sm"></i></button>
-                                <span class="text-[10px] px-2 py-0.5 rounded-lg border ${procBadge}">${escapeHTML(task.process)}</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-lg border ${procBadge}">${escapeHTML(getProcessDisplay(task.process, task.processDetail))}</span>
                             </h4>
                         </div>
                         <span class="${pulseLightClass}"></span>
@@ -2008,7 +2149,7 @@
                     <td class="py-3 px-4 text-center text-slate-400 font-bold">${index + 1}</td>
                     <td class="py-3 px-4 font-black text-slate-800">${escapeHTML(item.worker)}</td>
                     <td class="py-3 px-4 min-w-[250px]">${equipmentsHtml}</td>
-                    <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badgeClass}">${escapeHTML(item.process)}</span></td>
+                    <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badgeClass}">${escapeHTML(getProcessDisplay(item.process, item.processDetail))}</span></td>
                     <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${escapeHTML(item.startTime)}</td>
                     <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${escapeHTML(item.endTime)}</td>
                     <td class="py-3 px-4 text-right font-bold text-indigo-700 font-mono-num">
@@ -2174,7 +2315,7 @@
                 }
 
                 rows.push([
-                    index + 1, item.date, cleanWorkerName, mainModel, `${unitCount}대`, cskSns, item.process, item.startTime, item.endTime, item.elapsedMinutes, Math.round(actualMinPerUnit), stdTimeStr, diffStr, effState, itemMD
+                    index + 1, item.date, cleanWorkerName, mainModel, `${unitCount}대`, cskSns, getProcessDisplay(item.process, item.processDetail), item.startTime, item.endTime, item.elapsedMinutes, Math.round(actualMinPerUnit), stdTimeStr, diffStr, effState, itemMD
                 ]);
             });
             const wsDetail = XLSX.utils.aoa_to_sheet(rows);
@@ -2209,7 +2350,7 @@
                     const monthKey = `${dateParts[0]}-${dateParts[1]}`;
                     if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { workers: {}, equipments: {}, sharedJobs: [] };
                     
-                    const process = log.process || '미지정';
+                    const process = getProcessDisplay(log.process, log.processDetail);
                     const elapsedMins = log.elapsedMinutes;
                     let eqList = log.equipments || [];
                     if (eqList.length === 0 && log.equipment) eqList = [{ equipment: log.equipment, division: log.division, cskSn: log.cskSn }];
@@ -2554,7 +2695,7 @@
                 }
             });
 
-            // --- [V5.9] QC 반려 재작업 상세/KPI 시트 ---
+            // --- [V5.10] QC 반려 재작업 상세/KPI 시트 ---
             if (targetReworkLogs.length > 0) {
                 const rwHeader = ['No.', '재작업 일자', '장비 모델', 'CSK S/N', '사업부', '원공정', '재작업 차수', 'QC 부적합 항목', '부적합 항목수', '재작업자', '시작 시각', '종료 시각', '재작업 시간(분)', '재작업 공수(M/D)', '원 작업 Log ID', 'Rework Case ID'];
                 const rwRows = [rwHeader];
@@ -2627,6 +2768,8 @@
                 cskSerialNumbers: eqList.map(e => e.cskSn || '-'),
                 deliveryDates: eqList.map(e => e.deliveryDate || '-'),
                 processName: log.process,
+                processDetail: log.processDetail || null,
+                processDisplayName: getProcessDisplay(log.process, log.processDetail),
                 startTime: log.startTime,
                 endTime: log.endTime,
                 elapsedMinutes: log.elapsedMinutes,
@@ -2748,6 +2891,34 @@
         }
 
         function setupEventListeners() {
+            // [V5.10.1] 하네스 세부공정 팝업: inline handler에만 의존하지 않고 DOM 이벤트로도 연결
+            const harnessProcessBtn = document.getElementById('btn-process-harness');
+            if (harnessProcessBtn) {
+                harnessProcessBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.openHarnessProcessModal();
+                });
+            }
+            document.querySelectorAll('[data-harness-close]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.closeHarnessProcessModal();
+                });
+            });
+            document.querySelectorAll('[data-harness-detail]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const detail = btn.getAttribute('data-harness-detail') || '';
+                    if (detail) window.selectHarnessDetail(detail);
+                });
+            });
+            const harnessModal = document.getElementById('harness-process-modal');
+            if (harnessModal) {
+                harnessModal.addEventListener('click', (e) => {
+                    if (e.target === harnessModal) window.closeHarnessProcessModal();
+                });
+            }
             document.getElementById('btn-confirm-action')?.addEventListener('click', () => closeConfirmModal(true));
 
             document.getElementById('btn-toggle-fingerprint')?.addEventListener('click', () => {
@@ -2968,6 +3139,8 @@
             
             document.getElementById('btn-pause-all')?.addEventListener('click', triggerPauseAll);
             document.getElementById('btn-resume-all')?.addEventListener('click', triggerResumeAll);
+            document.getElementById('btn-rework-pause-all')?.addEventListener('click', () => triggerPauseAllRework(false));
+            document.getElementById('btn-rework-resume-all')?.addEventListener('click', () => triggerResumeAllRework(false));
 
             document.getElementById('btn-open-kgsystem-modal')?.addEventListener('click', window.openKGSystemModal);
             document.getElementById('btn-generate-kgsystem')?.addEventListener('click', processKGSystemExport);
@@ -3306,9 +3479,9 @@
         window.addEventListener('DOMContentLoaded', async () => {
             checkUrlModes();
             checkUrlHashRoom();
+            setupEventListeners();
             renderWorkers();
             renderReworkManagement();
-            setupEventListeners();
             startLocalTimerLoop();
             updateFingerprintUI();
             await initAuth();
