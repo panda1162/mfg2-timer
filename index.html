@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.8 (Redteam 5차 - 생산계획 수동 추가)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.9 (QC 반려 재작업 관리)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.8 Fail-Closed
+                                v5.9 Rework
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -314,7 +314,91 @@
                 </table>
             </div>
         </section>
+
+        <!-- [V5.9] QC 반려 재작업 관리: QC는 V5를 사용하지 않는 전제, 제조2팀에 돌아온 재작업만 최소 입력 -->
+        <section id="rework-section" class="bg-white rounded-2xl border border-rose-200 shadow-sm overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-rose-100 bg-gradient-to-r from-rose-50 to-amber-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div>
+                    <h4 class="text-md font-black text-slate-900 flex items-center gap-2"><i class="fa-solid fa-screwdriver-wrench text-rose-600"></i> QC 반려 재작업 관리</h4>
+                    <p class="text-xs text-slate-600 mt-1">QC에서 부적합으로 제조2팀에 돌아온 장비만 기록합니다. 한 장비에 여러 부적합을 묶어서 선택하고, 재작업 시작/완료 시간은 자동 집계됩니다.</p>
+                </div>
+                <span class="text-[10px] font-bold px-3 py-1.5 rounded-full bg-white border border-rose-200 text-rose-700"><i class="fa-solid fa-hand-pointer mr-1"></i>정상 장비 입력 없음 · 반려 장비만 기록</span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-slate-50 border-b border-slate-200">
+                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">진행 중</span><strong id="rw-kpi-active" class="text-xl font-black text-rose-600 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">건</span></div>
+                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">당월 반려 장비</span><strong id="rw-kpi-equipment" class="text-xl font-black text-slate-900 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span></div>
+                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">당월 재작업 횟수</span><strong id="rw-kpi-cycles" class="text-xl font-black text-slate-900 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">회</span></div>
+                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">당월 부적합 항목</span><strong id="rw-kpi-defects" class="text-xl font-black text-amber-600 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">건</span></div>
+                <div class="bg-white border border-slate-200 rounded-xl p-3 col-span-2 md:col-span-1"><span class="text-[10px] font-bold text-slate-400 block">당월 재작업 공수</span><strong id="rw-kpi-minutes" class="text-lg font-black text-indigo-700 font-mono-num">0분</strong><span id="rw-kpi-md" class="text-[10px] text-slate-500 block">0.000 M/D</span></div>
+            </div>
+
+            <div class="p-5 border-b border-slate-200">
+                <div class="flex justify-between items-center mb-3">
+                    <h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-rotate text-rose-500 mr-1"></i> 현재 재작업 진행 중</h5>
+                    <span class="text-[10px] text-slate-400">완료 이력의 장비별 <strong class="text-rose-600">QC 재작업</strong> 버튼으로 시작</span>
+                </div>
+                <div id="rework-active-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <div class="col-span-full py-5 text-center text-slate-400 text-xs italic">진행 중인 재작업이 없습니다.</div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto max-h-[420px] custom-scrollbar">
+                <table class="w-full text-left border-collapse min-w-[980px]">
+                    <thead class="sticky top-0 z-10">
+                        <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
+                            <th class="py-3 px-3 text-center">No.</th>
+                            <th class="py-3 px-3">일자 / 장비</th>
+                            <th class="py-3 px-3">QC 부적합 (복수)</th>
+                            <th class="py-3 px-3 text-center">차수</th>
+                            <th class="py-3 px-3">재작업자</th>
+                            <th class="py-3 px-3 text-center">원공정</th>
+                            <th class="py-3 px-3 text-center">시작~종료</th>
+                            <th class="py-3 px-3 text-right">재작업시간 / 공수</th>
+                            <th class="py-3 px-3 text-center">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rework-log-table-body" class="divide-y divide-slate-100 text-xs">
+                        <tr><td colspan="9" class="py-8 text-center text-slate-400 italic">완료된 재작업 이력이 없습니다.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </main>
+
+    <!-- [V5.9] 재작업 시작 모달 -->
+    <div id="rework-modal" class="fixed inset-0 bg-slate-900/50 z-[110] flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl mx-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-start gap-3 border-b border-slate-100 pb-3 mb-4">
+                <div>
+                    <h3 class="text-md font-black text-slate-900"><i class="fa-solid fa-screwdriver-wrench text-rose-600 mr-1"></i> QC 반려 재작업 시작</h3>
+                    <p class="text-[11px] text-slate-500 mt-1">부적합이 여러 개면 해당 항목을 모두 선택합니다. 상세 내용을 모르면 ‘상세미확인’ 그대로 시작할 수 있습니다.</p>
+                </div>
+                <button type="button" onclick="closeReworkModal()" class="text-slate-400 hover:text-slate-700 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4 grid grid-cols-2 gap-2 text-xs">
+                <div class="col-span-2"><span class="text-[10px] text-slate-400 font-bold block">대상 장비</span><strong id="rw-modal-equipment" class="text-slate-900">-</strong></div>
+                <div><span class="text-[10px] text-slate-400 font-bold block">CSK S/N</span><strong id="rw-modal-sn" class="text-indigo-700 font-mono-num">-</strong></div>
+                <div><span class="text-[10px] text-slate-400 font-bold block">원공정 / 재작업 차수</span><strong id="rw-modal-source" class="text-slate-800">-</strong></div>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2"><label class="text-xs font-black text-slate-700">재작업자</label><span class="text-[10px] text-slate-400">원작업자가 기본 선택됨</span></div>
+                <div id="rework-worker-grid" class="grid grid-cols-3 gap-2"></div>
+            </div>
+
+            <div class="mb-5">
+                <div class="flex justify-between items-center mb-2"><label class="text-xs font-black text-slate-700">QC 부적합 항목 <span class="text-rose-600">(복수 선택)</span></label><span id="rw-defect-count" class="text-[10px] font-bold text-rose-600">1개 선택</span></div>
+                <div id="rework-defect-grid" class="grid grid-cols-3 gap-2"></div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeReworkModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">취소</button>
+                <button id="btn-start-rework" data-rework-write="true" type="button" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow-sm"><i class="fa-solid fa-play mr-1"></i> 재작업 시작</button>
+            </div>
+        </div>
+    </div>
 
     <div id="custom-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
@@ -539,7 +623,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.8 Redteam Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.9 QC Rework Fail-Closed</p>
         </div>
     </footer>
 
@@ -620,6 +704,15 @@
 
         let runningTasks = [];
         let completedLogs = [];
+
+        // [V5.9] QC 반려 재작업은 원 작업로그와 분리 저장하여 정상 제작공수와 재작업공수를 섞지 않습니다.
+        let reworkTasks = [];
+        let reworkLogs = [];
+        let reworkModalContext = null;
+        let reworkSelectedWorkers = [];
+        let reworkSelectedDefects = ['상세미확인'];
+        let editingReworkLogId = null;
+        const REWORK_DEFECT_TYPES = ['압착', '오결선', '넘버링', '케이블', '취부', '체결', '외관', '기타', '상세미확인'];
         
         const escapeHTML = (str) => {
             if (typeof str !== 'string') return str;
@@ -679,6 +772,7 @@
             if (btnClearLogs) btnClearLogs.disabled = !canWrite;
             if (btnLoadDemo) btnLoadDemo.disabled = !(canWrite && isAdminMode);
             if (btnPlanAdd) btnPlanAdd.disabled = !(canWrite && isAdminMode);
+            document.querySelectorAll('[data-rework-write="true"]').forEach(btn => { btn.disabled = !canWrite || btn.dataset.reworkLocked === 'true'; });
         }
 
         function checkFailClosedCanWrite() {
@@ -834,7 +928,7 @@
         
         window.triggerEditLogTime = function(logId, currentMinutes) {
             if (!checkFailClosedCanWrite()) return;
-            editingLogId = logId; editingActiveTaskId = null;
+            editingLogId = logId; editingActiveTaskId = null; editingReworkLogId = null;
             const input = document.getElementById('edit-time-input');
             if (input) input.value = currentMinutes;
             document.getElementById('edit-time-modal')?.classList.remove('hidden');
@@ -850,7 +944,7 @@
             if (currentElapsedMs < 0) currentElapsedMs = 0;
             const currentElapsedMins = Math.floor(currentElapsedMs / 60000);
             
-            editingActiveTaskId = taskId; editingLogId = null;
+            editingActiveTaskId = taskId; editingLogId = null; editingReworkLogId = null;
             const input = document.getElementById('edit-time-input');
             if (input) input.value = currentElapsedMins;
             document.getElementById('edit-time-modal')?.classList.remove('hidden');
@@ -859,7 +953,7 @@
         
         window.closeEditTimeModal = function() {
             document.getElementById('edit-time-modal')?.classList.add('hidden');
-            editingLogId = null; editingActiveTaskId = null;
+            editingLogId = null; editingActiveTaskId = null; editingReworkLogId = null;
         };
         
         window.triggerEditActiveWorker = function(taskId) {
@@ -1206,6 +1300,310 @@
             });
         };
 
+        // =============================
+        // [V5.9] QC 반려 재작업 관리
+        // =============================
+        function getKstDateString(ts = Date.now()) {
+            return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ts));
+        }
+
+        function getEquipmentListFromLog(log) {
+            let eqList = log?.equipments || [];
+            if (eqList.length === 0 && log?.equipment) {
+                eqList = [{ id: log.equipmentId || '', division: log.division || 'ACM', equipment: log.equipment, cskSn: log.cskSn || '-', deliveryDate: log.deliveryDate || '-' }];
+            }
+            return eqList;
+        }
+
+        function getReworkEquipmentKey(logId, eq, eqIndex = 0) {
+            if (eq?.id) return `EQ:${eq.id}`;
+            if (eq?.cskSn && !['-', '수동입력', '하네스_일괄대수'].includes(eq.cskSn)) return `SN:${eq.cskSn}`;
+            return `LOG:${logId}:EQ:${eqIndex}`;
+        }
+
+        function renderReworkWorkerGrid() {
+            const grid = document.getElementById('rework-worker-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            const names = [...new Set([...activeWorkersList, ...reworkSelectedWorkers])].filter(Boolean);
+            names.forEach(worker => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = worker;
+                const selected = reworkSelectedWorkers.includes(worker);
+                btn.className = selected
+                    ? 'py-2 border-2 border-rose-500 bg-rose-50 text-rose-700 rounded-xl text-[11px] font-black shadow-sm'
+                    : 'py-2 border border-slate-200 bg-white text-slate-700 rounded-xl text-[11px] font-bold hover:bg-slate-50';
+                btn.onclick = () => {
+                    if (reworkSelectedWorkers.includes(worker)) reworkSelectedWorkers = reworkSelectedWorkers.filter(w => w !== worker);
+                    else reworkSelectedWorkers.push(worker);
+                    renderReworkWorkerGrid();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function renderReworkDefectGrid() {
+            const grid = document.getElementById('rework-defect-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            REWORK_DEFECT_TYPES.forEach(defect => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = defect;
+                const selected = reworkSelectedDefects.includes(defect);
+                btn.className = selected
+                    ? 'py-2 border-2 border-rose-500 bg-rose-50 text-rose-700 rounded-xl text-[11px] font-black shadow-sm'
+                    : 'py-2 border border-slate-200 bg-white text-slate-700 rounded-xl text-[11px] font-bold hover:bg-slate-50';
+                btn.onclick = () => {
+                    if (defect === '상세미확인') {
+                        reworkSelectedDefects = ['상세미확인'];
+                    } else {
+                        reworkSelectedDefects = reworkSelectedDefects.filter(d => d !== '상세미확인');
+                        if (reworkSelectedDefects.includes(defect)) reworkSelectedDefects = reworkSelectedDefects.filter(d => d !== defect);
+                        else reworkSelectedDefects.push(defect);
+                        if (reworkSelectedDefects.length === 0) reworkSelectedDefects = ['상세미확인'];
+                    }
+                    renderReworkDefectGrid();
+                };
+                grid.appendChild(btn);
+            });
+            const countEl = document.getElementById('rw-defect-count');
+            if (countEl) countEl.textContent = `${reworkSelectedDefects.length}개 선택`;
+        }
+
+        window.openReworkModal = function(logId, eqIndex) {
+            if (!checkFailClosedCanWrite()) return;
+            const log = completedLogs.find(l => l.id === logId && !l.isDeleted);
+            if (!log) { showToast('원 작업 이력을 찾을 수 없습니다.', 'fa-triangle-exclamation'); return; }
+            const eqList = getEquipmentListFromLog(log);
+            const eq = eqList[eqIndex];
+            if (!eq) { showToast('대상 장비를 찾을 수 없습니다.', 'fa-triangle-exclamation'); return; }
+            const equipmentKey = getReworkEquipmentKey(log.id, eq, eqIndex);
+            if (reworkTasks.some(t => t.equipmentKey === equipmentKey)) {
+                showToast('이 장비는 이미 재작업 진행 중입니다.', 'fa-rotate');
+                return;
+            }
+            const cycleNo = reworkLogs.filter(r => !r.isDeleted && r.equipmentKey === equipmentKey).length + 1;
+            reworkModalContext = { logId: log.id, eqIndex, log, eq: JSON.parse(JSON.stringify(eq)), equipmentKey, cycleNo };
+            reworkSelectedWorkers = (log.workerList && log.workerList.length > 0 ? [...log.workerList] : String(log.worker || '').split(',').map(w => w.trim())).filter(Boolean);
+            reworkSelectedDefects = ['상세미확인'];
+
+            const eqEl = document.getElementById('rw-modal-equipment');
+            const snEl = document.getElementById('rw-modal-sn');
+            const srcEl = document.getElementById('rw-modal-source');
+            if (eqEl) eqEl.textContent = eq.equipment || '미지정';
+            if (snEl) snEl.textContent = eq.cskSn || '-';
+            if (srcEl) srcEl.textContent = `${log.process || '미지정'} / ${cycleNo}차`;
+            renderReworkWorkerGrid();
+            renderReworkDefectGrid();
+            document.getElementById('rework-modal')?.classList.remove('hidden');
+            updateWriteButtonsState();
+        };
+
+        window.closeReworkModal = function() {
+            document.getElementById('rework-modal')?.classList.add('hidden');
+            reworkModalContext = null;
+            reworkSelectedWorkers = [];
+            reworkSelectedDefects = ['상세미확인'];
+        };
+
+        async function updateReworkInCloudSecurely(actionType, payload) {
+            if (!checkFailClosedCanWrite()) return false;
+            const roomRef = getRoomDocRef(currentRoomId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const sfDoc = await transaction.get(roomRef);
+                    if (!sfDoc.exists()) throw new Error('FAIL-CLOSED: Room document does not exist.');
+                    const currentData = sfDoc.data() || {};
+                    const currentTasks = Array.isArray(currentData.reworkTasks) ? currentData.reworkTasks : [];
+                    const currentLogs = Array.isArray(currentData.reworkLogs) ? currentData.reworkLogs : [];
+                    const newTasks = JSON.parse(JSON.stringify(currentTasks));
+                    const newLogs = JSON.parse(JSON.stringify(currentLogs));
+
+                    if (actionType === 'START') {
+                        if (newTasks.some(t => t.equipmentKey === payload.equipmentKey)) throw new Error('REWORK_ALREADY_ACTIVE');
+                        newTasks.unshift(payload);
+                    } else if (actionType === 'COMPLETE') {
+                        const idx = newTasks.findIndex(t => t.id === payload.taskId);
+                        if (idx < 0) throw new Error('REWORK_TASK_NOT_FOUND');
+                        newTasks.splice(idx, 1);
+                        newLogs.unshift(payload.finishedLog);
+                    } else if (actionType === 'EDIT_LOG_TIME') {
+                        const idx = newLogs.findIndex(l => l.id === payload.id);
+                        if (idx > -1) {
+                            newLogs[idx].elapsedMinutes = payload.newMinutes;
+                            newLogs[idx].elapsedHours = parseFloat((payload.newMinutes / 60).toFixed(4));
+                            newLogs[idx].updatedAt = Date.now();
+                        }
+                    } else if (actionType === 'DELETE_LOG') {
+                        const idx = newLogs.findIndex(l => l.id === payload.id);
+                        if (idx > -1) { newLogs[idx].isDeleted = true; newLogs[idx].deletedAt = Date.now(); newLogs[idx].updatedAt = Date.now(); }
+                    }
+
+                    transaction.update(roomRef, { reworkTasks: newTasks, reworkLogs: newLogs, updatedAt: Date.now() });
+                });
+                return true;
+            } catch (e) {
+                console.error('[Rework]', e);
+                if (e.message === 'REWORK_ALREADY_ACTIVE') showToast('동일 장비의 재작업이 이미 진행 중입니다.', 'fa-rotate');
+                else showToast('재작업 기록 저장에 실패했습니다. 클라우드 연결을 확인하세요.', 'fa-triangle-exclamation');
+                return false;
+            }
+        }
+
+        async function startReworkFromModal() {
+            if (!checkFailClosedCanWrite() || !reworkModalContext) return;
+            if (reworkSelectedWorkers.length === 0) { showToast('재작업자를 최소 1명 선택하세요.', 'fa-triangle-exclamation'); return; }
+            if (reworkSelectedDefects.length === 0) reworkSelectedDefects = ['상세미확인'];
+            const now = Date.now();
+            const ctx = reworkModalContext;
+            const task = {
+                id: 'rw_task_' + now + '_' + Math.random().toString(36).substr(2, 5),
+                reworkCaseId: 'RW-' + now + '-' + Math.random().toString(36).substr(2, 4).toUpperCase(),
+                cycleNo: ctx.cycleNo,
+                sourceWorkLogId: ctx.logId,
+                sourceProcess: ctx.log.process || '미지정',
+                equipmentKey: ctx.equipmentKey,
+                equipment: {
+                    id: ctx.eq.id || '',
+                    division: ctx.eq.division || 'ACM',
+                    equipment: ctx.eq.equipment || '미지정',
+                    cskSn: ctx.eq.cskSn || '-',
+                    deliveryDate: ctx.eq.deliveryDate || '-'
+                },
+                worker: reworkSelectedWorkers.join(', '),
+                workerList: [...reworkSelectedWorkers],
+                defectTypes: [...reworkSelectedDefects],
+                defectCount: reworkSelectedDefects.length,
+                startTime: now,
+                date: getKstDateString(now),
+                createdAt: now,
+                updatedAt: now
+            };
+            const success = await updateReworkInCloudSecurely('START', task);
+            if (success) {
+                closeReworkModal();
+                playSound(950, 0.1);
+                showToast(`${task.equipment.cskSn || task.equipment.equipment} 재작업을 시작했습니다.`, 'fa-screwdriver-wrench');
+            }
+        }
+
+        window.triggerCompleteRework = async function(taskId) {
+            if (!checkFailClosedCanWrite()) return;
+            const task = reworkTasks.find(t => t.id === taskId);
+            if (!task) return;
+            const now = Date.now();
+            const elapsedMinutes = Math.max(0, Math.round((now - task.startTime) / 60000));
+            const finishedLog = {
+                id: 'rw_log_' + now + '_' + Math.random().toString(36).substr(2, 5),
+                reworkCaseId: task.reworkCaseId,
+                cycleNo: task.cycleNo || 1,
+                sourceWorkLogId: task.sourceWorkLogId,
+                sourceProcess: task.sourceProcess || '미지정',
+                equipmentKey: task.equipmentKey,
+                equipment: JSON.parse(JSON.stringify(task.equipment)),
+                worker: task.worker,
+                workerList: task.workerList || String(task.worker || '').split(',').map(w => w.trim()).filter(Boolean),
+                defectTypes: Array.isArray(task.defectTypes) && task.defectTypes.length ? [...task.defectTypes] : ['상세미확인'],
+                defectCount: Array.isArray(task.defectTypes) && task.defectTypes.length ? task.defectTypes.length : 1,
+                startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }),
+                endTime: new Date(now).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }),
+                elapsedMinutes,
+                elapsedHours: parseFloat((elapsedMinutes / 60).toFixed(4)),
+                date: getKstDateString(now),
+                isDeleted: false,
+                createdAt: now,
+                updatedAt: now
+            };
+            const success = await updateReworkInCloudSecurely('COMPLETE', { taskId, finishedLog });
+            if (success) { playSound(1200, 0.15); showToast(`재작업 완료: ${elapsedMinutes}분`, 'fa-check'); }
+        };
+
+        window.triggerEditReworkTime = function(logId, currentMinutes) {
+            if (!checkFailClosedCanWrite()) return;
+            editingReworkLogId = logId; editingLogId = null; editingActiveTaskId = null;
+            const input = document.getElementById('edit-time-input');
+            if (input) input.value = currentMinutes;
+            document.getElementById('edit-time-modal')?.classList.remove('hidden');
+            setTimeout(() => document.getElementById('edit-time-input')?.focus(), 100);
+        };
+
+        window.triggerDeleteReworkLog = function(logId) {
+            if (!checkFailClosedCanWrite()) return;
+            showConfirm('재작업 이력 삭제', '선택한 QC 반려 재작업 이력을 삭제하시겠습니까?', async () => {
+                const success = await updateReworkInCloudSecurely('DELETE_LOG', { id: logId });
+                if (success) showToast('재작업 이력이 삭제되었습니다.', 'fa-trash');
+            });
+        };
+
+        function renderReworkManagement() {
+            const activeContainer = document.getElementById('rework-active-container');
+            const tbody = document.getElementById('rework-log-table-body');
+            const activeLogs = reworkLogs.filter(l => !l.isDeleted);
+            const currentMonth = getKstDateString(Date.now()).slice(0, 7);
+            const monthLogs = activeLogs.filter(l => String(l.date || '').startsWith(currentMonth));
+            const uniqueEquip = new Set(monthLogs.map(l => l.equipmentKey || l.equipment?.cskSn || l.id)).size;
+            const defectCount = monthLogs.reduce((sum, l) => sum + Math.max(1, (l.defectTypes || []).length), 0);
+            const totalMins = monthLogs.reduce((sum, l) => sum + (Number(l.elapsedMinutes) || 0), 0);
+
+            const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+            setText('rw-kpi-active', reworkTasks.length);
+            setText('rw-kpi-equipment', uniqueEquip);
+            setText('rw-kpi-cycles', monthLogs.length);
+            setText('rw-kpi-defects', defectCount);
+            setText('rw-kpi-minutes', `${totalMins}분`);
+            setText('rw-kpi-md', `${(totalMins / 480).toFixed(3)} M/D`);
+
+            if (activeContainer) {
+                activeContainer.innerHTML = '';
+                if (reworkTasks.length === 0) {
+                    activeContainer.innerHTML = '<div class="col-span-full py-5 text-center text-slate-400 text-xs italic">진행 중인 재작업이 없습니다.</div>';
+                } else {
+                    reworkTasks.forEach(task => {
+                        const card = document.createElement('div');
+                        card.className = 'bg-slate-900 text-white rounded-2xl p-4 border border-slate-800 shadow-sm';
+                        const defects = (task.defectTypes || ['상세미확인']).map(d => `<span class="px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[9px] font-bold">${escapeHTML(d)}</span>`).join(' ');
+                        card.innerHTML = `
+                            <div class="flex justify-between items-start gap-2">
+                                <div><span class="text-[9px] text-rose-300 font-bold">QC 반려 ${task.cycleNo || 1}차 재작업</span><h5 class="font-black text-sm mt-1">${escapeHTML(task.equipment?.equipment || '미지정')}</h5><p class="text-[10px] text-indigo-300 font-mono-num mt-0.5">S/N ${escapeHTML(task.equipment?.cskSn || '-')}</p></div>
+                                <span id="rw-timer-${task.id}" class="font-mono-num font-black text-lg text-amber-300">00:00:00</span>
+                            </div>
+                            <div class="mt-3 flex flex-wrap gap-1">${defects}</div>
+                            <div class="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-400"><div>재작업자<br><strong class="text-slate-200">${escapeHTML(task.worker || '-')}</strong></div><div>원공정<br><strong class="text-slate-200">${escapeHTML(task.sourceProcess || '-')}</strong></div></div>
+                            <button data-rework-write="true" type="button" onclick="triggerCompleteRework('${task.id}')" class="mt-3 w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black"><i class="fa-solid fa-flag-checkered mr-1"></i> 재작업 완료</button>`;
+                        activeContainer.appendChild(card);
+                    });
+                }
+            }
+
+            if (tbody) {
+                tbody.innerHTML = '';
+                if (activeLogs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-400 italic">완료된 재작업 이력이 없습니다.</td></tr>';
+                } else {
+                    activeLogs.forEach((log, index) => {
+                        const eq = log.equipment || {};
+                        const defects = (log.defectTypes || ['상세미확인']).map(d => `<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded text-[9px] font-bold">${escapeHTML(d)}</span>`).join('');
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-50 border-b border-slate-100';
+                        tr.innerHTML = `
+                            <td class="py-3 px-3 text-center text-slate-400 font-bold">${index + 1}</td>
+                            <td class="py-3 px-3"><strong class="text-slate-800">${escapeHTML(log.date || '-')}</strong><div class="mt-1 font-bold text-slate-900">${escapeHTML(eq.equipment || '미지정')}</div><div class="text-[10px] text-indigo-700 font-mono-num">S/N ${escapeHTML(eq.cskSn || '-')}</div></td>
+                            <td class="py-3 px-3 max-w-[230px]">${defects}</td>
+                            <td class="py-3 px-3 text-center"><span class="px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-black">${log.cycleNo || 1}차</span></td>
+                            <td class="py-3 px-3 font-bold text-slate-700">${escapeHTML(log.worker || '-')}</td>
+                            <td class="py-3 px-3 text-center text-slate-600">${escapeHTML(log.sourceProcess || '-')}</td>
+                            <td class="py-3 px-3 text-center font-mono-num text-slate-500">${escapeHTML(log.startTime || '-')}<br>~ ${escapeHTML(log.endTime || '-')}</td>
+                            <td class="py-3 px-3 text-right font-mono-num font-black text-rose-700">${Number(log.elapsedMinutes)||0}분<div class="text-[10px] text-slate-400">${((Number(log.elapsedMinutes)||0)/480).toFixed(3)} M/D</div></td>
+                            <td class="py-3 px-3 text-center"><button data-rework-write="true" onclick="triggerEditReworkTime('${log.id}', ${Number(log.elapsedMinutes)||0})" class="p-1.5 text-slate-400 hover:text-indigo-600" title="시간 수정"><i class="fa-solid fa-pen-to-square"></i></button><button data-rework-write="true" onclick="triggerDeleteReworkLog('${log.id}')" class="p-1.5 text-slate-400 hover:text-rose-600" title="이력 삭제"><i class="fa-solid fa-trash-can"></i></button></td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+            updateWriteButtonsState();
+        }
+
         function renderWorkers() {
             const grid = document.getElementById('worker-grid');
             if (!grid) return;
@@ -1461,6 +1859,17 @@
                         }
                     }
                 });
+
+                // [V5.9] 재작업 타이머는 추가 터치 없이 시작~완료 경과시간을 표시합니다.
+                reworkTasks.forEach(task => {
+                    const el = document.getElementById(`rw-timer-${task.id}`);
+                    if (!el) return;
+                    let diff = nowMs - task.startTime;
+                    if (diff < 0) diff = 0;
+                    const sec = Math.floor((diff / 1000) % 60), min = Math.floor((diff / 60000) % 60), hour = Math.floor(diff / 3600000);
+                    const pad = n => String(n).padStart(2, '0');
+                    el.textContent = `${pad(hour)}:${pad(min)}:${pad(sec)}`;
+                });
             }, 1000);
         }
 
@@ -1574,16 +1983,24 @@
                 let eqList = item.equipments || [];
                 if (eqList.length === 0 && item.equipment) eqList = [{ division: item.division || 'ACM', equipment: item.equipment, cskSn: item.cskSn || '-', deliveryDate: item.deliveryDate || '-' }];
 
-                const equipmentsHtml = eqList.map(eq => `
+                const equipmentsHtml = eqList.map((eq, eqIndex) => {
+                    const rwKey = getReworkEquipmentKey(item.id, eq, eqIndex);
+                    const rwActive = reworkTasks.some(t => t.equipmentKey === rwKey);
+                    return `
                     <div class="mb-1.5 last:mb-0">
-                        <div class="font-extrabold text-slate-900 text-xs">${escapeHTML(eq.equipment || '미지정')}</div>
-                        <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-1.5 items-center">
-                            <span class="bg-indigo-50 text-indigo-700 font-extrabold px-1.5 py-0.5 rounded text-[9px] border border-indigo-100">${escapeHTML(eq.division || 'ACM')}</span>
-                            <span class="font-mono-num font-semibold text-slate-600">S/N: ${escapeHTML(eq.cskSn || '-')}</span>
-                            <span class="text-slate-400">📅 ${escapeHTML(eq.deliveryDate || '-')}</span>
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="min-w-0">
+                                <div class="font-extrabold text-slate-900 text-xs">${escapeHTML(eq.equipment || '미지정')}</div>
+                                <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-1.5 items-center">
+                                    <span class="bg-indigo-50 text-indigo-700 font-extrabold px-1.5 py-0.5 rounded text-[9px] border border-indigo-100">${escapeHTML(eq.division || 'ACM')}</span>
+                                    <span class="font-mono-num font-semibold text-slate-600">S/N: ${escapeHTML(eq.cskSn || '-')}</span>
+                                    <span class="text-slate-400">📅 ${escapeHTML(eq.deliveryDate || '-')}</span>
+                                </div>
+                            </div>
+                            <button data-rework-write="true" data-rework-locked="${rwActive ? 'true' : 'false'}" type="button" ${rwActive ? 'disabled' : ''} onclick="openReworkModal('${item.id}', ${eqIndex})" class="shrink-0 px-2 py-1 rounded-lg text-[9px] font-black border ${rwActive ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'}" title="QC 반려 재작업 시작"><i class="fa-solid fa-screwdriver-wrench"></i> ${rwActive ? '재작업중' : 'QC 재작업'}</button>
                         </div>
-                    </div>
-                `).join('<div class="border-t border-slate-100 my-1.5"></div>');
+                    </div>`;
+                }).join('<div class="border-t border-slate-100 my-1.5"></div>');
 
                 const mdValue = (item.elapsedMinutes / 60 / 8).toFixed(3);
 
@@ -1607,6 +2024,7 @@
                 tbody.appendChild(tr);
             });
             updateFingerprintUI();
+            updateWriteButtonsState();
         }
 
         function normalizeEquipmentName(name) {
@@ -1715,6 +2133,12 @@
                 return eqs.some(eq => (eq.division || 'ACM') === selectedLogDiv);
             });
             if (targetLogs.length === 0) { showMessage('작업 이력 없음', '엑셀로 출력할 완료된 작업 이력이 없습니다.'); return; }
+
+            const targetReworkLogs = reworkLogs.filter(item => {
+                if (item.isDeleted) return false;
+                if (!selectedLogDiv) return true;
+                return (item.equipment?.division || 'ACM') === selectedLogDiv;
+            });
 
             const wb = XLSX.utils.book_new();
             
@@ -2130,6 +2554,49 @@
                 }
             });
 
+            // --- [V5.9] QC 반려 재작업 상세/KPI 시트 ---
+            if (targetReworkLogs.length > 0) {
+                const rwHeader = ['No.', '재작업 일자', '장비 모델', 'CSK S/N', '사업부', '원공정', '재작업 차수', 'QC 부적합 항목', '부적합 항목수', '재작업자', '시작 시각', '종료 시각', '재작업 시간(분)', '재작업 공수(M/D)', '원 작업 Log ID', 'Rework Case ID'];
+                const rwRows = [rwHeader];
+                targetReworkLogs.forEach((log, idx) => {
+                    const eq = log.equipment || {};
+                    rwRows.push([
+                        idx + 1, log.date || '-', normalizeEquipmentName(eq.equipment || '미지정'), eq.cskSn || '-', eq.division || 'ACM', log.sourceProcess || '-', log.cycleNo || 1,
+                        (log.defectTypes || ['상세미확인']).join(', '), Math.max(1, (log.defectTypes || []).length), getCleanWorkerName(log.worker || '-'), log.startTime || '-', log.endTime || '-',
+                        Number(log.elapsedMinutes) || 0, parseFloat(((Number(log.elapsedMinutes) || 0) / 480).toFixed(4)), log.sourceWorkLogId || '-', log.reworkCaseId || '-'
+                    ]);
+                });
+                const wsRw = XLSX.utils.aoa_to_sheet(rwRows);
+                wsRw['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rwRows.length - 1, c: rwHeader.length - 1 } }) };
+                applyExcelStyle(wsRw, rwRows.length, rwHeader.length);
+                autoFitSheetColumns(wsRw);
+                XLSX.utils.book_append_sheet(wb, wsRw, 'QC재작업_상세');
+
+                const byMonth = {};
+                targetReworkLogs.forEach(log => {
+                    const month = String(log.date || '').slice(0, 7) || '미지정';
+                    if (!byMonth[month]) byMonth[month] = { logs: [], equipmentKeys: new Set(), defects: {}, minutes: 0 };
+                    const stat = byMonth[month];
+                    stat.logs.push(log);
+                    stat.equipmentKeys.add(log.equipmentKey || log.equipment?.cskSn || log.id);
+                    stat.minutes += Number(log.elapsedMinutes) || 0;
+                    (log.defectTypes || ['상세미확인']).forEach(d => { stat.defects[d] = (stat.defects[d] || 0) + 1; });
+                });
+                const kpiHeader = ['월', 'QC 반려 장비(고유)', '재작업 발생 횟수', '부적합 항목수', '재작업 시간(분)', '재작업 공수(M/D)', '부적합 TOP3'];
+                const kpiRows = [kpiHeader];
+                Object.keys(byMonth).sort().forEach(month => {
+                    const stat = byMonth[month];
+                    const defectItems = Object.entries(stat.defects).sort((a,b) => b[1]-a[1]);
+                    const defectTotal = defectItems.reduce((sum, [,cnt]) => sum + cnt, 0);
+                    const top3 = defectItems.slice(0,3).map(([name,cnt]) => `${name} ${cnt}건`).join(' / ');
+                    kpiRows.push([month, stat.equipmentKeys.size, stat.logs.length, defectTotal, stat.minutes, parseFloat((stat.minutes/480).toFixed(4)), top3 || '-']);
+                });
+                const wsRwKpi = XLSX.utils.aoa_to_sheet(kpiRows);
+                applyExcelStyle(wsRwKpi, kpiRows.length, kpiHeader.length);
+                autoFitSheetColumns(wsRwKpi);
+                XLSX.utils.book_append_sheet(wb, wsRwKpi, 'QC재작업_KPI');
+            }
+
             const fileName = selectedLogDiv ? `제조2팀_실공수_기록대장_${selectedLogDiv}_${currentRoomId}.xlsx` : `제조2팀_실공수_기록대장_전체_${currentRoomId}.xlsx`;
             XLSX.writeFile(wb, fileName);
             showToast("엑셀 파일 다운로드가 완료되었습니다.", "fa-file-excel");
@@ -2496,7 +2963,8 @@
             });
 
             document.getElementById('btn-punch-in')?.addEventListener('click', triggerPunchIn);
-            document.getElementById('log-division-filter')?.addEventListener('change', renderCompletedLogs);
+            document.getElementById('btn-start-rework')?.addEventListener('click', startReworkFromModal);
+            document.getElementById('log-division-filter')?.addEventListener('change', () => { renderCompletedLogs(); renderReworkManagement(); });
             
             document.getElementById('btn-pause-all')?.addEventListener('click', triggerPauseAll);
             document.getElementById('btn-resume-all')?.addEventListener('click', triggerResumeAll);
@@ -2523,7 +2991,7 @@
 
             document.getElementById('btn-save-edited-time')?.addEventListener('click', async () => {
                 if (!checkFailClosedCanWrite()) return;
-                if (!editingLogId && !editingActiveTaskId) return;
+                if (!editingLogId && !editingActiveTaskId && !editingReworkLogId) return;
                 const timeInput = document.getElementById('edit-time-input');
                 const newVal = parseInt(timeInput ? timeInput.value : '0', 10);
                 if (isNaN(newVal) || newVal < 0) {
@@ -2548,6 +3016,9 @@
                         await updateTaskInCloudSecurely('EDIT_ACTIVE_TIME', { id: editingActiveTaskId, newStartTime: newStartTime });
                         showToast("실시간 진행 시간이 수정되었습니다.", "fa-check");
                     }
+                } else if (editingReworkLogId) {
+                    const success = await updateReworkInCloudSecurely('EDIT_LOG_TIME', { id: editingReworkLogId, newMinutes: newVal });
+                    if (success) showToast("재작업 소요 시간이 수정되었습니다.", "fa-check");
                 }
                 closeEditTimeModal();
             });
@@ -2686,6 +3157,8 @@
             diagState.lastSnapshotTime = '-';
             runningTasks = [];
             completedLogs = [];
+            reworkTasks = [];
+            reworkLogs = [];
             planEquipments = [];
             activeWorkersList = [...defaultWorkers]; 
 
@@ -2723,6 +3196,8 @@
                         const data = snapshot.data() || {};
                         runningTasks = Array.isArray(data.runningTasks) ? data.runningTasks : [];
                         completedLogs = Array.isArray(data.completedLogs) ? data.completedLogs : [];
+                        reworkTasks = Array.isArray(data.reworkTasks) ? data.reworkTasks : [];
+                        reworkLogs = Array.isArray(data.reworkLogs) ? data.reworkLogs : [];
                         activeWorkersList = Array.isArray(data.activeWorkersList) && data.activeWorkersList.length > 0 ? data.activeWorkersList : [...defaultWorkers];
                         planEquipments = Array.isArray(data.planEquipments) ? data.planEquipments : [];
                         
@@ -2743,6 +3218,8 @@
                         diagState.docExists = 'NO';
                         runningTasks = [];
                         completedLogs = [];
+                        reworkTasks = [];
+                        reworkLogs = [];
                         planEquipments = [];
                         activeWorkersList = [...defaultWorkers];
                         const cntEl = document.getElementById('cnt-loaded-items');
@@ -2757,6 +3234,7 @@
                     renderWorkers(); 
                     renderActiveTasks(); 
                     renderCompletedLogs();
+                    renderReworkManagement();
                     updateDivisionFilters(); 
                     renderEquipmentDropdown(); 
                     renderWorkerManageList();
@@ -2772,12 +3250,15 @@
                     diagState.docExists = 'NO';
                     runningTasks = [];
                     completedLogs = [];
+                    reworkTasks = [];
+                    reworkLogs = [];
                     planEquipments = [];
                     activeWorkersList = [...defaultWorkers];
                     updateFingerprintUI();
                     updateCloudStatusBadges("동기화 오류 발생", false);
                     renderActiveTasks();
                     renderCompletedLogs();
+                    renderReworkManagement();
                     console.error("[Redteam Diagnostic] Snapshot Error:", error);
                 }
             );
@@ -2826,6 +3307,7 @@
             checkUrlModes();
             checkUrlHashRoom();
             renderWorkers();
+            renderReworkManagement();
             setupEventListeners();
             startLocalTimerLoop();
             updateFingerprintUI();
