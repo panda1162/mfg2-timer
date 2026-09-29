@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.14 (작업관리 / KPI 탭)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.16 (작업관리 / KPI 탭)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.14 Work + KPI Tabs
+                                v5.16 Work + KPI Tabs
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -123,7 +123,7 @@
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- [V5.14] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
+        <!-- [V5.16] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
         <nav id="main-view-tabs" class="bg-white border border-slate-200 rounded-2xl shadow-sm p-1.5 flex items-center gap-1.5" aria-label="메인 화면 탭">
             <button id="tab-btn-work" type="button" aria-selected="true" class="flex-1 sm:flex-none px-5 py-3 rounded-xl text-xs sm:text-sm font-black bg-slate-900 text-white shadow-sm transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-screwdriver-wrench"></i> 작업관리
@@ -396,14 +396,14 @@
 
         </div>
 
-        <!-- [V5.14] KPI 전용 탭 -->
+        <!-- [V5.16] KPI 전용 탭 -->
         <div id="tab-kpi-content" class="hidden">
         <!-- [V5.11] 제조2팀 KPI 대시보드 -->
         <section id="kpi-section" class="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden flex flex-col">
             <div class="p-6 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-emerald-50 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                 <div>
                     <h4 class="text-md font-black text-slate-900 flex items-center gap-2"><i class="fa-solid fa-chart-line text-indigo-600"></i> 제조2팀 KPI 대시보드</h4>
-                    <p class="text-xs text-slate-600 mt-1">작업로그·생산계획·QC 재작업 이력을 자동 집계합니다. <strong class="text-emerald-700">관리자와 작업자 모두 열람할 수 있습니다.</strong> 생산계획 진척은 <strong>계획 장비 중 작업실적이 1건 이상 등록된 장비</strong> 기준입니다.</p>
+                    <p class="text-xs text-slate-600 mt-1">작업로그·생산계획·QC 재작업 이력을 자동 집계합니다. <strong class="text-emerald-700">관리자와 작업자 모두 열람할 수 있습니다.</strong> 작업착수는 <strong>계획 장비 중 작업실적이 1건 이상 등록된 장비</strong>, 생산완료는 <strong>최종결선 또는 전체 결선 완료 이력이 등록된 장비</strong> 기준이며, 생산계획과 작업이력은 <strong>CSK S/N을 우선 기준으로 자동 연결</strong>합니다.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto">
                     <select id="kpi-division-filter" class="px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-white text-indigo-700 focus:ring-2 focus:ring-indigo-500">
@@ -415,28 +415,29 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 p-4 bg-slate-50 border-b border-slate-200">
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-9 gap-3 p-4 bg-slate-50 border-b border-slate-200">
                 <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">생산계획</span><strong id="kpi-plan-total" class="text-xl font-black text-slate-900 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span class="text-[9px] text-slate-400 block mt-1">선택월 납품계획</span></div>
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">실적등록 장비</span><strong id="kpi-plan-touched" class="text-xl font-black text-indigo-700 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span id="kpi-progress-sub" class="text-[9px] text-slate-400 block mt-1">진척률 0%</span></div>
+                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">작업착수 장비</span><strong id="kpi-plan-touched" class="text-xl font-black text-indigo-700 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span id="kpi-progress-sub" class="text-[9px] text-slate-400 block mt-1">착수율 0%</span></div>
+                <div class="bg-white border border-emerald-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">생산완료 장비</span><strong id="kpi-plan-completed" class="text-xl font-black text-emerald-700 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span id="kpi-completion-sub" class="text-[9px] text-slate-400 block mt-1">완료율 0%</span></div>
                 <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">정상 작업공수</span><strong id="kpi-normal-md" class="text-xl font-black text-slate-900 font-mono-num">0.000</strong><span class="text-xs text-slate-500 ml-1">M/D</span><span id="kpi-normal-minutes" class="text-[9px] text-slate-400 block mt-1">0분</span></div>
                 <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">장비 1대 평균공수</span><strong id="kpi-avg-unit-md" class="text-xl font-black text-emerald-700 font-mono-num">0.000</strong><span class="text-xs text-slate-500 ml-1">M/D</span><span id="kpi-avg-unit-sub" class="text-[9px] text-slate-400 block mt-1">실적 장비 기준</span></div>
                 <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">표준시간 달성률</span><strong id="kpi-standard-rate" class="text-xl font-black text-slate-900 font-mono-num">-</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-standard-diff" class="text-[9px] text-slate-400 block mt-1">기준 매칭 없음</span></div>
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">납기 준수</span><strong id="kpi-delivery-rate" class="text-xl font-black text-slate-900 font-mono-num">-</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-delivery-sub" class="text-[9px] text-slate-400 block mt-1">최종 작업기록일 기준</span></div>
+                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">납기 내 작업완료</span><strong id="kpi-delivery-rate" class="text-xl font-black text-slate-900 font-mono-num">-</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-delivery-sub" class="text-[9px] text-slate-400 block mt-1">최종/전체결선 완료일 기준</span></div>
                 <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">QC 재작업 공수비중</span><strong id="kpi-rework-share" class="text-xl font-black text-rose-700 font-mono-num">0.0</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-rework-sub" class="text-[9px] text-slate-400 block mt-1">정상+재작업 대비</span></div>
                 <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">전월 대비 평균공수</span><strong id="kpi-mom-md" class="text-lg font-black text-slate-900 font-mono-num">-</strong><span id="kpi-mom-sub" class="text-[9px] text-slate-400 block mt-1">비교 데이터 없음</span></div>
             </div>
 
             <div class="px-5 pt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div id="kpi-goal-progress-card" class="rounded-xl border border-slate-200 bg-white p-3"><div class="flex justify-between text-[10px] font-bold"><span class="text-slate-500">생산진척 목표</span><span id="kpi-goal-progress-text">95%</span></div><div class="h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div id="kpi-goal-progress-bar" class="h-full bg-indigo-500 rounded-full" style="width:0%"></div></div></div>
+                <div id="kpi-goal-progress-card" class="rounded-xl border border-slate-200 bg-white p-3"><div class="flex justify-between text-[10px] font-bold"><span class="text-slate-500">생산계획 작업착수율 목표</span><span id="kpi-goal-progress-text">95%</span></div><div class="h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div id="kpi-goal-progress-bar" class="h-full bg-indigo-500 rounded-full" style="width:0%"></div></div></div>
                 <div id="kpi-goal-standard-card" class="rounded-xl border border-slate-200 bg-white p-3"><div class="flex justify-between text-[10px] font-bold"><span class="text-slate-500">표준시간 달성 목표</span><span id="kpi-goal-standard-text">100%</span></div><div class="h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div id="kpi-goal-standard-bar" class="h-full bg-indigo-500 rounded-full" style="width:0%"></div></div></div>
-                <div id="kpi-goal-delivery-card" class="rounded-xl border border-slate-200 bg-white p-3"><div class="flex justify-between text-[10px] font-bold"><span class="text-slate-500">납기준수 목표</span><span id="kpi-goal-delivery-text">98%</span></div><div class="h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div id="kpi-goal-delivery-bar" class="h-full bg-indigo-500 rounded-full" style="width:0%"></div></div></div>
+                <div id="kpi-goal-delivery-card" class="rounded-xl border border-slate-200 bg-white p-3"><div class="flex justify-between text-[10px] font-bold"><span class="text-slate-500">납기 내 작업완료율 목표</span><span id="kpi-goal-delivery-text">98%</span></div><div class="h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div id="kpi-goal-delivery-bar" class="h-full bg-indigo-500 rounded-full" style="width:0%"></div></div></div>
                 <div id="kpi-goal-rework-card" class="rounded-xl border border-slate-200 bg-white p-3"><div class="flex justify-between text-[10px] font-bold"><span class="text-slate-500">재작업 공수비중 상한</span><span id="kpi-goal-rework-text">3%</span></div><div class="h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div id="kpi-goal-rework-bar" class="h-full bg-rose-500 rounded-full" style="width:0%"></div></div></div>
             </div>
 
             <div class="p-5 grid grid-cols-1 xl:grid-cols-2 gap-5">
                 <div class="border border-slate-200 rounded-2xl overflow-hidden">
                     <div class="px-4 py-3 bg-slate-50 border-b border-slate-200"><h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-industry text-indigo-500 mr-1"></i>장비 모델별 생산성</h5></div>
-                    <div class="overflow-x-auto max-h-[360px] custom-scrollbar"><table class="w-full min-w-[760px] text-xs"><thead class="sticky top-0 bg-slate-100 text-[10px] text-slate-500"><tr><th class="px-3 py-2 text-left">장비</th><th class="px-3 py-2 text-right">실적대수</th><th class="px-3 py-2 text-right">총시간</th><th class="px-3 py-2 text-right">1대 평균</th><th class="px-3 py-2 text-right">1대 M/D</th><th class="px-3 py-2 text-right">표준달성</th><th class="px-3 py-2 text-right">납기준수</th></tr></thead><tbody id="kpi-equipment-body" class="divide-y divide-slate-100"><tr><td colspan="7" class="py-6 text-center text-slate-400">데이터가 없습니다.</td></tr></tbody></table></div>
+                    <div class="overflow-x-auto max-h-[360px] custom-scrollbar"><table class="w-full min-w-[760px] text-xs"><thead class="sticky top-0 bg-slate-100 text-[10px] text-slate-500"><tr><th class="px-3 py-2 text-left">장비</th><th class="px-3 py-2 text-right">실적대수</th><th class="px-3 py-2 text-right">총시간</th><th class="px-3 py-2 text-right">1대 평균</th><th class="px-3 py-2 text-right">1대 M/D</th><th class="px-3 py-2 text-right">표준달성</th><th class="px-3 py-2 text-right">납기 내 완료</th></tr></thead><tbody id="kpi-equipment-body" class="divide-y divide-slate-100"><tr><td colspan="7" class="py-6 text-center text-slate-400">데이터가 없습니다.</td></tr></tbody></table></div>
                 </div>
                 <div class="border border-slate-200 rounded-2xl overflow-hidden">
                     <div class="px-4 py-3 bg-slate-50 border-b border-slate-200"><h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-gears text-purple-500 mr-1"></i>공정별 평균시간 / 공수</h5></div>
@@ -447,7 +448,7 @@
                     <div class="overflow-x-auto max-h-[320px] custom-scrollbar"><table class="w-full min-w-[640px] text-xs"><thead class="sticky top-0 bg-slate-100 text-[10px] text-slate-500"><tr><th class="px-3 py-2 text-left">작업자</th><th class="px-3 py-2 text-right">작업기록</th><th class="px-3 py-2 text-right">투입시간</th><th class="px-3 py-2 text-right">투입공수</th><th class="px-3 py-2 text-right">인력공수 비중</th></tr></thead><tbody id="kpi-worker-body" class="divide-y divide-slate-100"><tr><td colspan="5" class="py-6 text-center text-slate-400">데이터가 없습니다.</td></tr></tbody></table></div>
                 </div>
             </div>
-            <div class="px-5 pb-5"><div id="kpi-note" class="text-[10px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">표준시간이 등록되지 않은 공정은 표준시간 달성률 계산에서 제외됩니다. 납기준수는 장비의 최종 작업기록일과 생산계획 납품일을 비교한 참고지표입니다.</div></div>
+            <div class="px-5 pb-5"><div id="kpi-note" class="text-[10px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">표준시간이 등록되지 않은 공정은 표준시간 달성률 계산에서 제외됩니다. 작업착수율은 계획 장비 중 작업실적이 1건 이상 등록된 장비 기준이며, 생산완료율은 최종결선 또는 전체 결선 완료 이력이 등록된 장비 기준입니다. 납기 내 작업완료율은 납품일이 도래했거나 이미 완료된 장비를 대상으로 최종결선/전체 결선 완료일이 납품일 이내인지 비교합니다.</div></div>
         </section>
         </div>
 
@@ -462,9 +463,9 @@
                 <button id="btn-close-kpi-goals" type="button" class="text-slate-400 hover:text-slate-700 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="space-y-3">
-                <div><label class="block text-xs font-bold text-slate-700 mb-1">생산계획 진척률 목표 (%)</label><input id="kpi-goal-progress" type="number" min="0" max="100" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-black bg-slate-50" value="95"></div>
+                <div><label class="block text-xs font-bold text-slate-700 mb-1">생산계획 작업착수율 목표 (%)</label><input id="kpi-goal-progress" type="number" min="0" max="100" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-black bg-slate-50" value="95"></div>
                 <div><label class="block text-xs font-bold text-slate-700 mb-1">표준시간 달성률 목표 (%)</label><input id="kpi-goal-standard" type="number" min="1" max="300" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-black bg-slate-50" value="100"></div>
-                <div><label class="block text-xs font-bold text-slate-700 mb-1">납기 준수율 목표 (%)</label><input id="kpi-goal-delivery" type="number" min="0" max="100" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-black bg-slate-50" value="98"></div>
+                <div><label class="block text-xs font-bold text-slate-700 mb-1">납기 내 작업완료율 목표 (%)</label><input id="kpi-goal-delivery" type="number" min="0" max="100" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-black bg-slate-50" value="98"></div>
                 <div><label class="block text-xs font-bold text-slate-700 mb-1">재작업 공수 비중 상한 (%)</label><input id="kpi-goal-rework" type="number" min="0" max="100" step="0.1" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-black bg-slate-50" value="3"></div>
             </div>
             <div class="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-100"><button id="btn-cancel-kpi-goals" type="button" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">취소</button><button id="btn-save-kpi-goals" type="button" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black">저장</button></div>
@@ -751,7 +752,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.14 Work+KPI Tabs Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.16 Work+KPI Tabs Fail-Closed</p>
         </div>
     </footer>
 
@@ -1475,9 +1476,18 @@
             return eqList;
         }
 
+        // [V5.16] 장비 매칭 기준 통일: CSK S/N을 최우선 고유키로 사용합니다.
+        // 하이픈/공백/슬래시/점 표기 차이가 있어도 동일 S/N으로 인식합니다.
+        function normalizeEquipmentSn(value) {
+            const raw = String(value ?? '').trim().toUpperCase();
+            if (!raw || raw === '-' || raw === '수동입력' || raw.includes('하네스_') || raw === '하네스일괄대수') return '';
+            return raw.replace(/[^A-Z0-9가-힣]/g, '');
+        }
+
         function getReworkEquipmentKey(logId, eq, eqIndex = 0) {
+            const snKey = normalizeEquipmentSn(eq?.cskSn);
+            if (snKey) return `SN:${snKey}`;
             if (eq?.id) return `EQ:${eq.id}`;
-            if (eq?.cskSn && !['-', '수동입력', '하네스_일괄대수'].includes(eq.cskSn)) return `SN:${eq.cskSn}`;
             return `LOG:${logId}:EQ:${eqIndex}`;
         }
 
@@ -1763,7 +1773,7 @@
 
 
         // -------------------------------------------------
-        // [V5.14] 작업관리 / KPI 탭 전환
+        // [V5.16] 작업관리 / KPI 탭 전환
         // KPI 열람은 권한과 무관하게 모든 사용자가 가능하며, 목표값 수정만 관리자 모드로 제한합니다.
         function setMainTab(tabName) {
             const isKpi = tabName === 'kpi';
@@ -1831,9 +1841,18 @@
         }
 
         function getStableEquipmentKey(eq, fallback = '') {
+            // [V5.16] 생산계획을 다시 업로드해 내부 ID가 바뀌어도 동일 CSK S/N이면 같은 장비로 연결합니다.
+            const snKey = normalizeEquipmentSn(eq?.cskSn);
+            if (snKey) return `SN:${snKey}`;
             if (eq?.id) return `ID:${eq.id}`;
-            if (eq?.cskSn && !['-', '수동입력', '하네스_일괄대수'].includes(String(eq.cskSn))) return `SN:${eq.cskSn}`;
             return `FB:${fallback}:${normalizeEquipmentName(eq?.equipment || '미지정')}`;
+        }
+
+        // [V5.16] 생산완료 판정: 최종결선 또는 전체 결선의 완료 이력이 있어야 생산완료로 인정합니다.
+        function isProductionCompletionLog(log) {
+            const process = String(log?.process || '').replace(/\s+/g, '');
+            const display = String(getProcessDisplay(log?.process, log?.processDetail)).replace(/\s+/g, '');
+            return process === '최종결선' || process === '전체결선' || display === '최종결선' || display === '전체결선';
         }
 
         function buildKPIData(month, division = '') {
@@ -1842,29 +1861,37 @@
             const monthReworks = reworkLogs.filter(l => !l.isDeleted && String(l.date || '').startsWith(month) && (!division || (l.equipment?.division || 'ACM') === division));
             const planForMonth = planEquipments.filter(p => (!division || (p.division || 'ACM') === division) && String(p.deliveryDate || '').startsWith(month));
 
-            // 모든 완료로그에서 장비별 최종 기록일을 확보 (생산계획 진척/납기 참고용)
+            // 모든 완료로그에서 장비별 최초/최종 기록일과 생산완료일(최종결선/전체 결선)을 확보합니다.
             const equipmentLogInfo = {};
             validLogsAll.filter(l => logMatchesDivision(l, division)).forEach((log, logIdx) => {
                 const eqList = getEquipmentListFromLog(log);
+                const isCompletion = isProductionCompletionLog(log);
                 eqList.forEach((eq, eqIdx) => {
                     const key = getStableEquipmentKey(eq, `${log.id || logIdx}:${eqIdx}`);
                     const date = String(log.date || '');
-                    if (!equipmentLogInfo[key]) equipmentLogInfo[key] = { firstDate: date, lastDate: date, model: normalizeEquipmentName(eq.equipment || '미지정'), cskSn: eq.cskSn || '-', division: eq.division || 'ACM' };
+                    if (!equipmentLogInfo[key]) equipmentLogInfo[key] = { firstDate: date, lastDate: date, completionDate: '', model: normalizeEquipmentName(eq.equipment || '미지정'), cskSn: eq.cskSn || '-', division: eq.division || 'ACM' };
                     if (date && (!equipmentLogInfo[key].firstDate || date < equipmentLogInfo[key].firstDate)) equipmentLogInfo[key].firstDate = date;
                     if (date && date > equipmentLogInfo[key].lastDate) equipmentLogInfo[key].lastDate = date;
+                    if (isCompletion && date && (!equipmentLogInfo[key].completionDate || date < equipmentLogInfo[key].completionDate)) equipmentLogInfo[key].completionDate = date;
                 });
             });
 
-            let planTouched = 0, deliveryChecked = 0, deliveryOnTime = 0;
+            const todayKst = getKstDateString(Date.now());
+            let planTouched = 0, planCompleted = 0, deliveryChecked = 0, deliveryOnTime = 0;
             planForMonth.forEach((p, idx) => {
                 const key = getStableEquipmentKey(p, `PLAN:${idx}`);
                 const info = equipmentLogInfo[key];
-                if (info) {
-                    planTouched += 1;
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(String(p.deliveryDate || '')) && /^\d{4}-\d{2}-\d{2}$/.test(String(info.lastDate || ''))) {
-                        deliveryChecked += 1;
-                        if (info.lastDate <= p.deliveryDate) deliveryOnTime += 1;
-                    }
+                if (info) planTouched += 1;
+                if (info?.completionDate) planCompleted += 1;
+
+                const deliveryDate = String(p.deliveryDate || '');
+                const validDeliveryDate = /^\d{4}-\d{2}-\d{2}$/.test(deliveryDate);
+                // 아직 납기일이 오지 않은 미완료 장비는 납기 판정에서 제외합니다.
+                // 이미 완료된 장비는 납기일 도래 전이라도 조기 완료 여부를 판정합니다.
+                const shouldCheckDelivery = validDeliveryDate && (deliveryDate <= todayKst || !!info?.completionDate);
+                if (shouldCheckDelivery) {
+                    deliveryChecked += 1;
+                    if (info?.completionDate && info.completionDate <= deliveryDate) deliveryOnTime += 1;
                 }
             });
 
@@ -1919,21 +1946,25 @@
                 });
             });
 
-            // 장비 모델별 납기 참고 집계 (선택 월 생산계획 기준)
+            // 장비 모델별 납기 내 작업완료 집계 (생산완료일 = 최종결선/전체 결선 완료일)
             planForMonth.forEach((p, idx) => {
                 const model = normalizeEquipmentName(p.equipment || '미지정');
                 if (!equipmentStats[model]) equipmentStats[model] = { equipmentKeys: new Set(), minutes: 0, stdExpected: 0, stdActual: 0, stdMatches: 0, deliveryChecked: 0, deliveryOnTime: 0 };
                 const key = getStableEquipmentKey(p, `PLAN:${idx}`);
                 const info = equipmentLogInfo[key];
-                if (info && /^\d{4}-\d{2}-\d{2}$/.test(String(p.deliveryDate || '')) && /^\d{4}-\d{2}-\d{2}$/.test(String(info.lastDate || ''))) {
+                const deliveryDate = String(p.deliveryDate || '');
+                const validDeliveryDate = /^\d{4}-\d{2}-\d{2}$/.test(deliveryDate);
+                const shouldCheckDelivery = validDeliveryDate && (deliveryDate <= todayKst || !!info?.completionDate);
+                if (shouldCheckDelivery) {
                     equipmentStats[model].deliveryChecked += 1;
-                    if (info.lastDate <= p.deliveryDate) equipmentStats[model].deliveryOnTime += 1;
+                    if (info?.completionDate && info.completionDate <= deliveryDate) equipmentStats[model].deliveryOnTime += 1;
                 }
             });
 
             const reworkMinutes = monthReworks.reduce((sum, r) => sum + (Number(r.elapsedMinutes) || 0), 0);
             const reworkShare = (normalMinutes + reworkMinutes) > 0 ? reworkMinutes / (normalMinutes + reworkMinutes) * 100 : 0;
-            const progressRate = planForMonth.length > 0 ? planTouched / planForMonth.length * 100 : null;
+            const progressRate = planForMonth.length > 0 ? planTouched / planForMonth.length * 100 : null; // 작업착수율 (기존 키 호환 유지)
+            const completionRate = planForMonth.length > 0 ? planCompleted / planForMonth.length * 100 : null;
             const standardRate = stdActual > 0 ? stdExpected / stdActual * 100 : null;
             const standardDiff = stdMatches > 0 ? stdActual - stdExpected : null;
             const deliveryRate = deliveryChecked > 0 ? deliveryOnTime / deliveryChecked * 100 : null;
@@ -1944,7 +1975,7 @@
 
             return {
                 month, division, monthLogs, monthReworks, planForMonth,
-                planTouched, progressRate, deliveryChecked, deliveryOnTime, deliveryRate,
+                planTouched, progressRate, planCompleted, completionRate, deliveryChecked, deliveryOnTime, deliveryRate,
                 normalMinutes, normalMD, totalAllocatedMinutes, uniqueEquipmentCount: monthEquipmentKeys.size, avgUnitMD,
                 stdExpected, stdActual, stdMatches, standardRate, standardDiff,
                 reworkMinutes, reworkShare, equipmentStats, processStats, workerStats, laborMinutes
@@ -2007,7 +2038,9 @@
 
             setText('kpi-plan-total', data.planForMonth.length);
             setText('kpi-plan-touched', data.planTouched);
-            setText('kpi-progress-sub', data.progressRate === null ? '선택월 생산계획 없음' : `진척률 ${data.progressRate.toFixed(1)}%`);
+            setText('kpi-progress-sub', data.progressRate === null ? '선택월 생산계획 없음' : `착수율 ${data.progressRate.toFixed(1)}%`);
+            setText('kpi-plan-completed', data.planCompleted);
+            setText('kpi-completion-sub', data.completionRate === null ? '선택월 생산계획 없음' : `완료율 ${data.completionRate.toFixed(1)}%`);
             setText('kpi-normal-md', data.normalMD.toFixed(3));
             setText('kpi-normal-minutes', `${Math.round(data.normalMinutes)}분`);
             setText('kpi-avg-unit-md', data.avgUnitMD.toFixed(3));
@@ -2015,7 +2048,7 @@
             setText('kpi-standard-rate', formatKpiRate(data.standardRate));
             setText('kpi-standard-diff', data.standardDiff === null ? '기준 매칭 없음' : `${data.standardDiff >= 0 ? '+' : ''}${Math.round(data.standardDiff)}분 (실제-표준)`);
             setText('kpi-delivery-rate', formatKpiRate(data.deliveryRate));
-            setText('kpi-delivery-sub', data.deliveryChecked > 0 ? `${data.deliveryOnTime}/${data.deliveryChecked}대 · 최종기록일 기준` : '비교 가능한 완료기록 없음');
+            setText('kpi-delivery-sub', data.deliveryChecked > 0 ? `${data.deliveryOnTime}/${data.deliveryChecked}대 · 최종/전체결선 완료일 기준` : '아직 납기 판정 대상 없음');
             setText('kpi-rework-share', data.reworkShare.toFixed(1));
             setText('kpi-rework-sub', `${Math.round(data.reworkMinutes)}분 / ${(data.reworkMinutes/480).toFixed(3)} M/D`);
 
@@ -2396,7 +2429,7 @@
         window.clearSelectedEquipments = () => { selectedEquipments = []; renderSelectedEquipmentsList(); };
 
         function getAutoSchedulerStorageKey() {
-            return `kg-v5.14-auto-scheduler:${getRoomNormId(currentRoomId)}`;
+            return `kg-v5.15-auto-scheduler:${getRoomNormId(currentRoomId)}`;
         }
 
         function saveAutoSchedulerCheckMs(value) {
@@ -3317,18 +3350,20 @@
                 [],
                 ['핵심 KPI', '실적', '목표/기준', '비고'],
                 ['생산계획 장비', kData.planForMonth.length, '-', '선택월 납품계획'],
-                ['실적등록 장비', kData.planTouched, '-', '계획 장비 중 작업실적 1건 이상'],
-                ['생산계획 진척률(%)', kData.progressRate===null?'-':Number(kData.progressRate.toFixed(1)), kGoals.progress, '실적등록 장비 / 생산계획'],
+                ['작업착수 장비', kData.planTouched, '-', '계획 장비 중 작업실적 1건 이상'],
+                ['생산계획 작업착수율(%)', kData.progressRate===null?'-':Number(kData.progressRate.toFixed(1)), kGoals.progress, '작업착수 장비 / 생산계획'],
+                ['생산완료 장비', kData.planCompleted, '-', '최종결선 또는 전체 결선 완료 이력'],
+                ['생산완료율(%)', kData.completionRate===null?'-':Number(kData.completionRate.toFixed(1)), '-', '생산완료 장비 / 생산계획'],
                 ['정상 작업공수(M/D)', Number(kData.normalMD.toFixed(4)), '-', `${Math.round(kData.normalMinutes)}분`],
                 ['장비 1대 평균공수(M/D)', Number(kData.avgUnitMD.toFixed(4)), '-', `${kData.uniqueEquipmentCount}대 실적 기준`],
                 ['표준시간 달성률(%)', kData.standardRate===null?'-':Number(kData.standardRate.toFixed(1)), kGoals.standard, '표준시간 등록 공정만 계산'],
                 ['표준 대비 시간차이(분)', kData.standardDiff===null?'-':Math.round(kData.standardDiff), '0에 가까울수록 기준', '실제-표준'],
-                ['납기 준수율(%)', kData.deliveryRate===null?'-':Number(kData.deliveryRate.toFixed(1)), kGoals.delivery, `${kData.deliveryOnTime}/${kData.deliveryChecked}대 · 최종 작업기록일 기준`],
+                ['납기 내 작업완료율(%)', kData.deliveryRate===null?'-':Number(kData.deliveryRate.toFixed(1)), kGoals.delivery, `${kData.deliveryOnTime}/${kData.deliveryChecked}대 · 최종/전체결선 완료일 기준`],
                 ['QC 재작업 시간(분)', Math.round(kData.reworkMinutes), '-', `${(kData.reworkMinutes/480).toFixed(4)} M/D`],
                 ['QC 재작업 공수 비중(%)', Number(kData.reworkShare.toFixed(1)), `${kGoals.reworkShare}% 이하`, '재작업 / (정상+재작업)'],
                 [],
                 ['장비 모델별 생산성'],
-                ['장비 모델', '실적대수', '총시간(분)', '1대 평균시간(분)', '1대 평균공수(M/D)', '표준시간 달성률(%)', '납기준수율(%)']
+                ['장비 모델', '실적대수', '총시간(분)', '1대 평균시간(분)', '1대 평균공수(M/D)', '표준시간 달성률(%)', '납기 내 작업완료율(%)']
             ];
             Object.entries(kData.equipmentStats).filter(([,st]) => st.minutes > 0).sort((a,b)=>b[1].minutes-a[1].minutes).forEach(([model, st]) => {
                 const units = st.equipmentKeys.size || 0, avg = units ? st.minutes/units : 0;
@@ -3880,6 +3915,14 @@
                     }
 
                     let parsedPlan = [];
+                    // [V5.16] 같은 CSK S/N의 장비는 생산계획 재업로드 시 기존 내부 ID를 유지합니다.
+                    // 과거 작업이력은 S/N으로도 매칭되므로, 기존 데이터 재입력 없이 KPI가 복구됩니다.
+                    const existingPlanBySn = new Map();
+                    (planEquipments || []).forEach(item => {
+                        const snKey = normalizeEquipmentSn(item?.cskSn);
+                        if (snKey && !existingPlanBySn.has(snKey)) existingPlanBySn.set(snKey, item);
+                    });
+
                     for (let i = hRowIdx + 1; i < rawRows.length; i++) {
                         const row = rawRows[i]; if (!row || row.length === 0) continue;
                         const equipName = row[eqIdx] !== undefined ? String(row[eqIdx]).trim() : '';
@@ -3894,7 +3937,10 @@
                             else if (typeof rawDate === 'number') { const dateObj = XLSX.SSF.parse_date_code(rawDate); delivDate = dateObj ? `${dateObj.y}-${String(dateObj.m).padStart(2, '0')}-${String(dateObj.d).padStart(2, '0')}` : String(rawDate).trim(); } 
                             else { delivDate = String(rawDate).split(' ')[0].trim(); }
                         }
-                        parsedPlan.push({ id: 'equip_' + i + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5), division: divName, equipment: equipName, cskSn: cskSn, deliveryDate: delivDate });
+                        const normalizedSn = normalizeEquipmentSn(cskSn);
+                        const existingPlanItem = normalizedSn ? existingPlanBySn.get(normalizedSn) : null;
+                        const stablePlanId = existingPlanItem?.id || ('equip_' + i + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
+                        parsedPlan.push({ id: stablePlanId, division: divName, equipment: equipName, cskSn: cskSn, deliveryDate: delivDate });
                     }
 
                     if (parsedPlan.length > 0) {
