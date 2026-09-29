@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.13 (작업관리 / KPI 탭)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.14 (작업관리 / KPI 탭)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.13 Work + KPI Tabs
+                                v5.14 Work + KPI Tabs
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -123,7 +123,7 @@
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- [V5.13] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
+        <!-- [V5.14] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
         <nav id="main-view-tabs" class="bg-white border border-slate-200 rounded-2xl shadow-sm p-1.5 flex items-center gap-1.5" aria-label="메인 화면 탭">
             <button id="tab-btn-work" type="button" aria-selected="true" class="flex-1 sm:flex-none px-5 py-3 rounded-xl text-xs sm:text-sm font-black bg-slate-900 text-white shadow-sm transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-screwdriver-wrench"></i> 작업관리
@@ -396,7 +396,7 @@
 
         </div>
 
-        <!-- [V5.13] KPI 전용 탭 -->
+        <!-- [V5.14] KPI 전용 탭 -->
         <div id="tab-kpi-content" class="hidden">
         <!-- [V5.11] 제조2팀 KPI 대시보드 -->
         <section id="kpi-section" class="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden flex flex-col">
@@ -751,7 +751,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.13 Work+KPI Tabs Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.14 Work+KPI Tabs Fail-Closed</p>
         </div>
     </footer>
 
@@ -826,8 +826,13 @@
         let confirmCallback = null;
         let editingLogId = null; 
         let editingActiveTaskId = null; 
-        let lastAutoResumeTime = ''; // 자동 일괄재개 중복 방지용
-        let lastAutoPauseTime = ''; // 자동 일괄정지 중복 방지용
+        let lastAutoResumeTime = ''; // 최근 자동 일괄재개 처리 시각(표시/진단용)
+        let lastAutoPauseTime = ''; // 최근 자동 일괄정지 처리 시각(표시/진단용)
+        let autoScheduleBusy = false; // 자동 스케줄 중복 실행 방지
+        let lastAutoSchedulerCheckMs = 0; // 마지막으로 정상 확인/처리한 시각
+        const AUTO_PAUSE_TIMES = ['10:00', '11:50', '15:00', '16:50'];
+        const AUTO_RESUME_TIMES = ['07:50', '10:15', '12:50', '15:15'];
+        const AUTO_SCHEDULE_MAX_LOOKBACK_MS = 18 * 60 * 60 * 1000; // 절전/백그라운드 복귀 시 최대 18시간 보정
         let editingActiveWorkerTaskId = null;
         let editingSelectedWorkers = [];
 
@@ -904,17 +909,17 @@
             document.querySelectorAll('[data-rework-write="true"]').forEach(btn => { btn.disabled = !canWrite || btn.dataset.reworkLocked === 'true'; });
         }
 
-        function checkFailClosedCanWrite() {
+        function checkFailClosedCanWrite(silent = false) {
             if (isUrlForcedReadOnlyMode) {
-                showMessage('Read-Only 모드 차단', '현재 ?mode=readonly 상태로 기동되어 모든 쓰기 작업이 영구 차단되었습니다.');
+                if (!silent) showMessage('Read-Only 모드 차단', '현재 ?mode=readonly 상태로 기동되어 모든 쓰기 작업이 영구 차단되었습니다.');
                 return false;
             }
             if (isManualReadOnlyMode) {
-                showMessage('Read-Only 모드 차단', '수동 Read-Only 모드가 켜져 있어 쓰기 작업이 차단되었습니다.');
+                if (!silent) showMessage('Read-Only 모드 차단', '수동 Read-Only 모드가 켜져 있어 쓰기 작업이 차단되었습니다.');
                 return false;
             }
             if (diagState.authStatus !== 'OK' || diagState.snapshotStatus !== 'SNAPSHOT OK' || diagState.docExists !== 'YES') {
-                showMessage('Fail-Closed 차단', '클라우드 원장이 동기화되지 않았거나 존재하지 않는 룸 문서입니다 (FAIL-CLOSED).\n신규 Room 자동 생성이 차단되어 작업 기록 및 수정이 금지됩니다.');
+                if (!silent) showMessage('Fail-Closed 차단', '클라우드 원장이 동기화되지 않았거나 존재하지 않는 룸 문서입니다 (FAIL-CLOSED).\n신규 Room 자동 생성이 차단되어 작업 기록 및 수정이 금지됩니다.');
                 return false;
             }
             return true;
@@ -1152,8 +1157,8 @@
         }
         function playSound(freq = 800, duration = 0.08) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'sine'; osc.frequency.value = freq; gain.gain.value = 0.08; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + duration); } catch (e) {} }
 
-        async function updateTaskInCloudSecurely(actionType, payload) {
-            if (!checkFailClosedCanWrite()) return;
+        async function updateTaskInCloudSecurely(actionType, payload, silent = false) {
+            if (!checkFailClosedCanWrite(silent)) return false;
 
             const roomRef = getRoomDocRef(currentRoomId);
             try {
@@ -1185,12 +1190,21 @@
                         if (idx > -1) { newRunning[idx].isHeld = payload.isHeld; }
                     }
                     else if (actionType === 'PAUSE_ALL') {
-                        newRunning.forEach(task => { if (!task.paused) { task.paused = true; task.pausedAt = payload.timestamp; } });
+                        const ts = Number(payload.timestamp) || Date.now();
+                        newRunning.forEach(task => {
+                            if (!task.paused) {
+                                const taskStart = Number(task.startTime) || ts;
+                                task.paused = true;
+                                // 놓친 스케줄 보정 시 작업 시작 전 시각으로 pausedAt이 내려가지 않도록 보호
+                                task.pausedAt = Math.max(ts, taskStart);
+                            }
+                        });
                     }
                     else if (actionType === 'RESUME_ALL') {
+                        const ts = Number(payload.timestamp) || Date.now();
                         newRunning.forEach(task => {
                             if (task.paused && !task.isHeld) { 
-                                task.totalPausedDuration += (payload.timestamp - task.pausedAt); 
+                                task.totalPausedDuration = (task.totalPausedDuration || 0) + Math.max(0, ts - (task.pausedAt || ts));
                                 task.paused = false; 
                                 task.pausedAt = null; 
                             } 
@@ -1234,7 +1248,7 @@
                 console.error(e);
                 diagState.lastError = e.code || e.message;
                 updateFingerprintUI();
-                showToast("네트워크 지연 또는 Fail-Closed 권한 제한으로 처리에 실패했습니다.", "fa-triangle-exclamation");
+                if (!silent) showToast("네트워크 지연 또는 Fail-Closed 권한 제한으로 처리에 실패했습니다.", "fa-triangle-exclamation");
                 return false;
             }
             return true;
@@ -1363,34 +1377,44 @@
             }
         };
 
-        window.triggerPauseAll = async function(isAuto = false) {
-            if (!checkFailClosedCanWrite()) return;
-            if (runningTasks.length === 0) return;
-            const hasPlaying = runningTasks.some(t => !t.paused);
-            if (!hasPlaying) { 
-                if (isAuto !== true) showToast("모든 작업이 이미 일시정지 상태입니다.", "fa-circle-info"); 
-                return; 
+        window.triggerPauseAll = async function(isAuto = false, scheduledTimestamp = null) {
+            const silent = isAuto === true;
+            if (!checkFailClosedCanWrite(silent)) return false;
+            if (!isAuto) {
+                if (runningTasks.length === 0) return true;
+                const hasPlaying = runningTasks.some(t => !t.paused);
+                if (!hasPlaying) { 
+                    showToast("모든 작업이 이미 일시정지 상태입니다.", "fa-circle-info"); 
+                    return true; 
+                }
             }
-            const success = await updateTaskInCloudSecurely('PAUSE_ALL', { timestamp: Date.now() });
-            if (success) { 
+            const ts = Number(scheduledTimestamp) || Date.now();
+            const success = await updateTaskInCloudSecurely('PAUSE_ALL', { timestamp: ts }, silent);
+            if (success && !isAuto) { 
                 playSound(500, 0.1); 
-                showToast(isAuto === true ? "지정된 시간이 되어 모든 작업이 자동 정지되었습니다." : "현재 진행 중인 모든 작업이 일괄 정지되었습니다.", "fa-pause"); 
+                showToast("현재 진행 중인 모든 작업이 일괄 정지되었습니다.", "fa-pause"); 
             }
+            return success === true;
         };
 
-        window.triggerResumeAll = async function(isAuto = false) {
-            if (!checkFailClosedCanWrite()) return;
-            if (runningTasks.length === 0) return;
-            const hasPausedNotHeld = runningTasks.some(t => t.paused && !t.isHeld);
-            if (!hasPausedNotHeld) { 
-                if (isAuto !== true) showToast("재개할 작업이 없습니다. (모든 정지된 작업이 보류 상태이거나 이미 진행 중)", "fa-circle-info"); 
-                return; 
+        window.triggerResumeAll = async function(isAuto = false, scheduledTimestamp = null) {
+            const silent = isAuto === true;
+            if (!checkFailClosedCanWrite(silent)) return false;
+            if (!isAuto) {
+                if (runningTasks.length === 0) return true;
+                const hasPausedNotHeld = runningTasks.some(t => t.paused && !t.isHeld);
+                if (!hasPausedNotHeld) { 
+                    showToast("재개할 작업이 없습니다. (모든 정지된 작업이 보류 상태이거나 이미 진행 중)", "fa-circle-info"); 
+                    return true; 
+                }
             }
-            const success = await updateTaskInCloudSecurely('RESUME_ALL', { timestamp: Date.now() });
-            if (success) { 
+            const ts = Number(scheduledTimestamp) || Date.now();
+            const success = await updateTaskInCloudSecurely('RESUME_ALL', { timestamp: ts }, silent);
+            if (success && !isAuto) { 
                 playSound(900, 0.1); 
-                showToast(isAuto === true ? "작업 시간이 되어 자동으로 일괄 재개되었습니다." : "보류되지 않은 일시정지 작업이 일괄 재개되었습니다.", "fa-play"); 
+                showToast("보류되지 않은 일시정지 작업이 일괄 재개되었습니다.", "fa-play"); 
             }
+            return success === true;
         };
 
         window.triggerPunchOut = async function(taskId) {
@@ -1544,8 +1568,8 @@
             reworkSelectedDefects = ['상세미확인'];
         };
 
-        async function updateReworkInCloudSecurely(actionType, payload) {
-            if (!checkFailClosedCanWrite()) return false;
+        async function updateReworkInCloudSecurely(actionType, payload, silent = false) {
+            if (!checkFailClosedCanWrite(silent)) return false;
             const roomRef = getRoomDocRef(currentRoomId);
             try {
                 await runTransaction(db, async (transaction) => {
@@ -1566,12 +1590,13 @@
                         newTasks.splice(idx, 1);
                         newLogs.unshift(payload.finishedLog);
                     } else if (actionType === 'PAUSE_ALL') {
-                        const ts = payload.timestamp || Date.now();
+                        const ts = Number(payload.timestamp) || Date.now();
                         newTasks.forEach(task => {
                             if (!task.paused) {
+                                const taskStart = Number(task.startTime) || ts;
                                 task.paused = true;
-                                task.pausedAt = ts;
-                                task.updatedAt = ts;
+                                task.pausedAt = Math.max(ts, taskStart);
+                                task.updatedAt = Math.max(ts, taskStart);
                             }
                         });
                     } else if (actionType === 'RESUME_ALL') {
@@ -1601,8 +1626,10 @@
                 return true;
             } catch (e) {
                 console.error('[Rework]', e);
-                if (e.message === 'REWORK_ALREADY_ACTIVE') showToast('동일 장비의 재작업이 이미 진행 중입니다.', 'fa-rotate');
-                else showToast('재작업 기록 저장에 실패했습니다. 클라우드 연결을 확인하세요.', 'fa-triangle-exclamation');
+                if (!silent) {
+                    if (e.message === 'REWORK_ALREADY_ACTIVE') showToast('동일 장비의 재작업이 이미 진행 중입니다.', 'fa-rotate');
+                    else showToast('재작업 기록 저장에 실패했습니다. 클라우드 연결을 확인하세요.', 'fa-triangle-exclamation');
+                }
                 return false;
             }
         }
@@ -1647,28 +1674,38 @@
             }
         }
 
-        window.triggerPauseAllRework = async function(isAuto = false) {
-            if (!checkFailClosedCanWrite()) return;
-            if (reworkTasks.length === 0) return;
-            const hasPlaying = reworkTasks.some(t => !t.paused);
-            if (!hasPlaying) {
-                if (isAuto !== true) showToast('모든 재작업이 이미 일시정지 상태입니다.', 'fa-circle-info');
-                return;
+        window.triggerPauseAllRework = async function(isAuto = false, scheduledTimestamp = null) {
+            const silent = isAuto === true;
+            if (!checkFailClosedCanWrite(silent)) return false;
+            if (!isAuto) {
+                if (reworkTasks.length === 0) return true;
+                const hasPlaying = reworkTasks.some(t => !t.paused);
+                if (!hasPlaying) {
+                    showToast('모든 재작업이 이미 일시정지 상태입니다.', 'fa-circle-info');
+                    return true;
+                }
             }
-            const success = await updateReworkInCloudSecurely('PAUSE_ALL', { timestamp: Date.now() });
-            if (success && isAuto !== true) showToast('현재 진행 중인 재작업을 일괄 정지했습니다.', 'fa-pause');
+            const ts = Number(scheduledTimestamp) || Date.now();
+            const success = await updateReworkInCloudSecurely('PAUSE_ALL', { timestamp: ts }, silent);
+            if (success && !isAuto) showToast('현재 진행 중인 재작업을 일괄 정지했습니다.', 'fa-pause');
+            return success === true;
         };
 
-        window.triggerResumeAllRework = async function(isAuto = false) {
-            if (!checkFailClosedCanWrite()) return;
-            if (reworkTasks.length === 0) return;
-            const hasPaused = reworkTasks.some(t => t.paused);
-            if (!hasPaused) {
-                if (isAuto !== true) showToast('재개할 재작업이 없습니다.', 'fa-circle-info');
-                return;
+        window.triggerResumeAllRework = async function(isAuto = false, scheduledTimestamp = null) {
+            const silent = isAuto === true;
+            if (!checkFailClosedCanWrite(silent)) return false;
+            if (!isAuto) {
+                if (reworkTasks.length === 0) return true;
+                const hasPaused = reworkTasks.some(t => t.paused);
+                if (!hasPaused) {
+                    showToast('재개할 재작업이 없습니다.', 'fa-circle-info');
+                    return true;
+                }
             }
-            const success = await updateReworkInCloudSecurely('RESUME_ALL', { timestamp: Date.now() });
-            if (success && isAuto !== true) showToast('일시정지된 재작업을 일괄 재개했습니다.', 'fa-play');
+            const ts = Number(scheduledTimestamp) || Date.now();
+            const success = await updateReworkInCloudSecurely('RESUME_ALL', { timestamp: ts }, silent);
+            if (success && !isAuto) showToast('일시정지된 재작업을 일괄 재개했습니다.', 'fa-play');
+            return success === true;
         };
 
         window.triggerCompleteRework = async function(taskId) {
@@ -1726,7 +1763,7 @@
 
 
         // -------------------------------------------------
-        // [V5.13] 작업관리 / KPI 탭 전환
+        // [V5.14] 작업관리 / KPI 탭 전환
         // KPI 열람은 권한과 무관하게 모든 사용자가 가능하며, 목표값 수정만 관리자 모드로 제한합니다.
         function setMainTab(tabName) {
             const isKpi = tabName === 'kpi';
@@ -2358,38 +2395,107 @@
         window.removeSelectedEquipment = (index) => { selectedEquipments.splice(index, 1); renderSelectedEquipmentsList(); };
         window.clearSelectedEquipments = () => { selectedEquipments = []; renderSelectedEquipmentsList(); };
 
+        function getAutoSchedulerStorageKey() {
+            return `kg-v5.14-auto-scheduler:${getRoomNormId(currentRoomId)}`;
+        }
+
+        function saveAutoSchedulerCheckMs(value) {
+            lastAutoSchedulerCheckMs = Number(value) || Date.now();
+            try { sessionStorage.setItem(getAutoSchedulerStorageKey(), String(lastAutoSchedulerCheckMs)); } catch (_) {}
+        }
+
+        function loadAutoSchedulerCheckMs(nowMs = Date.now()) {
+            let stored = 0;
+            try { stored = Number(sessionStorage.getItem(getAutoSchedulerStorageKey()) || 0); } catch (_) {}
+            if (!Number.isFinite(stored) || stored <= 0 || stored > nowMs) stored = 0;
+            // 첫 실행/새 탭에서도 당일 휴게·점심·퇴근 스케줄을 보정할 수 있도록 최대 18시간까지 확인
+            const lowerBound = nowMs - AUTO_SCHEDULE_MAX_LOOKBACK_MS;
+            lastAutoSchedulerCheckMs = stored ? Math.max(stored, lowerBound) : lowerBound;
+            return lastAutoSchedulerCheckMs;
+        }
+
+        function buildAutoScheduleEvents(startMs, endMs) {
+            if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return [];
+            const events = [];
+            const day = new Date(startMs);
+            day.setHours(0, 0, 0, 0);
+            const endDay = new Date(endMs);
+            endDay.setHours(0, 0, 0, 0);
+
+            for (let cursor = new Date(day); cursor.getTime() <= endDay.getTime(); cursor.setDate(cursor.getDate() + 1)) {
+                const addEvent = (type, timeStr) => {
+                    const [hour, minute] = timeStr.split(':').map(Number);
+                    const d = new Date(cursor);
+                    d.setHours(hour, minute, 0, 0);
+                    const ts = d.getTime();
+                    if (ts > startMs && ts <= endMs) events.push({ type, timeStr, timestamp: ts });
+                };
+                AUTO_PAUSE_TIMES.forEach(t => addEvent('pause', t));
+                AUTO_RESUME_TIMES.forEach(t => addEvent('resume', t));
+            }
+            return events.sort((a, b) => a.timestamp - b.timestamp);
+        }
+
+        async function processAutoScheduleNow(forceNowMs = null) {
+            if (autoScheduleBusy) return false;
+            autoScheduleBusy = true;
+            try {
+                const nowMs = Number(forceNowMs) || Date.now();
+                if (!lastAutoSchedulerCheckMs) loadAutoSchedulerCheckMs(nowMs);
+                if (lastAutoSchedulerCheckMs > nowMs || (nowMs - lastAutoSchedulerCheckMs) > AUTO_SCHEDULE_MAX_LOOKBACK_MS) {
+                    lastAutoSchedulerCheckMs = nowMs - AUTO_SCHEDULE_MAX_LOOKBACK_MS;
+                }
+
+                const events = buildAutoScheduleEvents(lastAutoSchedulerCheckMs, nowMs);
+                for (const evt of events) {
+                    const hadAnyTasks = runningTasks.length > 0 || reworkTasks.length > 0;
+                    let normalOk = false;
+                    let reworkOk = false;
+
+                    if (evt.type === 'pause') {
+                        normalOk = await window.triggerPauseAll(true, evt.timestamp);
+                        reworkOk = await window.triggerPauseAllRework(true, evt.timestamp);
+                    } else {
+                        normalOk = await window.triggerResumeAll(true, evt.timestamp);
+                        reworkOk = await window.triggerResumeAllRework(true, evt.timestamp);
+                    }
+
+                    if (!normalOk || !reworkOk) {
+                        // 성공하기 전에는 해당 스케줄을 완료 처리하지 않음 → 다음 1초 루프에서 재시도
+                        saveAutoSchedulerCheckMs(evt.timestamp - 1);
+                        return false;
+                    }
+
+                    if (evt.type === 'pause') lastAutoPauseTime = evt.timeStr;
+                    else lastAutoResumeTime = evt.timeStr;
+
+                    saveAutoSchedulerCheckMs(evt.timestamp);
+
+                    if (hadAnyTasks) {
+                        if (evt.type === 'pause') {
+                            playSound(500, 0.1);
+                            showToast(`${evt.timeStr} 자동 일괄 일시정지가 적용되었습니다.`, 'fa-pause');
+                        } else {
+                            playSound(900, 0.1);
+                            showToast(`${evt.timeStr} 자동 일괄 재개가 적용되었습니다.`, 'fa-play');
+                        }
+                    }
+                }
+
+                saveAutoSchedulerCheckMs(nowMs);
+                return true;
+            } finally {
+                autoScheduleBusy = false;
+            }
+        }
+
         function startLocalTimerLoop() {
+            loadAutoSchedulerCheckMs(Date.now());
+            processAutoScheduleNow();
             setInterval(() => {
                 const nowTime = new Date();
                 const nowMs = nowTime.getTime();
-                
-                const hh = String(nowTime.getHours()).padStart(2, '0');
-                const mm = String(nowTime.getMinutes()).padStart(2, '0');
-                const currentTimeStr = `${hh}:${mm}`;
-                
-                // [V5.11 자동 일괄 정지] 일반 공정 + QC 재작업: 10:00, 11:50, 15:00, 16:50
-                const targetAutoPauseTimes = ['10:00', '11:50', '15:00', '16:50'];
-                if (targetAutoPauseTimes.includes(currentTimeStr)) {
-                    if (lastAutoPauseTime !== currentTimeStr) {
-                        lastAutoPauseTime = currentTimeStr;
-                        window.triggerPauseAll(true);
-                        window.triggerPauseAllRework(true);
-                    }
-                } else {
-                    lastAutoPauseTime = '';
-                }
-
-                // [자동 일괄 재개 로직] 07:50, 10:15, 12:50, 15:15
-                const targetAutoResumeTimes = ['07:50', '10:15', '12:50', '15:15'];
-                if (targetAutoResumeTimes.includes(currentTimeStr)) {
-                    if (lastAutoResumeTime !== currentTimeStr) {
-                        lastAutoResumeTime = currentTimeStr;
-                        window.triggerResumeAll(true);
-                        window.triggerResumeAllRework(true);
-                    }
-                } else {
-                    lastAutoResumeTime = '';
-                }
+                processAutoScheduleNow(nowMs); // 실패 시 다음 1초 주기에 자동 재시도
 
                 runningTasks.forEach(task => {
                     const el = document.getElementById(`span-timer-${task.id}`);
@@ -3462,6 +3568,7 @@
                 const roomVal = roomInput ? roomInput.value.trim().toUpperCase() : '제조2팀';
                 if (roomVal) {
                     currentRoomId = roomVal; window.location.hash = encodeURIComponent(currentRoomId);
+                    lastAutoSchedulerCheckMs = 0; // 룸별 자동 스케줄 체크포인트를 다시 로드
                     if (isCloudAvailable) subscribeToRoom(currentRoomId);
                     showToast(`라인/룸코드 ${currentRoomId} 접속 시도`, 'fa-right-to-bracket');
                     updateFingerprintUI();
@@ -4018,8 +4125,15 @@
             renderReworkManagement();
             renderKPIDashboard();
             startLocalTimerLoop();
+            // 백그라운드/절전/네트워크 복귀 시 놓친 자동 정지·재개 스케줄 즉시 보정
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') processAutoScheduleNow();
+            });
+            window.addEventListener('focus', () => processAutoScheduleNow());
+            window.addEventListener('online', () => processAutoScheduleNow());
             updateFingerprintUI();
             await initAuth();
+            processAutoScheduleNow(); // 인증/Firestore 동기화 직후 한 번 더 확인
         });
     </script>
 </body>
