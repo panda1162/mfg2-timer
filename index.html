@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.12 (작업관리 / KPI 탭)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.13 (작업관리 / KPI 탭)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.12 Work + KPI Tabs
+                                v5.13 Work + KPI Tabs
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -123,7 +123,7 @@
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- [V5.12] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
+        <!-- [V5.13] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
         <nav id="main-view-tabs" class="bg-white border border-slate-200 rounded-2xl shadow-sm p-1.5 flex items-center gap-1.5" aria-label="메인 화면 탭">
             <button id="tab-btn-work" type="button" aria-selected="true" class="flex-1 sm:flex-none px-5 py-3 rounded-xl text-xs sm:text-sm font-black bg-slate-900 text-white shadow-sm transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-screwdriver-wrench"></i> 작업관리
@@ -294,6 +294,12 @@
                     <p class="text-xs text-slate-500 mt-1">기록기 가동 이후 정상 완료 처리된 실측 작업 양식입니다. 우측의 관리 버튼을 통해 시간을 수정할 수 있습니다.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                    <div class="relative w-full sm:w-72">
+                        <input type="text" id="log-equipment-search" autocomplete="off" placeholder="장비명 / S/N 검색..." class="w-full pl-9 pr-9 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" aria-label="완료 이력 장비 검색">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <button id="btn-clear-log-search" type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" title="검색어 지우기" aria-label="검색어 지우기"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <span id="log-search-result-count" class="hidden text-[10px] font-black px-2.5 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 whitespace-nowrap">검색 0건</span>
                     <div class="flex items-center gap-1.5">
                         <span class="text-xs font-bold text-slate-500 whitespace-nowrap">사업부 필터:</span>
                         <select id="log-division-filter" class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold bg-white text-indigo-700 focus:ring-2 focus:ring-indigo-500">
@@ -390,7 +396,7 @@
 
         </div>
 
-        <!-- [V5.12] KPI 전용 탭 -->
+        <!-- [V5.13] KPI 전용 탭 -->
         <div id="tab-kpi-content" class="hidden">
         <!-- [V5.11] 제조2팀 KPI 대시보드 -->
         <section id="kpi-section" class="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden flex flex-col">
@@ -745,7 +751,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.12 Work+KPI Tabs Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.13 Work+KPI Tabs Fail-Closed</p>
         </div>
     </footer>
 
@@ -835,7 +841,7 @@
         let reworkSelectedWorkers = [];
         let reworkSelectedDefects = ['상세미확인'];
         let editingReworkLogId = null;
-        const REWORK_DEFECT_TYPES = ['압착', '오결선', '넘버링', '케이블', '취부', '체결', '외관', '기타', '상세미확인'];
+        const REWORK_DEFECT_TYPES = ['압착', '오결선', '넘버링', '케이블', '취부', '체결', '외관', 'I-Marking 불량', '기타', '상세미확인'];
         
         const escapeHTML = (str) => {
             if (typeof str !== 'string') return str;
@@ -1720,7 +1726,7 @@
 
 
         // -------------------------------------------------
-        // [V5.12] 작업관리 / KPI 탭 전환
+        // [V5.13] 작업관리 / KPI 탭 전환
         // KPI 열람은 권한과 무관하게 모든 사용자가 가능하며, 목표값 수정만 관리자 모드로 제한합니다.
         function setMainTab(tabName) {
             const isKpi = tabName === 'kpi';
@@ -2525,18 +2531,45 @@
         function renderCompletedLogs() {
             const tbody = document.getElementById('log-table-body');
             const logFilterEl = document.getElementById('log-division-filter');
+            const searchEl = document.getElementById('log-equipment-search');
+            const clearSearchBtn = document.getElementById('btn-clear-log-search');
+            const searchCountEl = document.getElementById('log-search-result-count');
             const selectedLogDiv = logFilterEl ? logFilterEl.value : '';
+            const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            const compactSearchTerm = searchTerm.replace(/[\s\-_/\.]/g, '');
             if(!tbody) return; tbody.innerHTML = '';
-            
+
+            if (clearSearchBtn) clearSearchBtn.classList.toggle('hidden', !searchTerm);
+
             const filteredLogs = completedLogs.filter(item => {
                 if (item.isDeleted) return false;
-                if (!selectedLogDiv) return true;
-                const eqs = item.equipments || [{ division: item.division }];
-                return eqs.some(eq => (eq.division || 'ACM') === selectedLogDiv);
+                let eqs = item.equipments || [];
+                if (eqs.length === 0 && item.equipment) {
+                    eqs = [{ division: item.division || 'ACM', equipment: item.equipment, cskSn: item.cskSn || '-' }];
+                }
+
+                const divisionMatched = !selectedLogDiv || eqs.some(eq => (eq.division || 'ACM') === selectedLogDiv);
+                if (!divisionMatched) return false;
+                if (!searchTerm) return true;
+
+                return eqs.some(eq => {
+                    const equipment = String(eq.equipment || '').toLowerCase();
+                    const cskSn = String(eq.cskSn || '').toLowerCase();
+                    const equipmentCompact = equipment.replace(/[\s\-_/\.]/g, '');
+                    const cskSnCompact = cskSn.replace(/[\s\-_/\.]/g, '');
+                    return equipment.includes(searchTerm) || cskSn.includes(searchTerm) ||
+                           (compactSearchTerm && (equipmentCompact.includes(compactSearchTerm) || cskSnCompact.includes(compactSearchTerm)));
+                });
             });
 
+            if (searchCountEl) {
+                searchCountEl.classList.toggle('hidden', !searchTerm);
+                searchCountEl.textContent = `검색 ${filteredLogs.length}건`;
+            }
+
             if (filteredLogs.length === 0) { 
-                tbody.innerHTML = `<tr id="empty-log-tr"><td colspan="8" class="py-8 text-center text-slate-400 italic">완료된 공정 기록이 존재하지 않습니다.</td></tr>`; 
+                const emptyMessage = searchTerm ? '검색 조건에 맞는 완료 이력이 없습니다.' : '완료된 공정 기록이 존재하지 않습니다.';
+                tbody.innerHTML = `<tr id="empty-log-tr"><td colspan="8" class="py-8 text-center text-slate-400 italic">${emptyMessage}</td></tr>`; 
                 updateFingerprintUI();
                 return; 
             }
@@ -3612,6 +3645,15 @@
 
             document.getElementById('btn-punch-in')?.addEventListener('click', triggerPunchIn);
             document.getElementById('btn-start-rework')?.addEventListener('click', startReworkFromModal);
+            document.getElementById('log-equipment-search')?.addEventListener('input', renderCompletedLogs);
+            document.getElementById('btn-clear-log-search')?.addEventListener('click', () => {
+                const searchEl = document.getElementById('log-equipment-search');
+                if (searchEl) {
+                    searchEl.value = '';
+                    searchEl.focus();
+                }
+                renderCompletedLogs();
+            });
             document.getElementById('log-division-filter')?.addEventListener('change', () => { renderCompletedLogs(); renderReworkManagement(); });
             document.getElementById('kpi-month')?.addEventListener('change', renderKPIDashboard);
             document.getElementById('kpi-division-filter')?.addEventListener('change', renderKPIDashboard);
