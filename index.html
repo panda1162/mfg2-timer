@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.20 (작업관리 / KPI 탭)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.22 (Stable Timer / Auto Schedule Fix / KPI 탭)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.20 Work + KPI Tabs
+                                v5.22 Stable Timer + Auto Schedule Fix + KPI
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -559,7 +559,7 @@
             <div id="edit-time-hms-wrap" class="mb-4 hidden">
                 <label class="block text-xs font-bold text-slate-700 mb-1">현재 누적 작업시간 (시:분:초)</label>
                 <input type="text" id="edit-time-hms" class="w-full px-3 py-2 border border-amber-300 rounded-xl text-sm font-black font-mono-num bg-amber-50 focus:ring-2 focus:ring-amber-500" placeholder="예: 02:35:20" inputmode="numeric">
-                <p class="text-[10px] text-amber-700 mt-1.5">V5.16~V5.17에서 시간이 초기화된 작업은 기억하는 실제 누적시간을 입력하면 타이머 기준값을 안전하게 복구합니다.</p>
+                <p class="text-[10px] text-amber-700 mt-1.5">현재 누적 작업시간을 직접 수정합니다. 최초 시작시각은 변경하지 않으며 저장한 누적시간부터 계속 계산됩니다.</p>
             </div>
             <div class="flex justify-end gap-2">
                 <button onclick="closeEditTimeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">취소</button>
@@ -757,7 +757,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.20 Work+KPI Tabs Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.22 Stable Timer + Auto Schedule Fix + KPI Fail-Closed</p>
         </div>
     </footer>
 
@@ -836,9 +836,12 @@
         let lastAutoPauseTime = ''; // 최근 자동 일괄정지 처리 시각(표시/진단용)
         let autoScheduleBusy = false; // 자동 스케줄 중복 실행 방지
         let lastAutoSchedulerCheckMs = 0; // 마지막으로 정상 확인/처리한 시각
+        let autoScheduleSeededRoom = ''; // V5.22: 룸 최초 스냅샷에서만 과거 이벤트 보정 기준을 1회 설정
         const AUTO_PAUSE_TIMES = ['10:00', '11:50', '15:00', '16:50'];
         const AUTO_RESUME_TIMES = ['07:50', '10:15', '12:50', '15:15'];
-        const AUTO_SCHEDULE_MAX_LOOKBACK_MS = 18 * 60 * 60 * 1000; // 절전/백그라운드 복귀 시 최대 18시간 보정
+        const AUTO_SCHEDULE_MAX_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000; // V5.21: PC 종료/주말 포함 최대 7일 스케줄 보정
+        const TIMER_ENGINE_VERSION = 521;
+        let timerMigrationBusy = false;
         let editingActiveWorkerTaskId = null;
         let editingSelectedWorkers = [];
 
@@ -1073,10 +1076,10 @@
             const hmsWrap = document.getElementById('edit-time-hms-wrap');
             const isActive = mode === 'active';
             if (title) title.innerHTML = isActive
-                ? '<i class="fa-solid fa-clock-rotate-left text-amber-600"></i> 진행 시간 복구 / 수정'
+                ? '<i class="fa-solid fa-clock-rotate-left text-amber-600"></i> 진행 시간 수정'
                 : '<i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> 작업 소요 시간 수정';
             if (help) help.textContent = helpText || (isActive
-                ? '현재 진행 중인 작업의 누적 시간을 시:분:초로 입력합니다. 저장 시 기존 최초 시작시각은 별도 보존하고 타이머 계산 기준만 정상화합니다.'
+                ? '현재 진행 중인 작업의 누적 시간을 시:분:초로 입력합니다. 최초 시작시각은 변경하지 않고 누적 작업시간만 수정합니다.'
                 : '실제 작업한 총 소요 시간(분)으로 수정해주세요.');
             minWrap?.classList.toggle('hidden', isActive);
             hmsWrap?.classList.toggle('hidden', !isActive);
@@ -1112,11 +1115,8 @@
             if (!task) return;
             const now = Date.now();
             const currentElapsedMs = getSafeTaskElapsedMs(task, now, false);
-            const needsRecovery = isLegacyClockResetTask(task);
             editingActiveTaskId = taskId; editingLogId = null; editingReworkLogId = null;
-            setEditTimeModalMode('active', needsRecovery
-                ? '이 작업은 이전 버전에서 타이머 누적값이 손상된 흔적이 있습니다. 아래 표시시간은 최초 시작시각에서 평일 실제 근무구간(07:50~16:50, 점심·휴게·야간·주말 제외)만 합산한 값입니다. 과거 수동 일시정지/보류는 알 수 없으므로 실제 작업시간을 알고 있으면 그 값으로 수정한 뒤 저장하세요.'
-                : '현재 진행 중인 작업의 누적시간을 시:분:초로 수정할 수 있습니다.');
+            setEditTimeModalMode('active', '현재 누적 작업시간을 시:분:초로 수정합니다. 저장해도 최초 시작시각은 변경되지 않으며, 수정한 누적시간부터 계속 계산됩니다.');
             const hmsInput = document.getElementById('edit-time-hms');
             if (hmsInput) hmsInput.value = formatElapsedHMS(currentElapsedMs);
             document.getElementById('edit-time-modal')?.classList.remove('hidden');
@@ -1221,7 +1221,17 @@
                     }
                     else if (actionType === 'PAUSE_TOGGLE') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
-                        if (idx > -1) { newRunning[idx].paused = payload.paused; newRunning[idx].pausedAt = payload.pausedAt; newRunning[idx].totalPausedDuration = payload.totalPausedDuration; }
+                        if (idx > -1) {
+                            const ts = Number(payload.timestamp) || Date.now();
+                            const task = newRunning[idx];
+                            migrateTimerTaskInPlace(task, ts, false);
+                            if (task.paused) {
+                                resumeStableTimerTaskInPlace(task, ts);
+                                if (payload.clearHoldOnResume) task.isHeld = false;
+                            } else {
+                                pauseStableTimerTaskInPlace(task, ts, false);
+                            }
+                        }
                     } 
                     else if (actionType === 'TOGGLE_HOLD') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
@@ -1230,11 +1240,12 @@
                     else if (actionType === 'PAUSE_ALL') {
                         const ts = Number(payload.timestamp) || Date.now();
                         newRunning.forEach(task => {
-                            const taskStart = getTimestampMillis(task.startTime);
-                            // [V5.19] 해당 자동정지 시각에 이미 존재하던 작업만 정지합니다.
-                            if (!task.paused && taskStart > 0 && taskStart <= ts) {
-                                task.paused = true;
-                                task.pausedAt = ts;
+                            const segmentStart = isStableTimerTask(task)
+                                ? getTimestampMillis(task.activeSince)
+                                : getTimestampMillis(task.startTime);
+                            // V5.21: 해당 정지 시각에 실제로 진행 중이던 구간만 누적 후 정지합니다.
+                            if (!task.paused && segmentStart > 0 && segmentStart <= ts) {
+                                pauseStableTimerTaskInPlace(task, ts, false);
                             }
                         });
                     }
@@ -1242,21 +1253,16 @@
                         const ts = Number(payload.timestamp) || Date.now();
                         newRunning.forEach(task => {
                             const pausedAt = getTimestampMillis(task.pausedAt);
-                            // 이 재개 시각보다 나중에 수동 정지된 작업은 과거 스케줄로 재개하지 않습니다.
                             if (task.paused && !task.isHeld && pausedAt > 0 && pausedAt <= ts) { 
-                                task.totalPausedDuration = (Number(task.totalPausedDuration) || 0) + Math.max(0, ts - pausedAt); 
-                                task.paused = false; 
-                                task.pausedAt = null; 
+                                migrateTimerTaskInPlace(task, ts, false);
+                                resumeStableTimerTaskInPlace(task, ts);
                             } 
                         });
                     }
                     else if (actionType === 'REPAIR_CLOCK') {
-                        // [V5.19] 이전 버전 호환용. 자동 복구 과정에서는 더 이상 이 액션으로 원본 시간을 덮어쓰지 않습니다.
+                        // V5.21 호환용: 과거 필드는 읽기만 하고 새 타이머는 누적 작업시간 방식으로 전환합니다.
                         const idx = newRunning.findIndex(x => x.id === payload.id);
-                        if (idx > -1 && Number.isFinite(Number(payload.totalPausedDuration))) {
-                            newRunning[idx].totalPausedDuration = Math.max(0, Number(payload.totalPausedDuration) || 0);
-                            newRunning[idx].updatedAt = Date.now();
-                        }
+                        if (idx > -1) migrateTimerTaskInPlace(newRunning[idx], Date.now(), false);
                     }
                     else if (actionType === 'RECOVER_ACTIVE_TIME') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
@@ -1264,13 +1270,11 @@
                             const task = newRunning[idx];
                             const nowTs = Number(payload.now) || Date.now();
                             const desiredMs = Math.max(0, Number(payload.desiredElapsedMs) || 0);
-                            const pausedAt = getTimestampMillis(task.pausedAt);
-                            const anchor = task.paused && pausedAt > 0 ? pausedAt : nowTs;
-                            if (!task.clockOriginalStartTime) task.clockOriginalStartTime = getOriginalTaskStartMillis(task) || getTimestampMillis(task.startTime) || anchor;
-                            task.startTime = anchor - desiredMs;
-                            task.totalPausedDuration = 0;
-                            task.clockRecoveryFixed = true;
-                            task.clockRecoveredAt = nowTs;
+                            migrateTimerTaskInPlace(task, nowTs, false);
+                            task.accumulatedWorkMs = desiredMs;
+                            task.activeSince = task.paused ? null : nowTs;
+                            task.timerEngineVersion = TIMER_ENGINE_VERSION;
+                            task.timerAdjustedAt = nowTs;
                             task.updatedAt = nowTs;
                         }
                     }
@@ -1296,7 +1300,16 @@
                     }
                     else if (actionType === 'EDIT_ACTIVE_TIME') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
-                        if (idx > -1) { newRunning[idx].startTime = payload.newStartTime; }
+                        if (idx > -1) {
+                            const nowTs = Number(payload.now) || Date.now();
+                            const task = newRunning[idx];
+                            migrateTimerTaskInPlace(task, nowTs, false);
+                            if (Number.isFinite(Number(payload.newElapsedMs))) {
+                                task.accumulatedWorkMs = Math.max(0, Number(payload.newElapsedMs));
+                                task.activeSince = task.paused ? null : nowTs;
+                                task.timerAdjustedAt = nowTs;
+                            }
+                        }
                     }
                     else if (actionType === 'EDIT_ACTIVE_WORKER') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
@@ -1378,9 +1391,13 @@
                 process: selectedProcess,
                 processDetail: selectedProcessDetail || '',
                 startTime: timestamp,
+                originalStartTime: timestamp,
+                accumulatedWorkMs: 0,
+                activeSince: timestamp,
+                timerEngineVersion: TIMER_ENGINE_VERSION,
                 paused: false, 
                 pausedAt: null, 
-                totalPausedDuration: 0,
+                totalPausedDuration: 0, // 이전 버전 호환 필드(새 타이머 계산에는 사용하지 않음)
                 isHeld: false,
                 equipments: selectedEquipments.map(item => ({ id: item.id, equipment: item.equipment, division: item.division, cskSn: item.cskSn, deliveryDate: item.deliveryDate }))
             };
@@ -1405,23 +1422,15 @@
             if (!task) return;
             const now = new Date().getTime();
             
-            let wasHeld = false;
-            if (task.paused && task.isHeld) {
-                wasHeld = true;
-                await updateTaskInCloudSecurely('TOGGLE_HOLD', { id: taskId, isHeld: false });
-            }
-
-            let updatedPayload = { id: task.id, paused: task.paused, pausedAt: task.pausedAt, totalPausedDuration: task.totalPausedDuration || 0 };
-
-            if (!task.paused) {
-                updatedPayload.paused = true; updatedPayload.pausedAt = now;
-            } else {
-                updatedPayload.totalPausedDuration += (now - task.pausedAt);
-                updatedPayload.paused = false; updatedPayload.pausedAt = null;
-            }
-            const success = await updateTaskInCloudSecurely('PAUSE_TOGGLE', updatedPayload);
+            const wasPaused = task.paused === true;
+            const wasHeld = wasPaused && task.isHeld === true;
+            const success = await updateTaskInCloudSecurely('PAUSE_TOGGLE', {
+                id: task.id,
+                timestamp: now,
+                clearHoldOnResume: wasHeld
+            });
             if(success) {
-                 if (updatedPayload.paused) { playSound(500, 0.1); showToast(`작업 일시정지됨`, "fa-pause"); }
+                 if (!wasPaused) { playSound(500, 0.1); showToast(`작업 일시정지됨`, "fa-pause"); }
                  else { playSound(900, 0.1); showToast(wasHeld ? `보류 해제 및 작업 재개됨` : `작업 재개됨`, "fa-play"); }
             }
         };
@@ -1663,11 +1672,11 @@
                     } else if (actionType === 'PAUSE_ALL') {
                         const ts = Number(payload.timestamp) || Date.now();
                         newTasks.forEach(task => {
-                            const taskStart = getTimestampMillis(task.startTime);
-                            if (!task.paused && taskStart > 0 && taskStart <= ts) {
-                                task.paused = true;
-                                task.pausedAt = ts;
-                                task.updatedAt = ts;
+                            const segmentStart = isStableTimerTask(task)
+                                ? getTimestampMillis(task.activeSince)
+                                : getTimestampMillis(task.startTime);
+                            if (!task.paused && segmentStart > 0 && segmentStart <= ts) {
+                                pauseStableTimerTaskInPlace(task, ts, true);
                             }
                         });
                     } else if (actionType === 'RESUME_ALL') {
@@ -1675,18 +1684,13 @@
                         newTasks.forEach(task => {
                             const pausedAt = getTimestampMillis(task.pausedAt);
                             if (task.paused && pausedAt > 0 && pausedAt <= ts) {
-                                task.totalPausedDuration = (Number(task.totalPausedDuration) || 0) + Math.max(0, ts - pausedAt);
-                                task.paused = false;
-                                task.pausedAt = null;
-                                task.updatedAt = ts;
+                                migrateTimerTaskInPlace(task, ts, true);
+                                resumeStableTimerTaskInPlace(task, ts);
                             }
                         });
                     } else if (actionType === 'REPAIR_CLOCK') {
                         const idx = newTasks.findIndex(t => t.id === payload.id);
-                        if (idx > -1) {
-                            newTasks[idx].totalPausedDuration = Math.max(0, Number(payload.totalPausedDuration) || 0);
-                            newTasks[idx].updatedAt = Date.now();
-                        }
+                        if (idx > -1) migrateTimerTaskInPlace(newTasks[idx], Date.now(), true);
                     } else if (actionType === 'EDIT_LOG_TIME') {
                         const idx = newLogs.findIndex(l => l.id === payload.id);
                         if (idx > -1) {
@@ -1737,9 +1741,13 @@
                 defectTypes: [...reworkSelectedDefects],
                 defectCount: reworkSelectedDefects.length,
                 startTime: now,
+                originalStartTime: now,
+                accumulatedWorkMs: 0,
+                activeSince: now,
+                timerEngineVersion: TIMER_ENGINE_VERSION,
                 paused: false,
                 pausedAt: null,
-                totalPausedDuration: 0,
+                totalPausedDuration: 0, // 이전 버전 호환 필드
                 date: getKstDateString(now),
                 createdAt: now,
                 updatedAt: now
@@ -1791,11 +1799,7 @@
             const task = reworkTasks.find(t => t.id === taskId);
             if (!task) return;
             const now = Date.now();
-            const totalPaused = task.totalPausedDuration || 0;
-            let elapsedMs = task.paused
-                ? ((task.pausedAt || now) - task.startTime - totalPaused)
-                : (now - task.startTime - totalPaused);
-            if (elapsedMs < 0) elapsedMs = 0;
+            const elapsedMs = getSafeTaskElapsedMs(task, now, true);
             const elapsedMinutes = Math.max(0, Math.round(elapsedMs / 60000));
             const finishedLog = {
                 id: 'rw_log_' + now + '_' + Math.random().toString(36).substr(2, 5),
@@ -1809,7 +1813,7 @@
                 workerList: task.workerList || String(task.worker || '').split(',').map(w => w.trim()).filter(Boolean),
                 defectTypes: Array.isArray(task.defectTypes) && task.defectTypes.length ? [...task.defectTypes] : ['상세미확인'],
                 defectCount: Array.isArray(task.defectTypes) && task.defectTypes.length ? task.defectTypes.length : 1,
-                startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }),
+                startTime: new Date(getOriginalTaskStartMillis(task) || getTimestampMillis(task.startTime) || now).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }),
                 endTime: new Date(now).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }),
                 elapsedMinutes,
                 elapsedHours: parseFloat((elapsedMinutes / 60).toFixed(4)),
@@ -2513,8 +2517,9 @@
             return 0;
         }
 
-        // [V5.19] V5.16~V5.17에서 손상된 타이머를 "표시만" 복구합니다.
-        // 원본 클라우드 값은 자동으로 덮어쓰지 않으며, 사용자가 시간 수정/복구를 저장할 때만 정상화합니다.
+        // [V5.21] Stable Timer Engine
+        // 핵심 원칙: 최초 시작시각은 절대 역산/변경하지 않고, 누적 실작업시간 + 현재 진행 구간만 합산합니다.
+        // V5.20 이하 진행 중 작업은 최초 1회 현재 표시시간을 누적값으로 고정하여 새 엔진으로 이전합니다.
         function getTaskIdStartMillis(task) {
             const id = String(task?.id || '');
             const m = id.match(/^(?:rw_)?task_(\d{10,})_/);
@@ -2524,7 +2529,10 @@
         }
 
         function getOriginalTaskStartMillis(task) {
-            return getTimestampMillis(task?.clockOriginalStartTime) || getTaskIdStartMillis(task) || getTimestampMillis(task?.startTime);
+            return getTimestampMillis(task?.originalStartTime)
+                || getTimestampMillis(task?.clockOriginalStartTime)
+                || getTaskIdStartMillis(task)
+                || getTimestampMillis(task?.startTime);
         }
 
         function isLegacyClockResetTask(task) {
@@ -2534,7 +2542,6 @@
             const pausedAtMs = getTimestampMillis(task.pausedAt);
             const pausedDuration = Math.max(0, Number(task.totalPausedDuration) || 0);
             if (!startMs || pausedDuration <= 0) return false;
-            // V5.17의 REPAIR_CLOCK은 누적 일시정지시간을 전체 경과시간과 같게 만든 뒤 task.updatedAt을 기록했습니다.
             if (updatedMs > startMs) {
                 const repairedWhileRunning = Math.max(0, updatedMs - startMs);
                 if (pausedDuration >= repairedWhileRunning - 5000) return true;
@@ -2546,10 +2553,7 @@
             return false;
         }
 
-        // [V5.19] 손상된 타이머 복구는 "경과시간"이 아니라 실제 근무 가능 구간과 겹치는 시간만 합산합니다.
-        // 평일 기준: 07:50~10:00 / 10:15~11:50 / 12:50~15:00 / 15:15~16:50
-        // 야간, 점심, 휴게시간, 토/일은 복구 추정시간에 포함하지 않습니다. 하루 최대 7시간 30분입니다.
-        // 과거 수동 일시정지/보류 이력은 저장되어 있지 않으므로 자동 복구값은 여전히 추정치이며, 정확한 값은 연필 버튼에서 확정할 수 있습니다.
+        // 이전 버전 데이터 이전 시에만 사용하는 일회성 호환 계산입니다.
         const RECOVERY_WORK_WINDOWS = [
             ['07:50', '10:00'],
             ['10:15', '11:50'],
@@ -2567,17 +2571,14 @@
         function estimateElapsedFromWorkWindows(task, endMs) {
             const startMs = getOriginalTaskStartMillis(task);
             if (!startMs || !Number.isFinite(endMs) || endMs <= startMs) return 0;
-
             let total = 0;
             const firstDay = new Date(startMs);
             firstDay.setHours(0, 0, 0, 0);
             const lastDay = new Date(endMs);
             lastDay.setHours(0, 0, 0, 0);
-
             for (let day = new Date(firstDay); day.getTime() <= lastDay.getTime(); day.setDate(day.getDate() + 1)) {
                 const dow = day.getDay();
-                if (dow === 0 || dow === 6) continue; // 일요일/토요일 제외
-
+                if (dow === 0 || dow === 6) continue;
                 for (const [from, to] of RECOVERY_WORK_WINDOWS) {
                     const winStart = getLocalDayTimeMillis(day, from);
                     const winEnd = getLocalDayTimeMillis(day, to);
@@ -2589,42 +2590,177 @@
             return Math.max(0, total);
         }
 
-        function getSafeTaskElapsedMs(task, nowMs, isRework = false) {
+        function getLegacyTaskElapsedMs(task, nowMs, isRework = false) {
             const startMs = getTimestampMillis(task?.startTime);
             if (!startMs || startMs > nowMs + 60000) return 0;
             const pausedAtMs = getTimestampMillis(task?.pausedAt);
             const endMs = task?.paused ? (pausedAtMs || nowMs) : nowMs;
             const wallElapsed = Math.max(0, endMs - startMs);
             const pausedDuration = Math.max(0, Number(task?.totalPausedDuration) || 0);
-
-            // 손상 징후가 있으면 클라우드 데이터를 변경하지 않고 최초 작업 ID + 자동 스케줄로 화면 시간을 복구합니다.
             if (!isRework && (isLegacyClockResetTask(task) || pausedDuration > wallElapsed + 1000)) {
                 return estimateElapsedFromWorkWindows(task, endMs);
             }
-            if (isRework && pausedDuration > wallElapsed + 1000) {
-                return Math.max(0, wallElapsed);
-            }
+            if (isRework && pausedDuration > wallElapsed + 1000) return Math.max(0, wallElapsed);
             return Math.max(0, wallElapsed - pausedDuration);
         }
 
+        function isStableTimerTask(task) {
+            return !!task
+                && Number(task.timerEngineVersion) >= TIMER_ENGINE_VERSION
+                && Number.isFinite(Number(task.accumulatedWorkMs));
+        }
+
+        function migrateTimerTaskInPlace(task, referenceMs = Date.now(), isRework = false) {
+            if (!task) return task;
+            const refMs = Number(referenceMs) || Date.now();
+            if (isStableTimerTask(task)) {
+                if (!getTimestampMillis(task.originalStartTime)) task.originalStartTime = getOriginalTaskStartMillis(task) || refMs;
+                if (!task.paused && !getTimestampMillis(task.activeSince)) task.activeSince = refMs;
+                return task;
+            }
+            const originalStart = getOriginalTaskStartMillis(task) || getTimestampMillis(task.startTime) || refMs;
+            const frozenElapsed = getLegacyTaskElapsedMs(task, refMs, isRework);
+            task.originalStartTime = originalStart;
+            task.accumulatedWorkMs = Math.max(0, frozenElapsed);
+            task.activeSince = task.paused ? null : refMs;
+            task.timerEngineVersion = TIMER_ENGINE_VERSION;
+            task.timerMigratedAt = refMs;
+            task.clockRecoveryFixed = true;
+            // 호환 필드는 남기되 V5.21 계산에는 더 이상 사용하지 않습니다.
+            task.totalPausedDuration = 0;
+            return task;
+        }
+
+        function pauseStableTimerTaskInPlace(task, pauseMs = Date.now(), isRework = false) {
+            const ts = Number(pauseMs) || Date.now();
+            migrateTimerTaskInPlace(task, ts, isRework);
+            if (task.paused) return task;
+            const activeSince = getTimestampMillis(task.activeSince);
+            if (activeSince > 0 && activeSince <= ts) {
+                task.accumulatedWorkMs = Math.max(0, Number(task.accumulatedWorkMs) || 0) + Math.max(0, ts - activeSince);
+            }
+            task.activeSince = null;
+            task.paused = true;
+            task.pausedAt = ts;
+            task.timerStateUpdatedAt = ts;
+            task.updatedAt = ts;
+            return task;
+        }
+
+        function resumeStableTimerTaskInPlace(task, resumeMs = Date.now()) {
+            const ts = Number(resumeMs) || Date.now();
+            if (!isStableTimerTask(task)) migrateTimerTaskInPlace(task, ts, false);
+            if (!task.paused) return task;
+            task.paused = false;
+            task.pausedAt = null;
+            task.activeSince = ts;
+            task.timerStateUpdatedAt = ts;
+            task.updatedAt = ts;
+            return task;
+        }
+
+        function getSafeTaskElapsedMs(task, nowMs, isRework = false) {
+            const currentMs = Number(nowMs) || Date.now();
+            if (isStableTimerTask(task)) {
+                let total = Math.max(0, Number(task.accumulatedWorkMs) || 0);
+                if (!task.paused) {
+                    const activeSince = getTimestampMillis(task.activeSince);
+                    if (activeSince > 0 && activeSince <= currentMs + 60000) {
+                        total += Math.max(0, currentMs - activeSince);
+                    }
+                }
+                return Math.max(0, total);
+            }
+            // V5.20 이하 데이터가 아직 클라우드 이전되기 전 잠깐만 사용되는 호환 경로입니다.
+            return getLegacyTaskElapsedMs(task, currentMs, isRework);
+        }
+
+        async function migrateActiveTimersToV521() {
+            if (timerMigrationBusy || !db || !currentUser || !checkFailClosedCanWrite(true)) return false;
+            timerMigrationBusy = true;
+            const roomRef = getRoomDocRef(currentRoomId);
+            try {
+                let changed = false;
+                await runTransaction(db, async (transaction) => {
+                    const sfDoc = await transaction.get(roomRef);
+                    if (!sfDoc.exists()) return;
+                    const data = sfDoc.data() || {};
+                    const normal = Array.isArray(data.runningTasks) ? JSON.parse(JSON.stringify(data.runningTasks)) : [];
+                    const rework = Array.isArray(data.reworkTasks) ? JSON.parse(JSON.stringify(data.reworkTasks)) : [];
+                    const now = Date.now();
+                    let normalChanged = false;
+                    let reworkChanged = false;
+                    normal.forEach(task => {
+                        if (!isStableTimerTask(task)) { migrateTimerTaskInPlace(task, now, false); normalChanged = true; }
+                    });
+                    rework.forEach(task => {
+                        if (!isStableTimerTask(task)) { migrateTimerTaskInPlace(task, now, true); reworkChanged = true; }
+                    });
+                    if (normalChanged || reworkChanged) {
+                        changed = true;
+                        transaction.update(roomRef, {
+                            runningTasks: normal,
+                            reworkTasks: rework,
+                            timerEngineVersion: TIMER_ENGINE_VERSION,
+                            timerEngineMigratedAt: now,
+                            updatedAt: now
+                        });
+                    }
+                });
+                if (changed) console.info('[V5.21] 기존 진행 중 타이머를 Stable Timer 엔진으로 이전했습니다.');
+                return true;
+            } catch (e) {
+                console.error('[V5.21] 타이머 엔진 이전 실패:', e);
+                return false;
+            } finally {
+                timerMigrationBusy = false;
+            }
+        }
+
         function getAutoSchedulerStorageKey() {
-            return `kg-v5.19-auto-scheduler:${getRoomNormId(currentRoomId)}`;
+            return `kg-v5.21-auto-scheduler:${getRoomNormId(currentRoomId)}`;
         }
 
         function saveAutoSchedulerCheckMs(value) {
             lastAutoSchedulerCheckMs = Number(value) || Date.now();
-            try { sessionStorage.setItem(getAutoSchedulerStorageKey(), String(lastAutoSchedulerCheckMs)); } catch (_) {}
+            try { localStorage.setItem(getAutoSchedulerStorageKey(), String(lastAutoSchedulerCheckMs)); } catch (_) {}
         }
 
         function loadAutoSchedulerCheckMs(nowMs = Date.now()) {
             let stored = 0;
-            try { stored = Number(sessionStorage.getItem(getAutoSchedulerStorageKey()) || 0); } catch (_) {}
+            try { stored = Number(localStorage.getItem(getAutoSchedulerStorageKey()) || 0); } catch (_) {}
             if (!Number.isFinite(stored) || stored <= 0 || stored > nowMs) stored = 0;
 
-            // [V5.19] 새 파일/새 탭 첫 실행에는 과거 스케줄을 현재 작업에 소급 적용하지 않습니다.
-            // 이 화면이 열린 상태에서 절전/백그라운드로 빠졌던 경우에만 마지막 체크시각부터 보정합니다.
             const lowerBound = nowMs - AUTO_SCHEDULE_MAX_LOOKBACK_MS;
             lastAutoSchedulerCheckMs = stored ? Math.max(stored, lowerBound) : nowMs;
+            return lastAutoSchedulerCheckMs;
+        }
+
+        function reseedAutoSchedulerFromActiveTasks(nowMs = Date.now(), allowBackward = false) {
+            const anchors = [];
+            const collect = task => {
+                if (!task) return;
+                let anchor = 0;
+                if (task.paused) anchor = getTimestampMillis(task.pausedAt);
+                else if (isStableTimerTask(task)) anchor = getTimestampMillis(task.activeSince);
+                else anchor = getTimestampMillis(task.startTime);
+                if (anchor > 0 && anchor <= nowMs) anchors.push(anchor);
+            };
+            runningTasks.forEach(collect);
+            reworkTasks.forEach(collect);
+            if (!anchors.length) return lastAutoSchedulerCheckMs;
+            const lowerBound = nowMs - AUTO_SCHEDULE_MAX_LOOKBACK_MS;
+            const earliest = Math.max(Math.min(...anchors) - 1, lowerBound);
+
+            // V5.22 핵심 수정:
+            // 스냅샷이 갱신될 때마다 체크포인트를 activeSince/pausedAt까지 되감으면
+            // 이미 처리한 10:00/10:15/11:50/12:50/15:00/15:15 이벤트가 계속 재실행됩니다.
+            // 따라서 체크포인트 후퇴는 새 룸에 최초 접속한 1회에만 허용합니다.
+            if (!lastAutoSchedulerCheckMs) {
+                saveAutoSchedulerCheckMs(earliest);
+            } else if (allowBackward && earliest < lastAutoSchedulerCheckMs) {
+                saveAutoSchedulerCheckMs(earliest);
+            }
             return lastAutoSchedulerCheckMs;
         }
 
@@ -2705,11 +2841,11 @@
 
         function startLocalTimerLoop() {
             loadAutoSchedulerCheckMs(Date.now());
-            processAutoScheduleNow().catch(err => console.error('[V5.19] 초기 자동 스케줄 처리 오류:', err));
+            processAutoScheduleNow().catch(err => console.error('[V5.22] 초기 자동 스케줄 처리 오류:', err));
             setInterval(() => {
                 const nowTime = new Date();
                 const nowMs = nowTime.getTime();
-                processAutoScheduleNow(nowMs).catch(err => console.error('[V5.19] 자동 스케줄 처리 오류:', err)); // 실패 시 다음 1초 주기에 자동 재시도
+                processAutoScheduleNow(nowMs).catch(err => console.error('[V5.22] 자동 스케줄 처리 오류:', err)); // 실패 시 다음 1초 주기에 자동 재시도
 
                 runningTasks.forEach(task => {
                     try {
@@ -2753,7 +2889,7 @@
                         }
                     }
                     } catch (timerErr) {
-                        console.error('[V5.19] 개별 작업 타이머 갱신 오류:', task?.id, timerErr);
+                        console.error('[V5.21] 개별 작업 타이머 갱신 오류:', task?.id, timerErr);
                     }
                 });
 
@@ -2767,7 +2903,7 @@
                         const pad = n => String(n).padStart(2, '0');
                         el.textContent = `${pad(hour)}:${pad(min)}:${pad(sec)}`;
                     } catch (timerErr) {
-                        console.error('[V5.19] 재작업 타이머 갱신 오류:', task?.id, timerErr);
+                        console.error('[V5.21] 재작업 타이머 갱신 오류:', task?.id, timerErr);
                     }
                 });
             }, 1000);
@@ -4033,7 +4169,7 @@
                     const success = await updateTaskInCloudSecurely('RECOVER_ACTIVE_TIME', {
                         id: editingActiveTaskId, desiredElapsedMs: desiredMs, now: Date.now()
                     });
-                    if (success) showToast("진행 시간이 복구/수정되었습니다. 기존 최초 시작시각도 보존했습니다.", "fa-clock-rotate-left");
+                    if (success) showToast("누적 작업시간이 수정되었습니다. 최초 시작시각은 변경되지 않았습니다.", "fa-clock-rotate-left");
                 } else {
                     const timeInput = document.getElementById('edit-time-input');
                     const newVal = parseInt(timeInput ? timeInput.value : '0', 10);
@@ -4195,6 +4331,8 @@
                 unsubscribeRoom();
                 unsubscribeRoom = null;
             }
+            // V5.22: 룸 구독이 새로 시작될 때만 자동 스케줄 초기 보정을 다시 허용합니다.
+            autoScheduleSeededRoom = '';
             
             diagState.listenerStatus = 'UNSUBSCRIBED';
             diagState.snapshotStatus = 'WAITING';
@@ -4245,6 +4383,23 @@
                         reworkLogs = Array.isArray(data.reworkLogs) ? data.reworkLogs : [];
                         activeWorkersList = Array.isArray(data.activeWorkersList) && data.activeWorkersList.length > 0 ? data.activeWorkersList : [...defaultWorkers];
                         planEquipments = Array.isArray(data.planEquipments) ? data.planEquipments : [];
+
+                        // V5.22: 자동 휴게 스케줄 보정은 '룸 최초 스냅샷 1회'만 수행합니다.
+                        // 이후 onSnapshot 갱신에서는 체크포인트를 과거로 되돌리지 않아
+                        // 이미 처리한 일괄 일시정지/재개가 반복 실행되지 않습니다.
+                        const roomSeedKey = getRoomNormId(roomId);
+                        const needsTimerMigration = runningTasks.some(t => !isStableTimerTask(t)) || reworkTasks.some(t => !isStableTimerTask(t));
+                        if (autoScheduleSeededRoom !== roomSeedKey) {
+                            autoScheduleSeededRoom = roomSeedKey; // 비동기 처리 전에 먼저 잠가 중복 예약 방지
+                            reseedAutoSchedulerFromActiveTasks(Date.now(), true);
+                            setTimeout(async () => {
+                                await processAutoScheduleNow();
+                                if (needsTimerMigration) await migrateActiveTimersToV521();
+                            }, 0);
+                        } else if (needsTimerMigration) {
+                            // 이미 스케줄 보정을 끝낸 뒤 유입된 구형 타이머만 엔진 이전합니다.
+                            setTimeout(() => migrateActiveTimersToV521(), 0);
+                        }
                         
                         const cntEl = document.getElementById('cnt-loaded-items');
                         if (cntEl) cntEl.innerText = planEquipments.length;
@@ -4359,7 +4514,7 @@
             renderReworkManagement();
             renderKPIDashboard();
             startLocalTimerLoop();
-            // [V5.19] 현재 화면이 열린 상태에서 백그라운드/절전/네트워크 복귀 시에만 놓친 스케줄을 보정
+            // [V5.22] 백그라운드/절전/재실행 후에도 체크포인트는 단조 증가시키고, 룸 최초 연결 시에만 놓친 스케줄을 1회 보정
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') processAutoScheduleNow();
             });
