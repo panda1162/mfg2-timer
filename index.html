@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.17 (작업관리 / KPI 탭)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.18 (작업관리 / KPI 탭)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,13 +40,13 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.17 Work + KPI Tabs
+                                v5.18 Work + KPI Tabs
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
                             </span>
                         </h1>
-                        <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 기준정보 중앙 동기화 및 다중 S/N 공유공수 분리</p>
+                        <p class="text-xs text-slate-300 mt-0.5 hidden sm:block">실시간 기준정보 중앙 동기화 및 다중 S/N 공유공수 분리 · 타이머 무결성 보정</p>
                     </div>
                 </div>
 
@@ -123,7 +123,7 @@
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- [V5.17] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
+        <!-- [V5.18] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
         <nav id="main-view-tabs" class="bg-white border border-slate-200 rounded-2xl shadow-sm p-1.5 flex items-center gap-1.5" aria-label="메인 화면 탭">
             <button id="tab-btn-work" type="button" aria-selected="true" class="flex-1 sm:flex-none px-5 py-3 rounded-xl text-xs sm:text-sm font-black bg-slate-900 text-white shadow-sm transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-screwdriver-wrench"></i> 작업관리
@@ -396,7 +396,7 @@
 
         </div>
 
-        <!-- [V5.17] KPI 전용 탭 -->
+        <!-- [V5.18] KPI 전용 탭 -->
         <div id="tab-kpi-content" class="hidden">
         <!-- [V5.11] 제조2팀 KPI 대시보드 -->
         <section id="kpi-section" class="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden flex flex-col">
@@ -752,7 +752,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.17 Work+KPI Tabs Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.18 Work+KPI Tabs Fail-Closed</p>
         </div>
     </footer>
 
@@ -1075,9 +1075,8 @@
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
             const now = new Date().getTime();
-            let currentElapsedMs = task.paused ? (task.pausedAt - task.startTime - (task.totalPausedDuration||0)) : (now - task.startTime - (task.totalPausedDuration||0));
-            if (currentElapsedMs < 0) currentElapsedMs = 0;
-            const currentElapsedMins = Math.floor(currentElapsedMs / 60000);
+            const elapsedSnapshot = getSafeTaskElapsedSnapshot(task, now);
+            const currentElapsedMins = Math.floor(elapsedSnapshot.elapsedMs / 60000);
             
             editingActiveTaskId = taskId; editingLogId = null; editingReworkLogId = null;
             const input = document.getElementById('edit-time-input');
@@ -1195,6 +1194,9 @@
                         newRunning.forEach(task => {
                             if (!task.paused) {
                                 const taskStart = Number(task.startTime) || ts;
+                                // [V5.18] 누적 정지시간이 전체 경과시간을 초과한 기존 오류값은 정지 시점에 즉시 정리
+                                const safeSnapshot = getSafeTaskElapsedSnapshot(task, ts);
+                                task.totalPausedDuration = safeSnapshot.pausedMs;
                                 task.paused = true;
                                 // 놓친 스케줄 보정 시 작업 시작 전 시각으로 pausedAt이 내려가지 않도록 보호
                                 task.pausedAt = Math.max(ts, taskStart);
@@ -1204,11 +1206,13 @@
                     else if (actionType === 'RESUME_ALL') {
                         const ts = Number(payload.timestamp) || Date.now();
                         newRunning.forEach(task => {
-                            if (task.paused && !task.isHeld) { 
-                                task.totalPausedDuration = (task.totalPausedDuration || 0) + Math.max(0, ts - (task.pausedAt || ts));
-                                task.paused = false; 
-                                task.pausedAt = null; 
-                            } 
+                            if (task.paused && !task.isHeld) {
+                                // [V5.18] 중복/비정상 자동정지 이력으로 정지 누적값이 경과시간을 넘지 않도록 복구
+                                const resumeState = getSafePausedTotalAfterResume(task, ts);
+                                task.totalPausedDuration = resumeState.totalPausedDuration;
+                                task.paused = false;
+                                task.pausedAt = null;
+                            }
                         });
                     }
                     else if (actionType === 'PUNCH_OUT') {
@@ -1233,7 +1237,12 @@
                     }
                     else if (actionType === 'EDIT_ACTIVE_TIME') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
-                        if (idx > -1) { newRunning[idx].startTime = payload.newStartTime; }
+                        if (idx > -1) {
+                            newRunning[idx].startTime = payload.newStartTime;
+                            if (Number.isFinite(Number(payload.newTotalPausedDuration))) {
+                                newRunning[idx].totalPausedDuration = Math.max(0, Number(payload.newTotalPausedDuration));
+                            }
+                        }
                     }
                     else if (actionType === 'EDIT_ACTIVE_WORKER') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
@@ -1348,13 +1357,19 @@
                 await updateTaskInCloudSecurely('TOGGLE_HOLD', { id: taskId, isHeld: false });
             }
 
-            let updatedPayload = { id: task.id, paused: task.paused, pausedAt: task.pausedAt, totalPausedDuration: task.totalPausedDuration || 0 };
+            let updatedPayload = { id: task.id, paused: task.paused, pausedAt: task.pausedAt, totalPausedDuration: Math.max(0, Number(task.totalPausedDuration) || 0) };
 
             if (!task.paused) {
-                updatedPayload.paused = true; updatedPayload.pausedAt = now;
+                // [V5.18] 이미 누적 정지값이 깨져 있으면 일시정지하는 순간 정상값으로 복구
+                const safeSnapshot = getSafeTaskElapsedSnapshot(task, now);
+                updatedPayload.totalPausedDuration = safeSnapshot.pausedMs;
+                updatedPayload.paused = true;
+                updatedPayload.pausedAt = now;
             } else {
-                updatedPayload.totalPausedDuration += (now - task.pausedAt);
-                updatedPayload.paused = false; updatedPayload.pausedAt = null;
+                const resumeState = getSafePausedTotalAfterResume(task, now);
+                updatedPayload.totalPausedDuration = resumeState.totalPausedDuration;
+                updatedPayload.paused = false;
+                updatedPayload.pausedAt = null;
             }
             const success = await updateTaskInCloudSecurely('PAUSE_TOGGLE', updatedPayload);
             if(success) {
@@ -1418,14 +1433,59 @@
             return success === true;
         };
 
+        // [V5.18] 일반 작업 시간 무결성 보정
+        // - totalPausedDuration이 실제 경과시간보다 커져 타이머가 00:00:00으로 고정되는 현상을 방지합니다.
+        // - pausedAt/startTime 이상값도 현재 시각 범위 안으로 제한해 음수 시간 계산을 차단합니다.
+        function getSafeTaskElapsedSnapshot(task, nowMs = Date.now()) {
+            const startMs = Number(task?.startTime);
+            const now = Number(nowMs) || Date.now();
+            if (!Number.isFinite(startMs) || startMs <= 0 || now <= startMs) {
+                return { elapsedMs: 0, pausedMs: 0, recovered: false, wallMs: 0, endPoint: now };
+            }
+
+            const rawPausedAt = Number(task?.pausedAt);
+            const pausedAt = Number.isFinite(rawPausedAt) && rawPausedAt > 0
+                ? Math.min(now, Math.max(startMs, rawPausedAt))
+                : now;
+            const endPoint = task?.paused ? pausedAt : now;
+            const wallMs = Math.max(0, endPoint - startMs);
+            const rawPausedMs = Math.max(0, Number(task?.totalPausedDuration) || 0);
+            const pausedIsCorrupt = rawPausedMs > wallMs;
+            const safePausedMs = pausedIsCorrupt ? 0 : rawPausedMs;
+            const elapsedMs = Math.max(0, wallMs - safePausedMs);
+
+            return { elapsedMs, pausedMs: safePausedMs, recovered: pausedIsCorrupt, wallMs, endPoint };
+        }
+
+        function getSafePausedTotalAfterResume(task, resumeMs = Date.now()) {
+            const ts = Number(resumeMs) || Date.now();
+            const taskStart = Number(task?.startTime);
+            if (!Number.isFinite(taskStart) || taskStart <= 0 || ts <= taskStart) {
+                return { totalPausedDuration: 0, recovered: true };
+            }
+
+            const rawPausedAt = Number(task?.pausedAt);
+            const pausedAt = Number.isFinite(rawPausedAt) && rawPausedAt > 0
+                ? Math.min(ts, Math.max(taskStart, rawPausedAt))
+                : ts;
+            const wallUntilPause = Math.max(0, pausedAt - taskStart);
+            const rawPausedMs = Math.max(0, Number(task?.totalPausedDuration) || 0);
+            const wasCorrupt = rawPausedMs > wallUntilPause;
+            const basePausedMs = wasCorrupt ? 0 : rawPausedMs;
+            const addedPausedMs = Math.max(0, ts - pausedAt);
+            const maxPausedUntilNow = Math.max(0, ts - taskStart);
+            const totalPausedDuration = Math.min(maxPausedUntilNow, basePausedMs + addedPausedMs);
+
+            return { totalPausedDuration, recovered: wasCorrupt };
+        }
+
         window.triggerPunchOut = async function(taskId) {
             if (!checkFailClosedCanWrite()) return;
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
             const now = new Date().getTime();
-            const totalPaused = task.totalPausedDuration || 0;
-            let elapsedMs = task.paused ? (task.pausedAt - task.startTime - totalPaused) : (now - task.startTime - totalPaused);
-            if (elapsedMs < 0) elapsedMs = 0;
+            const elapsedSnapshot = getSafeTaskElapsedSnapshot(task, now);
+            const elapsedMs = elapsedSnapshot.elapsedMs;
             const elapsedHours = parseFloat((elapsedMs / (1000 * 60 * 60)).toFixed(4));
             const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
 
@@ -1442,6 +1502,10 @@
                 startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
                 endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
                 elapsedMinutes: elapsedMinutes, elapsedHours: elapsedHours,
+                startTimestamp: Number(task.startTime) || null,
+                endTimestamp: now,
+                totalPausedDuration: elapsedSnapshot.pausedMs,
+                timerIntegrityRecovered: elapsedSnapshot.recovered,
                 date: kstDateStr, 
                 equipments: task.equipments && task.equipments.length > 0 ? task.equipments : [{ division: task.division||'ACM', equipment: task.equipment||'미지정', cskSn: task.cskSn||'-', deliveryDate: task.deliveryDate||'-' }],
                 isDeleted: false,
@@ -1609,7 +1673,7 @@
                                 const currentPaused = Math.max(0, Number(task.totalPausedDuration) || 0);
                                 const addedPaused = Math.max(0, ts - pausedAt);
                                 const maxPausedUntilNow = Math.max(0, ts - taskStart);
-                                // [V5.17] 자동 일시정지/재개 이상으로 누적 정지시간이 전체 경과시간을 초과하지 않도록 방어
+                                // [V5.18] 자동 일시정지/재개 이상으로 누적 정지시간이 전체 경과시간을 초과하지 않도록 방어
                                 task.totalPausedDuration = Math.min(maxPausedUntilNow, currentPaused + addedPaused);
                                 task.paused = false;
                                 task.pausedAt = null;
@@ -1715,7 +1779,7 @@
             return success === true;
         };
 
-        // [V5.17] 재작업 시간 무결성 보정
+        // [V5.18] 재작업 시간 무결성 보정
         // - 비정상적으로 누적된 totalPausedDuration 때문에 완료시간이 0분으로 저장되는 문제를 방지합니다.
         // - 과거 0분 완료기록은 시작~종료 시각을 보조값으로 사용해 KPI/화면/엑셀 집계에서 누락되지 않게 합니다.
         function getSafeReworkElapsedSnapshot(task, nowMs = Date.now()) {
@@ -1849,7 +1913,7 @@
 
 
         // -------------------------------------------------
-        // [V5.17] 작업관리 / KPI 탭 전환
+        // [V5.18] 작업관리 / KPI 탭 전환
         // KPI 열람은 권한과 무관하게 모든 사용자가 가능하며, 목표값 수정만 관리자 모드로 제한합니다.
         function setMainTab(tabName) {
             const isKpi = tabName === 'kpi';
@@ -1922,7 +1986,7 @@
             return `FB:${fallback}:${normalizeEquipmentName(eq?.equipment || '미지정')}`;
         }
 
-        // [V5.17] 생산완료 판정: 최종결선 또는 전체 결선의 완료 이력이 있어야 생산완료로 인정합니다.
+        // [V5.18] 생산완료 판정: 최종결선 또는 전체 결선의 완료 이력이 있어야 생산완료로 인정합니다.
         function isProductionCompletionLog(log) {
             const process = String(log?.process || '').replace(/\s+/g, '');
             const display = String(getProcessDisplay(log?.process, log?.processDetail)).replace(/\s+/g, '');
@@ -2503,7 +2567,7 @@
         window.clearSelectedEquipments = () => { selectedEquipments = []; renderSelectedEquipmentsList(); };
 
         function getAutoSchedulerStorageKey() {
-            return `kg-v5.17-auto-scheduler:${getRoomNormId(currentRoomId)}`;
+            return `kg-v5.18-auto-scheduler:${getRoomNormId(currentRoomId)}`;
         }
 
         function saveAutoSchedulerCheckMs(value) {
@@ -2515,7 +2579,7 @@
             let stored = 0;
             try { stored = Number(sessionStorage.getItem(getAutoSchedulerStorageKey()) || 0); } catch (_) {}
 
-            // [V5.17] 첫 실행/새 탭에서는 과거 자동 스케줄을 재생하지 않습니다.
+            // [V5.18] 첫 실행/새 탭에서는 과거 자동 스케줄을 재생하지 않습니다.
             // 현재 시각을 기준점으로 잡아 이후 발생하는 정지/재개 이벤트만 처리합니다.
             if (!Number.isFinite(stored) || stored <= 0 || stored > nowMs) {
                 lastAutoSchedulerCheckMs = nowMs;
@@ -2564,7 +2628,7 @@
                 const nowMs = Number(forceNowMs) || Date.now();
                 if (!lastAutoSchedulerCheckMs) loadAutoSchedulerCheckMs(nowMs);
                 if (lastAutoSchedulerCheckMs > nowMs || (nowMs - lastAutoSchedulerCheckMs) > AUTO_SCHEDULE_MAX_LOOKBACK_MS) {
-                    // [V5.17] 비정상/오래된 체크 시각에서 과거 18시간을 재생하지 않고 현재부터 다시 감시합니다.
+                    // [V5.18] 비정상/오래된 체크 시각에서 과거 18시간을 재생하지 않고 현재부터 다시 감시합니다.
                     saveAutoSchedulerCheckMs(nowMs);
                 }
 
@@ -2623,9 +2687,9 @@
                     const el = document.getElementById(`span-timer-${task.id}`);
                     const delayBadge = document.getElementById(`delay-badge-${task.id}`);
                     if (!el) return;
-                    let diff = task.paused ? (task.pausedAt - task.startTime - (task.totalPausedDuration||0)) : (nowMs - task.startTime - (task.totalPausedDuration||0));
-                    if (diff < 0) diff = 0;
-                    const sec = Math.floor((diff / 1000) % 60), min = Math.floor((diff / (1000 * 60)) % 60), hour = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                    const elapsedSnapshot = getSafeTaskElapsedSnapshot(task, nowMs);
+                    const diff = elapsedSnapshot.elapsedMs;
+                    const sec = Math.floor((diff / 1000) % 60), min = Math.floor((diff / (1000 * 60)) % 60), hour = Math.floor(diff / (1000 * 60 * 60));
                     const pad = (n) => String(n).padStart(2, '0');
                     el.innerText = `${pad(hour)}:${pad(min)}:${pad(sec)}`;
 
@@ -3935,13 +3999,14 @@
                     if (task) {
                         const desiredMs = newVal * 60000;
                         const now = new Date().getTime();
-                        let newStartTime;
-                        if (task.paused) {
-                            newStartTime = task.pausedAt - desiredMs - (task.totalPausedDuration || 0);
-                        } else {
-                            newStartTime = now - desiredMs - (task.totalPausedDuration || 0);
-                        }
-                        await updateTaskInCloudSecurely('EDIT_ACTIVE_TIME', { id: editingActiveTaskId, newStartTime: newStartTime });
+                        const elapsedSnapshot = getSafeTaskElapsedSnapshot(task, now);
+                        const endPoint = task.paused ? elapsedSnapshot.endPoint : now;
+                        const newStartTime = endPoint - desiredMs - elapsedSnapshot.pausedMs;
+                        await updateTaskInCloudSecurely('EDIT_ACTIVE_TIME', {
+                            id: editingActiveTaskId,
+                            newStartTime: newStartTime,
+                            newTotalPausedDuration: elapsedSnapshot.pausedMs
+                        });
                         showToast("실시간 진행 시간이 수정되었습니다.", "fa-check");
                     }
                 } else if (editingReworkLogId) {
