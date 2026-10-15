@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.23 (완성장비 1대평균 / 월별 부적합 추이 / QC 관리)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.26 (완성장비 1대평균 / 월별 부적합 수량·증감 / QC 관리)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.23 Completed Unit KPI + Monthly QC Trend
+                                v5.26 Completed Unit KPI + Monthly QC Trend
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -441,15 +441,32 @@
 
 
 
-            <!-- [V5.23] 월별 부적합 비율 추이 -->
+            <!-- [V5.26] 월별 부적합 수량 / 전월 증감 / 최다 부적합 -->
             <div class="px-5 pt-4">
                 <div class="border border-rose-200 rounded-2xl overflow-hidden bg-white">
                     <div class="px-4 py-3 bg-gradient-to-r from-rose-50 to-white border-b border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                            <h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-chart-column text-rose-500 mr-1"></i>월별 부적합 비율 추이</h5>
-                            <p class="text-[9px] text-slate-500 mt-0.5">부적합 비율 = 월별 QC 반려 고유 장비 ÷ 해당 월 완성 장비 × 100 · 막대를 누르면 불량 항목 상세를 확인할 수 있습니다.</p>
+                            <h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-chart-column text-rose-500 mr-1"></i>월별 부적합 수량 / 전월 증감</h5>
+                            <p class="text-[9px] text-slate-500 mt-0.5">한 장비에서 여러 부적합이 발생하면 각 항목을 각각 1건으로 집계합니다. 막대는 월별 부적합 총 수량이며, 전월 대비 증감률과 최다 부적합 항목을 함께 표시합니다.</p>
                         </div>
                         <span id="kpi-defect-trend-summary" class="text-[10px] font-black px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">최근 12개월</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 pb-0">
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <span class="text-[9px] font-bold text-slate-400 block">선택월 부적합 총 수량</span>
+                            <strong id="kpi-defect-current-count" class="text-xl font-black text-rose-700 font-mono-num">0건</strong>
+                            <span id="kpi-defect-current-sub" class="text-[9px] text-slate-400 block mt-1">복수 부적합 각각 집계</span>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <span class="text-[9px] font-bold text-slate-400 block">전월 대비</span>
+                            <strong id="kpi-defect-mom-change" class="text-xl font-black text-slate-900 font-mono-num">-</strong>
+                            <span id="kpi-defect-mom-sub" class="text-[9px] text-slate-400 block mt-1">전월 데이터 없음</span>
+                        </div>
+                        <div class="rounded-xl border border-rose-200 bg-rose-50 p-3">
+                            <span class="text-[9px] font-bold text-rose-400 block"><i class="fa-solid fa-triangle-exclamation mr-1"></i>최다 부적합 TOP1</span>
+                            <strong id="kpi-defect-top1" class="text-base font-black text-rose-800 block truncate">-</strong>
+                            <span id="kpi-defect-top1-sub" class="text-[9px] text-rose-500 block mt-1">부적합 기록 없음</span>
+                        </div>
                     </div>
                     <div id="kpi-defect-trend-chart" class="p-4 overflow-x-auto custom-scrollbar">
                         <div class="py-10 text-center text-slate-400 text-xs">부적합 추이 데이터를 계산 중입니다.</div>
@@ -471,7 +488,7 @@
                     <div class="overflow-x-auto max-h-[320px] custom-scrollbar"><table class="w-full min-w-[640px] text-xs"><thead class="sticky top-0 bg-slate-100 text-[10px] text-slate-500"><tr><th class="px-3 py-2 text-left">작업자</th><th class="px-3 py-2 text-right">작업기록</th><th class="px-3 py-2 text-right">투입시간</th><th class="px-3 py-2 text-right">투입공수</th><th class="px-3 py-2 text-right">인력공수 비중</th></tr></thead><tbody id="kpi-worker-body" class="divide-y divide-slate-100"><tr><td colspan="5" class="py-6 text-center text-slate-400">데이터가 없습니다.</td></tr></tbody></table></div>
                 </div>
             </div>
-            <div class="px-5 pb-5"><div id="kpi-note" class="text-[10px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">표준시간이 등록되지 않은 공정은 표준시간 달성률 계산에서 제외됩니다. 장비 1대 평균공수는 동일 장비의 좌면+정면+우면+최종결선이 모두 완성되거나 전체결선이 완료된 장비만 대상으로 하며, 작업월이 달라도 완성된 달에 이전 작업시간까지 합산합니다. 하네스는 ‘하네스 작업’으로 별도 집계하며 1대 평균공수에서 제외합니다. 월별 부적합 비율은 해당 월 QC 반려 고유 장비 수 ÷ 해당 월 완성 장비 수 × 100입니다.</div></div>
+            <div class="px-5 pb-5"><div id="kpi-note" class="text-[10px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">표준시간이 등록되지 않은 공정은 표준시간 달성률 계산에서 제외됩니다. 장비 1대 평균공수는 동일 장비의 좌면+정면+우면+최종결선이 모두 완성되거나 전체결선이 완료된 장비만 대상으로 하며, 작업월이 달라도 완성된 달에 이전 작업시간까지 합산합니다. 하네스는 ‘하네스 작업’으로 별도 집계하며 1대 평균공수에서 제외합니다. 월별 부적합은 장비 대수와 무관하게 선택된 부적합 항목을 각각 1건으로 집계하며, 전월 대비 증감률과 해당 월 최다 부적합 항목을 함께 표시합니다.</div></div>
         </section>
         </div>
 
@@ -820,7 +837,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.23 Completed Unit KPI + Monthly QC Trend + Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.26 Completed Unit KPI + Monthly QC Trend + Fail-Closed</p>
         </div>
     </footer>
 
@@ -2384,26 +2401,30 @@
             return /[*?]/.test(String(model || ''));
         }
 
-        // [V5.23] KPI 장비명은 상위 플랫폼명(TDS010DC 등)이 아니라 실제 모델 코드 중심으로 묶습니다.
+        // [V5.26] KPI 장비 구분은 S/N을 최우선 기준으로 사용합니다.
+        // 일반 S/N: 앞 두 구간을 사용합니다.
+        //   LTD040D-02BC012-ON128-260902 -> LTD040D-02BC012
+        //   LAR004D-3BC2-...            -> LAR004D-3BC2
+        //   LTD040D-02BC002-...         -> LTD040D-02BC002
+        // KLEAA S/N: KLEAA4944O139-260334처럼 첫 구간에 일련번호가 붙으므로 KLEAA로 통합합니다.
+        function getKpiModelFromSn(value) {
+            const sn = String(value || '').trim().toUpperCase();
+            if (!isMeaningfulEquipmentSn(sn)) return '';
+            if (sn.startsWith('KLEAA')) return 'KLEAA';
+
+            const parts = sn.split('-').map(x => x.trim()).filter(Boolean);
+            if (parts.length >= 2) return `${parts[0]}-${parts[1]}`;
+            return '';
+        }
+
+        // S/N이 없는 과거 기록만 장비명을 보조값으로 사용합니다.
+        // 명확하지 않은 상위 플랫폼명/와일드카드는 임의 변환하지 않고 미분류로 남깁니다.
         function normalizeKpiModelName(name) {
             const norm = normalizeEquipmentName(name || '미지정');
-            if (norm.includes('02BC012')) return '02BC012';
-            if (norm.includes('3BC2')) return '3BC2';
-            if (norm.includes('KLEAA')) return 'KLEAA';
-            if (norm.includes('02BC002')) return '02BC002';
-            if (norm.includes('RCU')) return 'RCU';
-            if (norm.includes('TCT020')) return 'TCT020';
-
-            // TDS010DC_*, TDS010DC-* 처럼 세부 모델을 알 수 없는 과거 데이터는
-            // 상위 플랫폼명으로 잘못 합치지 않고 '미분류 장비'로 분리합니다.
-            if (/TDS0?10DC/.test(norm) && /[*?]/.test(norm)) return '미분류 장비';
-
-            // 흔한 상위 접두어를 제거한 뒤 마지막 유효 모델 토큰을 사용합니다.
-            const generic = new Set(['TDS010DC','TDSO10DC','TDS','DTLR','LTD040D','ACM','PANEL','ASSY']);
-            const tokens = norm.split(/[-_\/\s]+/).filter(Boolean);
-            const candidates = tokens.filter(t => !generic.has(t) && !/^[*?]+$/.test(t));
-            if (candidates.length > 0) return candidates[candidates.length - 1];
-            return norm;
+            const compact = norm.replace(/\s+/g, '');
+            if (compact.includes('KLEAA')) return 'KLEAA';
+            if (/[*?]/.test(compact)) return '미분류 장비';
+            return norm || '미분류 장비';
         }
 
         function isHarnessWorkLog(log) {
@@ -2424,7 +2445,7 @@
             return null;
         }
 
-        // [V5.23] 장비 1대 평균은 '완성된 1대분' 기준입니다.
+        // [V5.26] 장비 1대 평균은 '완성된 1대분' 기준입니다.
         // - 좌면+정면+우면+최종결선이 모두 존재하거나 전체결선이 존재해야 1대로 인정
         // - 월을 넘겨 작업해도 완성된 달에 과거 작업시간까지 모두 합산
         // - S/N 또는 안정적인 생산계획 ID가 없는 기록은 월간 1대 평균에서 제외
@@ -2527,30 +2548,66 @@
             return `RW:${rw?.id || fallbackIndex}`;
         }
 
-        // 부적합 비율 = 해당 월 QC 반려 고유 장비 수 / 해당 월 완성 장비 수 × 100
+        // [V5.26] 월별 부적합 추이
+        // - 장비 대수와 무관하게 선택된 부적합 항목 하나를 1건으로 집계합니다.
+        // - 한 장비에서 부적합이 3개 선택되면 3건으로 계산합니다.
+        // - 전월 대비 증감률 = (당월 부적합수 - 전월 부적합수) / 전월 부적합수 × 100
         function buildMonthlyDefectTrend(endMonth, division = '', count = 12) {
-            const planBySn = new Map();
-            planEquipments.forEach(p => { if (isMeaningfulEquipmentSn(p.cskSn)) planBySn.set(String(p.cskSn).trim().toUpperCase(), p); });
+            const getMonthStats = (month) => {
+                const monthRws = reworkLogs.filter(r => !r.isDeleted && getResolvedReworkDate(r).startsWith(month) && (!division || (r.equipment?.division || 'ACM') === division));
+                const defectCounts = {};
+                monthRws.forEach(r => normalizeRecordedDefects(r.defectTypes).forEach(d => {
+                    defectCounts[d] = (defectCounts[d] || 0) + 1;
+                }));
+                const defectItems = Object.values(defectCounts).reduce((sum, cnt) => sum + cnt, 0);
+                const topEntry = Object.entries(defectCounts).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko-KR'))[0] || null;
+                return {
+                    month,
+                    defectItems,
+                    cases: monthRws.length,
+                    defectCounts,
+                    topDefect: topEntry ? topEntry[0] : '',
+                    topCount: topEntry ? topEntry[1] : 0
+                };
+            };
+
             const rows = [];
             for (let i = count - 1; i >= 0; i--) {
                 const month = getMonthOffset(endMonth, -i);
-                const completed = buildCompletedUnitKpi(month, division, planBySn);
-                const monthRws = reworkLogs.filter(r => !r.isDeleted && getResolvedReworkDate(r).startsWith(month) && (!division || (r.equipment?.division || 'ACM') === division));
-                const rejected = new Set(monthRws.map((r,idx)=>getReworkEquipmentIdentity(r, idx))).size;
-                const defectItems = monthRws.reduce((sum,r)=>sum+normalizeRecordedDefects(r.defectTypes).length,0);
-                const rate = completed.units.length > 0 ? rejected / completed.units.length * 100 : null;
-                rows.push({ month, completed: completed.units.length, rejected, defectItems, cases: monthRws.length, rate });
+                const current = getMonthStats(month);
+                const prev = getMonthStats(getMonthOffset(month, -1));
+                const delta = current.defectItems - prev.defectItems;
+                let changeRate = null;
+                let changeType = 'normal';
+                if (prev.defectItems > 0) {
+                    changeRate = (delta / prev.defectItems) * 100;
+                } else if (current.defectItems > 0) {
+                    changeType = 'new';
+                } else {
+                    changeRate = 0;
+                }
+                rows.push({ ...current, prevDefectItems: prev.defectItems, delta, changeRate, changeType });
             }
             return rows;
         }
 
         function getKpiResolvedModel(eq, planBySn = null) {
+            const rawEquipment = String(eq?.equipment || '').trim();
             const sn = String(eq?.cskSn || '').trim().toUpperCase();
+
+            // 1순위: S/N에서 직접 장비 구분값을 추출합니다.
+            const snModel = getKpiModelFromSn(sn);
+            if (snModel) return snModel;
+
+            // 2순위: 현재 항목의 S/N이 불완전하지만 생산계획에서 동일 항목을 찾을 수 있으면
+            // 생산계획 S/N을 다시 기준으로 사용합니다.
             if (isMeaningfulEquipmentSn(sn) && planBySn?.has(sn)) {
-                const plan = planBySn.get(sn);
-                if (plan?.equipment) return normalizeKpiModelName(plan.equipment);
+                const planModel = getKpiModelFromSn(planBySn.get(sn)?.cskSn || '');
+                if (planModel) return planModel;
             }
-            return normalizeKpiModelName(eq?.equipment || '미지정');
+
+            // 마지막: S/N이 없는 과거 데이터만 장비명을 보조값으로 사용합니다.
+            return normalizeKpiModelName(rawEquipment || '미지정');
         }
 
         // [V5.19] 생산완료 판정: 최종결선 또는 전체 결선의 완료 이력이 있어야 생산완료로 인정합니다.
@@ -2687,7 +2744,7 @@
             });
 
             planForMonth.forEach((p, idx) => {
-                const model = normalizeKpiModelName(p.equipment || '미지정');
+                const model = getKpiResolvedModel(p, planBySn);
                 if (!equipmentStats[model]) equipmentStats[model] = { ...createKpiUnitStat(), minutes: 0, stdExpected: 0, stdActual: 0, stdMatches: 0, deliveryChecked: 0, deliveryOnTime: 0, logs: [] };
                 const key = getStableEquipmentKey(p, `PLAN:${idx}`);
                 const info = equipmentLogInfo[key];
@@ -2743,7 +2800,7 @@
                     const st = reworkWorkerDefects[worker];
                     st.cases += 1; st.minutes += getResolvedReworkMinutes(rw);
                     defects.forEach(d => st.defects[d] = (st.defects[d] || 0) + 1);
-                    st.equipments.add(`${normalizeKpiModelName(rw.equipment?.equipment || '미지정')} / ${rw.equipment?.cskSn || '-'}`);
+                    st.equipments.add(`${getKpiResolvedModel(rw.equipment || {}, planBySn)} / ${rw.equipment?.cskSn || '-'}`);
                 });
             });
 
@@ -2817,26 +2874,53 @@
             const summary = document.getElementById('kpi-defect-trend-summary');
             if (!container) return;
             const rows = buildMonthlyDefectTrend(endMonth, division, 12);
-            const rates = rows.map(r=>r.rate).filter(v=>v!==null && Number.isFinite(v));
-            const maxRate = Math.max(5, ...rates, 0);
-            const selected = rows.find(r=>r.month===endMonth) || rows[rows.length-1];
-            if (summary && selected) summary.textContent = `${selected.month} · ${selected.rate===null?'-':selected.rate.toFixed(1)+'%'} (${selected.rejected}/${selected.completed}대)`;
+            const counts = rows.map(r => r.defectItems).filter(Number.isFinite);
+            const maxCount = Math.max(1, ...counts, 0);
+            const selected = rows.find(r => r.month === endMonth) || rows[rows.length - 1];
+
+            const formatChange = (r, withDelta = true) => {
+                if (!r) return '-';
+                if (r.changeType === 'new') return withDelta ? `신규 발생 (+${r.delta}건)` : '신규';
+                const rate = Number.isFinite(r.changeRate) ? r.changeRate : 0;
+                const delta = r.delta || 0;
+                return withDelta ? `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}% (${delta >= 0 ? '+' : ''}${delta}건)` : `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`;
+            };
+
+            const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+            if (summary && selected) summary.textContent = `${selected.month} · ${selected.defectItems}건 · 전월 ${formatChange(selected, false)}`;
+            if (selected) {
+                setText('kpi-defect-current-count', `${selected.defectItems}건`);
+                setText('kpi-defect-current-sub', `재작업 ${selected.cases}회 · 복수 부적합 각각 1건`);
+                setText('kpi-defect-mom-change', selected.changeType === 'new' ? '신규 발생' : formatChange(selected, false));
+                setText('kpi-defect-mom-sub', `전월 ${selected.prevDefectItems}건 → 당월 ${selected.defectItems}건 · ${selected.delta >= 0 ? '+' : ''}${selected.delta}건`);
+                setText('kpi-defect-top1', selected.topDefect || '-');
+                const topShare = selected.defectItems > 0 ? selected.topCount / selected.defectItems * 100 : 0;
+                setText('kpi-defect-top1-sub', selected.topDefect ? `${selected.topCount}건 · 전체 부적합의 ${topShare.toFixed(1)}%` : '부적합 기록 없음');
+
+                const momEl = document.getElementById('kpi-defect-mom-change');
+                if (momEl) {
+                    momEl.className = `text-xl font-black font-mono-num ${selected.delta < 0 ? 'text-emerald-700' : selected.delta > 0 ? 'text-rose-700' : 'text-slate-900'}`;
+                }
+            }
 
             const bars = rows.map(r => {
-                const pct = r.rate===null ? 0 : Math.max(3, Math.min(100, r.rate / maxRate * 100));
-                const label = r.month.slice(5)+'월';
-                const rateText = r.rate===null ? '-' : r.rate.toFixed(1)+'%';
-                const isSelected = r.month===endMonth;
-                return `<button type="button" onclick="openKpiDefectMonthDetail('${r.month}')" class="group w-16 shrink-0 flex flex-col items-center justify-end h-52 focus:outline-none" title="${r.month} 부적합 ${rateText} · 반려 ${r.rejected}대 / 완성 ${r.completed}대">
-                    <span class="text-[9px] font-black ${isSelected?'text-rose-700':'text-slate-500'} mb-1">${rateText}</span>
-                    <div class="w-9 h-36 bg-slate-100 rounded-t-lg flex items-end overflow-hidden border border-slate-200 relative">
-                        <div class="w-full ${isSelected?'bg-rose-500':'bg-rose-300 group-hover:bg-rose-400'} transition-all rounded-t-md" style="height:${pct}%"></div>
+                const pct = r.defectItems <= 0 ? 0 : Math.max(4, Math.min(100, r.defectItems / maxCount * 100));
+                const label = r.month.slice(5) + '월';
+                const isSelected = r.month === endMonth;
+                const changeText = r.changeType === 'new' ? '신규' : `${(r.changeRate || 0) >= 0 ? '+' : ''}${(r.changeRate || 0).toFixed(1)}%`;
+                const changeClass = r.delta < 0 ? 'text-emerald-600' : r.delta > 0 ? 'text-rose-600' : 'text-slate-400';
+                const topText = r.topDefect ? `${r.topDefect} ${r.topCount}건` : '부적합 없음';
+                return `<button type="button" onclick="openKpiDefectMonthDetail('${r.month}')" class="group w-20 shrink-0 flex flex-col items-center justify-end h-56 focus:outline-none" title="${r.month} 부적합 ${r.defectItems}건 · 전월 ${changeText} · 최다 ${escapeHTML(topText)}">
+                    <span class="text-[9px] font-black ${isSelected ? 'text-rose-700' : 'text-slate-600'} mb-1">${r.defectItems}건</span>
+                    <div class="w-10 h-36 bg-slate-100 rounded-t-lg flex items-end overflow-hidden border border-slate-200 relative">
+                        <div class="w-full ${isSelected ? 'bg-rose-500' : 'bg-rose-300 group-hover:bg-rose-400'} transition-all rounded-t-md" style="height:${pct}%"></div>
                     </div>
-                    <span class="text-[9px] font-bold ${isSelected?'text-rose-700':'text-slate-500'} mt-1">${label}</span>
-                    <span class="text-[8px] text-slate-400">${r.rejected}/${r.completed}대</span>
+                    <span class="text-[9px] font-bold ${isSelected ? 'text-rose-700' : 'text-slate-500'} mt-1">${label}</span>
+                    <span class="text-[8px] font-bold ${changeClass}">${changeText}</span>
+                    <span class="text-[8px] text-slate-400 max-w-[76px] truncate" title="${escapeHTML(topText)}">${escapeHTML(topText)}</span>
                 </button>`;
             }).join('');
-            container.innerHTML = `<div class="min-w-[780px]"><div class="flex items-end gap-2 border-b border-slate-200 pb-2">${bars}</div><div class="mt-2 flex items-center justify-between text-[9px] text-slate-400"><span>막대 높이: 부적합 비율</span><span>표기: QC 반려 고유장비 / 완성장비</span></div></div>`;
+            container.innerHTML = `<div class="min-w-[900px]"><div class="flex items-end gap-2 border-b border-slate-200 pb-2">${bars}</div><div class="mt-2 flex items-center justify-between text-[9px] text-slate-400"><span>막대 높이: 월별 부적합 총 수량(건)</span><span>막대 아래: 전월 대비 증감률 · 최다 부적합 TOP1</span></div></div>`;
         }
 
         function renderKPIDashboard() {
@@ -3054,14 +3138,23 @@
         window.openKpiDefectMonthDetail = function(targetMonth) {
             const division = document.getElementById('kpi-division-filter')?.value || '';
             const trend = buildMonthlyDefectTrend(targetMonth, division, 1)[0];
-            const rows = reworkLogs.filter(r => !r.isDeleted && getResolvedReworkDate(r).startsWith(targetMonth) && (!division || (r.equipment?.division || 'ACM')===division));
+            const rows = reworkLogs.filter(r => !r.isDeleted && getResolvedReworkDate(r).startsWith(targetMonth) && (!division || (r.equipment?.division || 'ACM') === division));
             const defects = {};
-            rows.forEach(r => normalizeRecordedDefects(r.defectTypes).forEach(d => defects[d]=(defects[d]||0)+1));
-            const total = Object.values(defects).reduce((a,b)=>a+b,0);
-            const defectRows = Object.entries(defects).sort((a,b)=>b[1]-a[1]).map(([d,c])=>`<tr><td class="px-3 py-2 font-bold">${escapeHTML(d)}</td><td class="px-3 py-2 text-right">${c}건</td><td class="px-3 py-2 text-right font-black text-rose-700">${total?((c/total)*100).toFixed(1):'0.0'}%</td></tr>`);
-            const logRows = rows.map((r,i)=>`<tr><td class="px-3 py-2">${i+1}</td><td class="px-3 py-2">${escapeHTML(getResolvedReworkDate(r))}</td><td class="px-3 py-2 font-bold">${escapeHTML(normalizeKpiModelName(r.equipment?.equipment||'미지정'))}</td><td class="px-3 py-2 font-mono-num">${escapeHTML(r.equipment?.cskSn||'-')}</td><td class="px-3 py-2">${escapeHTML(normalizeRecordedDefects(r.defectTypes).join(', '))}</td><td class="px-3 py-2">${escapeHTML(r.worker||'-')}</td><td class="px-3 py-2 text-right">${getResolvedReworkMinutes(r)}분</td></tr>`);
-            const summary=kpiDetailCard('부적합 비율',trend.rate===null?'-':`${trend.rate.toFixed(1)}%`,`${trend.rejected}/${trend.completed}대`)+kpiDetailCard('완성 장비',`${trend.completed}대`)+kpiDetailCard('QC 반려 고유장비',`${trend.rejected}대`)+kpiDetailCard('부적합 항목',`${trend.defectItems}건`);
-            openKpiDetailModal(`${targetMonth} 월별 부적합 상세`, `${division||'사업부 전체'} · QC 반려 고유장비 / 완성장비`, summary, `<h4 class="font-black text-slate-800 mb-2">부적합 항목 구성</h4>${kpiTable(['부적합 항목','건수','항목 비율'],defectRows,'부적합 기록이 없습니다.')}<h4 class="font-black text-slate-800 mt-5 mb-2">QC 반려 기록</h4>${kpiTable(['No.','일자','장비','S/N','부적합','작업자','재작업시간'],logRows,'QC 반려 기록이 없습니다.')}`);
+            rows.forEach(r => normalizeRecordedDefects(r.defectTypes).forEach(d => defects[d] = (defects[d] || 0) + 1));
+            const total = Object.values(defects).reduce((a,b) => a + b, 0);
+            const defectRows = Object.entries(defects).sort((a,b) => b[1] - a[1]).map(([d,c], idx) => `<tr><td class="px-3 py-2 text-center font-black ${idx===0?'text-rose-600':''}">${idx===0?'TOP1':''}</td><td class="px-3 py-2 font-bold">${escapeHTML(d)}</td><td class="px-3 py-2 text-right">${c}건</td><td class="px-3 py-2 text-right font-black text-rose-700">${total ? ((c/total)*100).toFixed(1) : '0.0'}%</td></tr>`);
+            const logRows = rows.map((r,i) => `<tr><td class="px-3 py-2">${i+1}</td><td class="px-3 py-2">${escapeHTML(getResolvedReworkDate(r))}</td><td class="px-3 py-2 font-bold">${escapeHTML(getKpiResolvedModel(r.equipment || {}))}</td><td class="px-3 py-2 font-mono-num">${escapeHTML(r.equipment?.cskSn||'-')}</td><td class="px-3 py-2">${escapeHTML(normalizeRecordedDefects(r.defectTypes).join(', '))}</td><td class="px-3 py-2">${escapeHTML(r.worker||'-')}</td><td class="px-3 py-2 text-right">${getResolvedReworkMinutes(r)}분</td></tr>`);
+
+            let changeMain = '-';
+            let changeSub = `전월 ${trend.prevDefectItems}건 → 당월 ${trend.defectItems}건`;
+            if (trend.changeType === 'new') changeMain = '신규 발생';
+            else changeMain = `${trend.changeRate >= 0 ? '+' : ''}${(trend.changeRate || 0).toFixed(1)}%`;
+            const topShare = trend.defectItems > 0 ? trend.topCount / trend.defectItems * 100 : 0;
+            const summary = kpiDetailCard('부적합 총 수량', `${trend.defectItems}건`, '복수 부적합 각각 1건')
+                + kpiDetailCard('전월 부적합', `${trend.prevDefectItems}건`)
+                + kpiDetailCard('전월 대비', changeMain, `${changeSub} · ${trend.delta >= 0 ? '+' : ''}${trend.delta}건`)
+                + kpiDetailCard('최다 부적합 TOP1', trend.topDefect || '-', trend.topDefect ? `${trend.topCount}건 · ${topShare.toFixed(1)}%` : '부적합 기록 없음');
+            openKpiDetailModal(`${targetMonth} 월별 부적합 상세`, `${division||'사업부 전체'} · 부적합 항목 수량 기준`, summary, `<h4 class="font-black text-slate-800 mb-2">부적합 항목별 수량</h4>${kpiTable(['순위','부적합 항목','건수','구성비'], defectRows, '부적합 기록이 없습니다.')}<h4 class="font-black text-slate-800 mt-5 mb-2">QC 반려 기록</h4>${kpiTable(['No.','일자','장비','S/N','부적합','작업자','재작업시간'], logRows, 'QC 반려 기록이 없습니다.')}`);
         };
 
         function openKpiGoalModal() {
@@ -3388,7 +3481,7 @@
         window.clearSelectedEquipments = () => { selectedEquipments = []; renderSelectedEquipmentsList(); };
 
         function getAutoSchedulerStorageKey() {
-            return `kg-v5.23-auto-scheduler:${getRoomNormId(currentRoomId)}`;
+            return `kg-v5.26-auto-scheduler:${getRoomNormId(currentRoomId)}`;
         }
 
         function saveAutoSchedulerCheckMs(value) {
@@ -3761,8 +3854,8 @@
 
             // 유연한 모델명 매칭 로직 (축약어나 약칭이 있어도 정식 모델명으로 맵핑)
             if (normModel.includes('02BC012')) normModel = 'TDS010DC-02BC012';
-            else if (normModel.includes('02BC002')) normModel = 'TDS010DC-02BC002';
-            else if (normModel.includes('TCT020')) normModel = 'TCT020DC';
+            else if (normModel.includes('02BC002') || normModel === '2B') normModel = 'TDS010DC-02BC002';
+            else if (normModel.includes('3BC2') || normModel.includes('TCT020')) normModel = 'TCT020DC';
             else if (normModel.includes('KLEAA')) normModel = 'DTLR-TDS-KLEAA';
 
             if (STANDARD_WORK_TIMES[normModel] && STANDARD_WORK_TIMES[normModel][process]) {
