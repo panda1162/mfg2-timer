@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제조2팀 스마트 공정 시간 기록기 V5.18 (작업관리 / KPI 탭)</title>
+    <title>제조2팀 스마트 공정 시간 기록기 V5.23 (완성장비 1대평균 / 월별 부적합 추이 / QC 관리)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- xlsx-js-style CDN -->
@@ -40,7 +40,7 @@
                         <h1 class="text-lg font-black tracking-tight flex flex-wrap items-center gap-2">
                             제조2팀 스마트 공정 시간 기록기
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase border border-emerald-500/30">
-                                v5.18 Work + KPI Tabs
+                                v5.23 Completed Unit KPI + Monthly QC Trend
                             </span>
                             <span id="admin-mode-badge" class="hidden text-[9px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full uppercase border border-rose-500/30">
                                 ADMIN MODE
@@ -123,7 +123,7 @@
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- [V5.18] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
+        <!-- [V5.19] 작업관리 / KPI 상단 탭: 모든 사용자가 KPI 열람 가능 -->
         <nav id="main-view-tabs" class="bg-white border border-slate-200 rounded-2xl shadow-sm p-1.5 flex items-center gap-1.5" aria-label="메인 화면 탭">
             <button id="tab-btn-work" type="button" aria-selected="true" class="flex-1 sm:flex-none px-5 py-3 rounded-xl text-xs sm:text-sm font-black bg-slate-900 text-white shadow-sm transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-screwdriver-wrench"></i> 작업관리
@@ -257,7 +257,7 @@
                 <div>
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
                         <h3 class="text-md font-bold text-slate-900 flex items-center gap-1.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 pulse-red"></span> 현재 실시간 진행 중인 공정 현황 (Active Jobs)
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 pulse-red"></span> 작업자별 실시간 공정 현황 (Active Jobs)
                         </h3>
                         <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end">
                             <button id="btn-pause-all" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-[11px] font-bold transition flex items-center gap-1 border border-amber-200 shadow-sm active:scale-95">
@@ -324,8 +324,8 @@
                             <th class="py-3 px-4 bg-slate-100">작업자</th>
                             <th class="py-3 px-4 bg-slate-100">작업 장비 목록 (여러 대 묶음 표기)</th>
                             <th class="py-3 px-4 text-center bg-slate-100">공정 유형</th>
-                            <th class="py-3 px-4 text-center bg-slate-100">시작 시각</th>
-                            <th class="py-3 px-4 text-center bg-slate-100">종료 시각</th>
+                            <th class="py-3 px-4 text-center bg-slate-100">시작 날짜/시간</th>
+                            <th class="py-3 px-4 text-center bg-slate-100">종료 날짜/시간</th>
                             <th class="py-3 px-4 text-right bg-slate-100">소요 시간</th>
                             <th class="py-3 px-4 text-center bg-slate-100">관리 (수정/삭제)</th>
                         </tr>
@@ -344,7 +344,12 @@
                     <h4 class="text-md font-black text-slate-900 flex items-center gap-2"><i class="fa-solid fa-screwdriver-wrench text-rose-600"></i> QC 반려 재작업 관리</h4>
                     <p class="text-xs text-slate-600 mt-1">QC에서 부적합으로 제조2팀에 돌아온 장비만 기록합니다. 한 장비에 여러 부적합을 묶어서 선택하고, 재작업 시작/완료 시간은 자동 집계됩니다.</p>
                 </div>
-                <span class="text-[10px] font-bold px-3 py-1.5 rounded-full bg-white border border-rose-200 text-rose-700"><i class="fa-solid fa-hand-pointer mr-1"></i>정상 장비 입력 없음 · 반려 장비만 기록</span>
+                <div class="flex items-center gap-2 flex-wrap justify-end">
+                    <button id="btn-open-defect-manager" type="button" class="hidden px-3 py-1.5 rounded-xl bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-black transition items-center gap-1.5">
+                        <i class="fa-solid fa-list-check"></i> QC 부적합 항목 관리 <span class="text-[8px] text-rose-400">ADMIN</span>
+                    </button>
+                    <span class="text-[10px] font-bold px-3 py-1.5 rounded-full bg-white border border-rose-200 text-rose-700"><i class="fa-solid fa-hand-pointer mr-1"></i>정상 장비 입력 없음 · 반려 장비만 기록</span>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 p-4 bg-slate-50 border-b border-slate-200">
@@ -396,7 +401,7 @@
 
         </div>
 
-        <!-- [V5.18] KPI 전용 탭 -->
+        <!-- [V5.19] KPI 전용 탭 -->
         <div id="tab-kpi-content" class="hidden">
         <!-- [V5.11] 제조2팀 KPI 대시보드 -->
         <section id="kpi-section" class="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden flex flex-col">
@@ -416,15 +421,15 @@
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-9 gap-3 p-4 bg-slate-50 border-b border-slate-200">
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">생산계획</span><strong id="kpi-plan-total" class="text-xl font-black text-slate-900 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span class="text-[9px] text-slate-400 block mt-1">선택월 납품계획</span></div>
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">작업착수 장비</span><strong id="kpi-plan-touched" class="text-xl font-black text-indigo-700 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span id="kpi-progress-sub" class="text-[9px] text-slate-400 block mt-1">착수율 0%</span></div>
-                <div class="bg-white border border-emerald-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">생산완료 장비</span><strong id="kpi-plan-completed" class="text-xl font-black text-emerald-700 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span id="kpi-completion-sub" class="text-[9px] text-slate-400 block mt-1">완료율 0%</span></div>
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">정상 작업공수</span><strong id="kpi-normal-md" class="text-xl font-black text-slate-900 font-mono-num">0.000</strong><span class="text-xs text-slate-500 ml-1">M/D</span><span id="kpi-normal-minutes" class="text-[9px] text-slate-400 block mt-1">0분</span></div>
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">장비 1대 평균공수</span><strong id="kpi-avg-unit-md" class="text-xl font-black text-emerald-700 font-mono-num">0.000</strong><span class="text-xs text-slate-500 ml-1">M/D</span><span id="kpi-avg-unit-sub" class="text-[9px] text-slate-400 block mt-1">실적 장비 기준</span></div>
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">표준시간 달성률</span><strong id="kpi-standard-rate" class="text-xl font-black text-slate-900 font-mono-num">-</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-standard-diff" class="text-[9px] text-slate-400 block mt-1">기준 매칭 없음</span></div>
+                <button type="button" data-kpi-detail="plan" class="text-left bg-white border border-slate-200 rounded-xl p-3 hover:border-indigo-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-indigo-400"><span class="text-[10px] font-bold text-slate-400 block">생산계획 <i class="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1"></i></span><strong id="kpi-plan-total" class="text-xl font-black text-slate-900 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span class="text-[9px] text-slate-400 block mt-1">클릭: 계획 장비 목록</span></button>
+                <button type="button" data-kpi-detail="touched" class="text-left bg-white border border-slate-200 rounded-xl p-3 hover:border-indigo-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-indigo-400"><span class="text-[10px] font-bold text-slate-400 block">작업착수 장비 <i class="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1"></i></span><strong id="kpi-plan-touched" class="text-xl font-black text-indigo-700 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span id="kpi-progress-sub" class="text-[9px] text-slate-400 block mt-1">착수율 0%</span></button>
+                <button type="button" data-kpi-detail="completed" class="text-left bg-white border border-emerald-200 rounded-xl p-3 hover:border-emerald-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-emerald-400"><span class="text-[10px] font-bold text-slate-400 block">생산완료 장비 <i class="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1"></i></span><strong id="kpi-plan-completed" class="text-xl font-black text-emerald-700 font-mono-num">0</strong><span class="text-xs text-slate-500 ml-1">대</span><span id="kpi-completion-sub" class="text-[9px] text-slate-400 block mt-1">완료율 0%</span></button>
+                <button type="button" data-kpi-detail="normal" class="text-left bg-white border border-slate-200 rounded-xl p-3 hover:border-indigo-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-indigo-400"><span class="text-[10px] font-bold text-slate-400 block">정상 작업공수 <i class="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1"></i></span><strong id="kpi-normal-md" class="text-xl font-black text-slate-900 font-mono-num">0.000</strong><span class="text-xs text-slate-500 ml-1">M/D</span><span id="kpi-normal-minutes" class="text-[9px] text-slate-400 block mt-1">0분</span></button>
+                <button type="button" data-kpi-detail="avg" class="text-left bg-white border border-slate-200 rounded-xl p-3 hover:border-emerald-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-emerald-400"><span class="text-[10px] font-bold text-slate-400 block">장비 1대 평균공수 <i class="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1"></i></span><strong id="kpi-avg-unit-md" class="text-xl font-black text-emerald-700 font-mono-num">0.000</strong><span class="text-xs text-slate-500 ml-1">M/D</span><span id="kpi-avg-unit-sub" class="text-[9px] text-slate-400 block mt-1">실제 장비 기준</span></button>
+                <button type="button" data-kpi-detail="standard" class="text-left bg-white border border-slate-200 rounded-xl p-3 hover:border-purple-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-purple-400"><span class="text-[10px] font-bold text-slate-400 block">표준시간 달성률 <i class="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1"></i></span><strong id="kpi-standard-rate" class="text-xl font-black text-slate-900 font-mono-num">-</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-standard-diff" class="text-[9px] text-slate-400 block mt-1">기준 매칭 없음</span></button>
                 <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">납기 내 작업완료</span><strong id="kpi-delivery-rate" class="text-xl font-black text-slate-900 font-mono-num">-</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-delivery-sub" class="text-[9px] text-slate-400 block mt-1">최종/전체결선 완료일 기준</span></div>
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">QC 재작업 공수비중</span><strong id="kpi-rework-share" class="text-xl font-black text-rose-700 font-mono-num">0.0</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-rework-sub" class="text-[9px] text-slate-400 block mt-1">정상+재작업 대비</span></div>
-                <div class="bg-white border border-slate-200 rounded-xl p-3"><span class="text-[10px] font-bold text-slate-400 block">전월 대비 평균공수</span><strong id="kpi-mom-md" class="text-lg font-black text-slate-900 font-mono-num">-</strong><span id="kpi-mom-sub" class="text-[9px] text-slate-400 block mt-1">비교 데이터 없음</span></div>
+                <button type="button" data-kpi-detail="rework" class="text-left bg-white border border-slate-200 rounded-xl p-3 hover:border-rose-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-rose-400"><span class="text-[10px] font-bold text-slate-400 block">QC 재작업 공수비중 <i class="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1"></i></span><strong id="kpi-rework-share" class="text-xl font-black text-rose-700 font-mono-num">0.0</strong><span class="text-xs text-slate-500 ml-1">%</span><span id="kpi-rework-sub" class="text-[9px] text-slate-400 block mt-1">정상+재작업 대비</span></button>
+                <button type="button" data-kpi-detail="mom" class="text-left bg-white border border-slate-200 rounded-xl p-3 hover:border-sky-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-sky-400"><span class="text-[10px] font-bold text-slate-400 block">전월 대비 평균공수 <i class="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1"></i></span><strong id="kpi-mom-md" class="text-lg font-black text-slate-900 font-mono-num">-</strong><span id="kpi-mom-sub" class="text-[9px] text-slate-400 block mt-1">비교 데이터 없음</span></button>
             </div>
 
             <div class="px-5 pt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -434,10 +439,28 @@
                 <div id="kpi-goal-rework-card" class="rounded-xl border border-slate-200 bg-white p-3"><div class="flex justify-between text-[10px] font-bold"><span class="text-slate-500">재작업 공수비중 상한</span><span id="kpi-goal-rework-text">3%</span></div><div class="h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div id="kpi-goal-rework-bar" class="h-full bg-rose-500 rounded-full" style="width:0%"></div></div></div>
             </div>
 
+
+
+            <!-- [V5.23] 월별 부적합 비율 추이 -->
+            <div class="px-5 pt-4">
+                <div class="border border-rose-200 rounded-2xl overflow-hidden bg-white">
+                    <div class="px-4 py-3 bg-gradient-to-r from-rose-50 to-white border-b border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-chart-column text-rose-500 mr-1"></i>월별 부적합 비율 추이</h5>
+                            <p class="text-[9px] text-slate-500 mt-0.5">부적합 비율 = 월별 QC 반려 고유 장비 ÷ 해당 월 완성 장비 × 100 · 막대를 누르면 불량 항목 상세를 확인할 수 있습니다.</p>
+                        </div>
+                        <span id="kpi-defect-trend-summary" class="text-[10px] font-black px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">최근 12개월</span>
+                    </div>
+                    <div id="kpi-defect-trend-chart" class="p-4 overflow-x-auto custom-scrollbar">
+                        <div class="py-10 text-center text-slate-400 text-xs">부적합 추이 데이터를 계산 중입니다.</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="p-5 grid grid-cols-1 xl:grid-cols-2 gap-5">
                 <div class="border border-slate-200 rounded-2xl overflow-hidden">
                     <div class="px-4 py-3 bg-slate-50 border-b border-slate-200"><h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-industry text-indigo-500 mr-1"></i>장비 모델별 생산성</h5></div>
-                    <div class="overflow-x-auto max-h-[360px] custom-scrollbar"><table class="w-full min-w-[760px] text-xs"><thead class="sticky top-0 bg-slate-100 text-[10px] text-slate-500"><tr><th class="px-3 py-2 text-left">장비</th><th class="px-3 py-2 text-right">실적대수</th><th class="px-3 py-2 text-right">총시간</th><th class="px-3 py-2 text-right">1대 평균</th><th class="px-3 py-2 text-right">1대 M/D</th><th class="px-3 py-2 text-right">표준달성</th><th class="px-3 py-2 text-right">납기 내 완료</th></tr></thead><tbody id="kpi-equipment-body" class="divide-y divide-slate-100"><tr><td colspan="7" class="py-6 text-center text-slate-400">데이터가 없습니다.</td></tr></tbody></table></div>
+                    <div class="overflow-x-auto max-h-[360px] custom-scrollbar"><table class="w-full min-w-[760px] text-xs"><thead class="sticky top-0 bg-slate-100 text-[10px] text-slate-500"><tr><th class="px-3 py-2 text-left">장비</th><th class="px-3 py-2 text-right">완성대수</th><th class="px-3 py-2 text-right">완성 1대분 총시간</th><th class="px-3 py-2 text-right">1대 평균</th><th class="px-3 py-2 text-right">1대 M/D</th><th class="px-3 py-2 text-right">표준달성</th><th class="px-3 py-2 text-right">납기 내 완료</th></tr></thead><tbody id="kpi-equipment-body" class="divide-y divide-slate-100"><tr><td colspan="7" class="py-6 text-center text-slate-400">데이터가 없습니다.</td></tr></tbody></table></div>
                 </div>
                 <div class="border border-slate-200 rounded-2xl overflow-hidden">
                     <div class="px-4 py-3 bg-slate-50 border-b border-slate-200"><h5 class="text-xs font-black text-slate-800"><i class="fa-solid fa-gears text-purple-500 mr-1"></i>공정별 평균시간 / 공수</h5></div>
@@ -448,12 +471,31 @@
                     <div class="overflow-x-auto max-h-[320px] custom-scrollbar"><table class="w-full min-w-[640px] text-xs"><thead class="sticky top-0 bg-slate-100 text-[10px] text-slate-500"><tr><th class="px-3 py-2 text-left">작업자</th><th class="px-3 py-2 text-right">작업기록</th><th class="px-3 py-2 text-right">투입시간</th><th class="px-3 py-2 text-right">투입공수</th><th class="px-3 py-2 text-right">인력공수 비중</th></tr></thead><tbody id="kpi-worker-body" class="divide-y divide-slate-100"><tr><td colspan="5" class="py-6 text-center text-slate-400">데이터가 없습니다.</td></tr></tbody></table></div>
                 </div>
             </div>
-            <div class="px-5 pb-5"><div id="kpi-note" class="text-[10px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">표준시간이 등록되지 않은 공정은 표준시간 달성률 계산에서 제외됩니다. 작업착수율은 계획 장비 중 작업실적이 1건 이상 등록된 장비 기준이며, 생산완료율은 최종결선 또는 전체 결선 완료 이력이 등록된 장비 기준입니다. 납기 내 작업완료율은 납품일이 도래했거나 이미 완료된 장비를 대상으로 최종결선/전체 결선 완료일이 납품일 이내인지 비교합니다.</div></div>
+            <div class="px-5 pb-5"><div id="kpi-note" class="text-[10px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">표준시간이 등록되지 않은 공정은 표준시간 달성률 계산에서 제외됩니다. 장비 1대 평균공수는 동일 장비의 좌면+정면+우면+최종결선이 모두 완성되거나 전체결선이 완료된 장비만 대상으로 하며, 작업월이 달라도 완성된 달에 이전 작업시간까지 합산합니다. 하네스는 ‘하네스 작업’으로 별도 집계하며 1대 평균공수에서 제외합니다. 월별 부적합 비율은 해당 월 QC 반려 고유 장비 수 ÷ 해당 월 완성 장비 수 × 100입니다.</div></div>
         </section>
         </div>
 
     </main>
 
+
+    <!-- [V5.19] KPI 카드 상세 분석 모달 -->
+    <div id="kpi-detail-modal" class="fixed inset-0 bg-slate-950/60 z-[135] flex items-center justify-center hidden" style="display:none;">
+        <div class="bg-white rounded-2xl w-[96vw] max-w-6xl max-h-[90vh] shadow-2xl mx-3 flex flex-col overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-indigo-50 flex justify-between items-start gap-3">
+                <div>
+                    <h3 id="kpi-detail-title" class="text-base font-black text-slate-900 flex items-center gap-2"><i class="fa-solid fa-chart-column text-indigo-600"></i>KPI 상세</h3>
+                    <p id="kpi-detail-subtitle" class="text-[11px] text-slate-500 mt-1"></p>
+                </div>
+                <button id="btn-close-kpi-detail" type="button" class="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-white border border-transparent hover:border-slate-200 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="kpi-detail-summary" class="px-5 pt-4 grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+            <div id="kpi-detail-body" class="p-5 pt-4 overflow-auto custom-scrollbar text-xs flex-1"></div>
+            <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-3">
+                <span class="text-[10px] text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>S/N 없는 과거 하네스/수동 입력은 공정별 랜덤 ID를 대수로 합산하지 않고 한 기록의 최대 입력대수 기준으로 보수 집계합니다.</span>
+                <button id="btn-close-kpi-detail-bottom" type="button" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold">닫기</button>
+            </div>
+        </div>
+    </div>
 
     <!-- [V5.11] KPI 목표 설정 모달 -->
     <div id="kpi-goal-modal" class="fixed inset-0 bg-slate-900/50 z-[120] flex items-center justify-center hidden" style="display:none;">
@@ -501,7 +543,7 @@
             <div class="flex justify-between items-start gap-3 border-b border-slate-100 pb-3 mb-4">
                 <div>
                     <h3 class="text-md font-black text-slate-900"><i class="fa-solid fa-screwdriver-wrench text-rose-600 mr-1"></i> QC 반려 재작업 시작</h3>
-                    <p class="text-[11px] text-slate-500 mt-1">부적합이 여러 개면 해당 항목을 모두 선택합니다. 상세 내용을 모르면 ‘상세미확인’ 그대로 시작할 수 있습니다.</p>
+                    <p class="text-[11px] text-slate-500 mt-1">부적합이 여러 개면 해당 항목을 모두 선택합니다. 해당 항목이 없으면 ‘기타’를 선택하세요.</p>
                 </div>
                 <button type="button" onclick="closeReworkModal()" class="text-slate-400 hover:text-slate-700 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
@@ -551,7 +593,7 @@
     <div id="edit-time-modal" class="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl mx-4 transform transition-all scale-95">
             <h3 class="text-md font-bold text-slate-900 mb-2"><i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> 작업 소요 시간 수정</h3>
-            <p class="text-xs text-slate-500 leading-relaxed mb-4">일시정지를 누르지 못한 경우 등, 실제 작업한 총 소요 시간(분)으로 수정해주세요.</p>
+            <p class="text-xs text-slate-500 leading-relaxed mb-4">일시정지를 누르지 못한 경우 등 실제 작업한 누적 시간(분)만 보정합니다. 작업 시작 날짜/시간은 변경되지 않습니다.</p>
             <div class="mb-4">
                 <label class="block text-xs font-bold text-slate-700 mb-1">소요 시간 (분)</label>
                 <input type="number" id="edit-time-input" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold bg-slate-50 focus:ring-2 focus:ring-indigo-500" min="0">
@@ -675,6 +717,32 @@
         </div>
     </div>
 
+    <!-- [V5.22] QC 부적합 항목 관리자 -->
+    <div id="defect-manager-modal" class="fixed inset-0 bg-slate-900/50 z-[130] flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl mx-4 flex flex-col space-y-4 max-h-[88vh]">
+            <div class="flex justify-between items-start gap-3 border-b border-slate-100 pb-3">
+                <div>
+                    <h3 class="text-md font-black text-slate-900 flex items-center gap-2"><i class="fa-solid fa-list-check text-rose-600"></i> QC 부적합 항목 관리</h3>
+                    <p class="text-[10px] text-slate-500 mt-1">추가·수정·삭제한 항목은 제조2팀 룸에 저장되어 모든 PC에 실시간 반영됩니다. 기존 재작업 이력의 불량명은 변경되지 않습니다.</p>
+                </div>
+                <button id="btn-close-defect-manager" type="button" class="text-slate-400 hover:text-slate-700 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="flex gap-2">
+                <input id="new-defect-input" type="text" maxlength="40" placeholder="새 QC 부적합 항목 입력..." class="flex-1 px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold bg-slate-50 focus:ring-2 focus:ring-rose-500">
+                <button id="btn-add-defect" type="button" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow-sm"><i class="fa-solid fa-plus mr-1"></i>추가</button>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-500">
+                <span>등록 항목 <strong id="defect-manager-count" class="text-rose-600">0</strong>개</span>
+                <span><i class="fa-solid fa-pen text-slate-400 mr-1"></i>모든 항목 추가·수정·삭제 가능</span>
+            </div>
+            <div id="defect-manager-list" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar border border-slate-200 rounded-xl bg-slate-50/60 p-2.5 space-y-2"></div>
+            <div class="flex justify-between items-center pt-3 border-t border-slate-100">
+                <button id="btn-reset-defects" type="button" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold"><i class="fa-solid fa-rotate-left mr-1"></i>기본 항목 복원</button>
+                <button id="btn-close-defect-manager-bottom" type="button" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <div id="worker-modal" class="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl mx-4 transform transition-all scale-95 flex flex-col space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -752,7 +820,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.18 Work+KPI Tabs Fail-Closed</p>
+            <p>© 2026 제조2팀 ACM 스마트 공정 이력관리 시스템 V5.23 Completed Unit KPI + Monthly QC Trend + Fail-Closed</p>
         </div>
     </footer>
 
@@ -830,6 +898,7 @@
         let lastAutoResumeTime = ''; // 최근 자동 일괄재개 처리 시각(표시/진단용)
         let lastAutoPauseTime = ''; // 최근 자동 일괄정지 처리 시각(표시/진단용)
         let autoScheduleBusy = false; // 자동 스케줄 중복 실행 방지
+        let taskTimerMigrationBusy = false; // V5.19 이하 진행 작업의 안정형 타이머 전환 중복 방지
         let lastAutoSchedulerCheckMs = 0; // 마지막으로 정상 확인/처리한 시각
         const AUTO_PAUSE_TIMES = ['10:00', '11:50', '15:00', '16:50'];
         const AUTO_RESUME_TIMES = ['07:50', '10:15', '12:50', '15:15'];
@@ -845,9 +914,10 @@
         let reworkLogs = [];
         let reworkModalContext = null;
         let reworkSelectedWorkers = [];
-        let reworkSelectedDefects = ['상세미확인'];
+        let reworkSelectedDefects = [];
         let editingReworkLogId = null;
-        const REWORK_DEFECT_TYPES = ['압착', '오결선', '넘버링', '케이블', '취부', '체결', '외관', 'I-Marking 불량', '기타', '상세미확인'];
+        const DEFAULT_REWORK_DEFECT_TYPES = ['압착', '오결선', '넘버링', '케이블', '취부', '체결', '외관', 'I-Marking 불량', '기타'];
+        let reworkDefectTypes = [...DEFAULT_REWORK_DEFECT_TYPES];
         
         const escapeHTML = (str) => {
             if (typeof str !== 'string') return str;
@@ -900,6 +970,7 @@
             const btnClearLogs = document.getElementById('btn-clear-logs');
             const btnLoadDemo = document.getElementById('btn-load-demo');
             const btnPlanAdd = document.getElementById('btn-open-plan-add-modal');
+            const btnDefectManager = document.getElementById('btn-open-defect-manager');
 
             if (btnPunchIn) btnPunchIn.disabled = !canWrite;
             if (btnPauseAll) btnPauseAll.disabled = !canWrite;
@@ -907,6 +978,7 @@
             if (btnClearLogs) btnClearLogs.disabled = !canWrite;
             if (btnLoadDemo) btnLoadDemo.disabled = !(canWrite && isAdminMode);
             if (btnPlanAdd) btnPlanAdd.disabled = !(canWrite && isAdminMode);
+            if (btnDefectManager) btnDefectManager.disabled = !(canWrite && isAdminMode);
             document.querySelectorAll('[data-rework-write="true"]').forEach(btn => { btn.disabled = !canWrite || btn.dataset.reworkLocked === 'true'; });
         }
 
@@ -1075,7 +1147,7 @@
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
             const now = new Date().getTime();
-            const elapsedSnapshot = getSafeTaskElapsedSnapshot(task, now);
+            const elapsedSnapshot = getStableTaskElapsedSnapshot(task, now);
             const currentElapsedMins = Math.floor(elapsedSnapshot.elapsedMs / 60000);
             
             editingActiveTaskId = taskId; editingLogId = null; editingReworkLogId = null;
@@ -1183,7 +1255,17 @@
                     }
                     else if (actionType === 'PAUSE_TOGGLE') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
-                        if (idx > -1) { newRunning[idx].paused = payload.paused; newRunning[idx].pausedAt = payload.pausedAt; newRunning[idx].totalPausedDuration = payload.totalPausedDuration; }
+                        if (idx > -1) {
+                            const task = newRunning[idx];
+                            task.paused = payload.paused;
+                            task.pausedAt = payload.pausedAt;
+                            task.totalPausedDuration = Math.max(0, Number(payload.totalPausedDuration) || 0);
+                            if (Number.isFinite(Number(payload.elapsedAccumulatedMs))) task.elapsedAccumulatedMs = Math.max(0, Number(payload.elapsedAccumulatedMs));
+                            task.lastResumedAt = payload.lastResumedAt ?? null;
+                            task.timerVersion = 2;
+                            if (!Number.isFinite(Number(task.originalStartTime)) || Number(task.originalStartTime) <= 0) task.originalStartTime = Number(task.startTime) || Date.now();
+                            task.updatedAt = Date.now();
+                        }
                     } 
                     else if (actionType === 'TOGGLE_HOLD') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
@@ -1192,26 +1274,37 @@
                     else if (actionType === 'PAUSE_ALL') {
                         const ts = Number(payload.timestamp) || Date.now();
                         newRunning.forEach(task => {
-                            if (!task.paused) {
-                                const taskStart = Number(task.startTime) || ts;
-                                // [V5.18] 누적 정지시간이 전체 경과시간을 초과한 기존 오류값은 정지 시점에 즉시 정리
-                                const safeSnapshot = getSafeTaskElapsedSnapshot(task, ts);
-                                task.totalPausedDuration = safeSnapshot.pausedMs;
+                            const taskStart = Number(task.startTime) || ts;
+                            const lastRunStateAt = Math.max(taskStart, Number(task.lastResumedAt) || taskStart);
+                            // [V5.20] 과거 자동 스케줄이 작업 시작 전/최근 수동재개 이전 상태를 다시 덮어쓰지 않도록 차단
+                            if (!task.paused && taskStart <= ts && lastRunStateAt <= ts) {
+                                const snapshot = getStableTaskElapsedSnapshot(task, ts);
+                                task.timerVersion = 2;
+                                task.originalStartTime = Number(task.originalStartTime) > 0 ? Number(task.originalStartTime) : taskStart;
+                                task.elapsedAccumulatedMs = snapshot.elapsedMs;
+                                task.lastResumedAt = null;
+                                task.totalPausedDuration = snapshot.pausedMs;
                                 task.paused = true;
-                                // 놓친 스케줄 보정 시 작업 시작 전 시각으로 pausedAt이 내려가지 않도록 보호
-                                task.pausedAt = Math.max(ts, taskStart);
+                                task.pausedAt = ts;
+                                task.updatedAt = Date.now();
                             }
                         });
                     }
                     else if (actionType === 'RESUME_ALL') {
                         const ts = Number(payload.timestamp) || Date.now();
                         newRunning.forEach(task => {
-                            if (task.paused && !task.isHeld) {
-                                // [V5.18] 중복/비정상 자동정지 이력으로 정지 누적값이 경과시간을 넘지 않도록 복구
-                                const resumeState = getSafePausedTotalAfterResume(task, ts);
-                                task.totalPausedDuration = resumeState.totalPausedDuration;
+                            const pausedAt = Number(task.pausedAt) || 0;
+                            // [V5.20] 예약 재개시각 뒤에 사용자가 수동 정지한 작업은 과거 자동재개가 해제하지 않음
+                            if (task.paused && !task.isHeld && pausedAt > 0 && pausedAt <= ts) {
+                                const snapshot = getStableTaskElapsedSnapshot(task, ts);
+                                task.timerVersion = 2;
+                                task.originalStartTime = Number(task.originalStartTime) > 0 ? Number(task.originalStartTime) : (Number(task.startTime) || ts);
+                                task.elapsedAccumulatedMs = snapshot.elapsedMs;
+                                task.lastResumedAt = ts;
+                                task.totalPausedDuration = snapshot.pausedMs;
                                 task.paused = false;
                                 task.pausedAt = null;
+                                task.updatedAt = Date.now();
                             }
                         });
                     }
@@ -1238,10 +1331,14 @@
                     else if (actionType === 'EDIT_ACTIVE_TIME') {
                         const idx = newRunning.findIndex(x => x.id === payload.id);
                         if (idx > -1) {
-                            newRunning[idx].startTime = payload.newStartTime;
-                            if (Number.isFinite(Number(payload.newTotalPausedDuration))) {
-                                newRunning[idx].totalPausedDuration = Math.max(0, Number(payload.newTotalPausedDuration));
-                            }
+                            const task = newRunning[idx];
+                            const refTs = Number(payload.referenceTime) || Date.now();
+                            // [V5.20] 진행시간 수정은 시작시간을 변경하지 않고 누적시간만 보정
+                            task.timerVersion = 2;
+                            task.originalStartTime = Number(task.originalStartTime) > 0 ? Number(task.originalStartTime) : (Number(task.startTime) || refTs);
+                            task.elapsedAccumulatedMs = Math.max(0, Number(payload.desiredElapsedMs) || 0);
+                            task.lastResumedAt = task.paused ? null : refTs;
+                            task.updatedAt = Date.now();
                         }
                     }
                     else if (actionType === 'EDIT_ACTIVE_WORKER') {
@@ -1324,10 +1421,16 @@
                 process: selectedProcess,
                 processDetail: selectedProcessDetail || '',
                 startTime: timestamp,
+                originalStartTime: timestamp,
+                timerVersion: 2,
+                elapsedAccumulatedMs: 0,
+                lastResumedAt: timestamp,
                 paused: false, 
                 pausedAt: null, 
                 totalPausedDuration: 0,
                 isHeld: false,
+                createdAt: timestamp,
+                updatedAt: timestamp,
                 equipments: selectedEquipments.map(item => ({ id: item.id, equipment: item.equipment, division: item.division, cskSn: item.cskSn, deliveryDate: item.deliveryDate }))
             };
             
@@ -1357,19 +1460,24 @@
                 await updateTaskInCloudSecurely('TOGGLE_HOLD', { id: taskId, isHeld: false });
             }
 
-            let updatedPayload = { id: task.id, paused: task.paused, pausedAt: task.pausedAt, totalPausedDuration: Math.max(0, Number(task.totalPausedDuration) || 0) };
+            const stableSnapshot = getStableTaskElapsedSnapshot(task, now);
+            let updatedPayload = {
+                id: task.id,
+                paused: task.paused,
+                pausedAt: task.pausedAt,
+                totalPausedDuration: stableSnapshot.pausedMs,
+                elapsedAccumulatedMs: stableSnapshot.elapsedMs,
+                lastResumedAt: task.lastResumedAt ?? null
+            };
 
             if (!task.paused) {
-                // [V5.18] 이미 누적 정지값이 깨져 있으면 일시정지하는 순간 정상값으로 복구
-                const safeSnapshot = getSafeTaskElapsedSnapshot(task, now);
-                updatedPayload.totalPausedDuration = safeSnapshot.pausedMs;
                 updatedPayload.paused = true;
                 updatedPayload.pausedAt = now;
+                updatedPayload.lastResumedAt = null;
             } else {
-                const resumeState = getSafePausedTotalAfterResume(task, now);
-                updatedPayload.totalPausedDuration = resumeState.totalPausedDuration;
                 updatedPayload.paused = false;
                 updatedPayload.pausedAt = null;
+                updatedPayload.lastResumedAt = now;
             }
             const success = await updateTaskInCloudSecurely('PAUSE_TOGGLE', updatedPayload);
             if(success) {
@@ -1479,12 +1587,130 @@
             return { totalPausedDuration, recovered: wasCorrupt };
         }
 
+
+        // [V5.20] 작업 ID(task_타임스탬프_...) 또는 저장된 원본값으로 최초 시작시각을 복구합니다.
+        function getImmutableTaskStartTime(task) {
+            const original = Number(task?.originalStartTime);
+            if (Number.isFinite(original) && original > 0) return original;
+            const idMatch = String(task?.id || '').match(/^task_(\d{12,14})_/);
+            if (idMatch) {
+                const fromId = Number(idMatch[1]);
+                if (Number.isFinite(fromId) && fromId > 0) return fromId;
+            }
+            const created = Number(task?.createdAt);
+            if (Number.isFinite(created) && created > 0) return created;
+            const start = Number(task?.startTime);
+            return Number.isFinite(start) && start > 0 ? start : Date.now();
+        }
+
+        function migrateLegacyTaskClockLocally(task, nowMs = Date.now()) {
+            if (!task || Number(task.timerVersion) >= 2) return task;
+            const now = Number(nowMs) || Date.now();
+            // 현재 화면에서 보이던 진행시간을 그대로 보존한 뒤 시작시각만 원래 값으로 복원합니다.
+            const legacySnapshot = getSafeTaskElapsedSnapshot(task, now);
+            const originalStart = getImmutableTaskStartTime(task);
+            return {
+                ...task,
+                startTime: originalStart,
+                originalStartTime: originalStart,
+                timerVersion: 2,
+                elapsedAccumulatedMs: legacySnapshot.elapsedMs,
+                lastResumedAt: task.paused ? null : now,
+                totalPausedDuration: legacySnapshot.pausedMs,
+                updatedAt: Number(task.updatedAt) || now
+            };
+        }
+
+        async function persistLegacyTaskClockMigration(roomId, migratedTasks) {
+            if (taskTimerMigrationBusy || !db || !currentUser || !Array.isArray(migratedTasks) || migratedTasks.length === 0) return;
+            taskTimerMigrationBusy = true;
+            try {
+                const byId = new Map(migratedTasks.map(t => [t.id, t]));
+                const roomRef = getRoomDocRef(roomId);
+                await runTransaction(db, async (transaction) => {
+                    const sfDoc = await transaction.get(roomRef);
+                    if (!sfDoc.exists()) return;
+                    const data = sfDoc.data() || {};
+                    const current = Array.isArray(data.runningTasks) ? JSON.parse(JSON.stringify(data.runningTasks)) : [];
+                    let changed = false;
+                    current.forEach(task => {
+                        const migrated = byId.get(task.id);
+                        if (!migrated || Number(task.timerVersion) >= 2) return;
+                        task.startTime = migrated.startTime;
+                        task.originalStartTime = migrated.originalStartTime;
+                        task.timerVersion = 2;
+                        task.elapsedAccumulatedMs = migrated.elapsedAccumulatedMs;
+                        task.lastResumedAt = migrated.lastResumedAt;
+                        task.totalPausedDuration = migrated.totalPausedDuration;
+                        task.updatedAt = Date.now();
+                        changed = true;
+                    });
+                    if (changed) transaction.update(roomRef, { runningTasks: current, updatedAt: Date.now() });
+                });
+            } catch (e) {
+                console.warn('[V5.20] legacy timer migration skipped:', e?.message || e);
+            } finally {
+                taskTimerMigrationBusy = false;
+            }
+        }
+
+        // [V5.20] 안정형 누적 타이머 엔진
+        // startTime은 최초 시작 시각으로 고정하고, 진행시간은 누적값 + 마지막 재개시각으로 계산합니다.
+        function getStableTaskElapsedSnapshot(task, nowMs = Date.now()) {
+            const now = Number(nowMs) || Date.now();
+            const startMs = Number(task?.timerVersion) >= 2 ? getImmutableTaskStartTime(task) : Number(task?.startTime);
+            if (!Number.isFinite(startMs) || startMs <= 0) {
+                return { elapsedMs: 0, pausedMs: 0, recovered: true, wallMs: 0, endPoint: now, stable: true };
+            }
+
+            const hasStableClock = Number(task?.timerVersion) >= 2 || Number.isFinite(Number(task?.elapsedAccumulatedMs));
+            if (!hasStableClock) {
+                const legacy = getSafeTaskElapsedSnapshot(task, now);
+                return { ...legacy, stable: false };
+            }
+
+            const endPoint = task?.paused
+                ? Math.min(now, Math.max(startMs, Number(task?.pausedAt) || now))
+                : now;
+            const accumulated = Math.max(0, Number(task?.elapsedAccumulatedMs) || 0);
+            let elapsedMs = accumulated;
+
+            if (!task?.paused) {
+                const rawAnchor = Number(task?.lastResumedAt);
+                const anchor = Number.isFinite(rawAnchor) && rawAnchor > 0
+                    ? Math.min(now, Math.max(startMs, rawAnchor))
+                    : startMs;
+                elapsedMs += Math.max(0, now - anchor);
+            }
+
+            elapsedMs = Math.max(0, elapsedMs);
+            const wallMs = Math.max(0, now - startMs);
+            const pausedMs = Math.max(0, wallMs - Math.min(wallMs, elapsedMs));
+            return { elapsedMs, pausedMs, recovered: false, wallMs, endPoint, stable: true };
+        }
+
+        function formatKstTimeString(ts, includeSeconds = true) {
+            const n = Number(ts);
+            if (!Number.isFinite(n) || n <= 0) return '-';
+            return new Intl.DateTimeFormat('ko-KR', {
+                timeZone: 'Asia/Seoul', hour12: false, hour: '2-digit', minute: '2-digit',
+                ...(includeSeconds ? { second: '2-digit' } : {})
+            }).format(new Date(n));
+        }
+
+        function formatKstDateTime(ts, includeSeconds = true) {
+            const n = Number(ts);
+            if (!Number.isFinite(n) || n <= 0) return '-';
+            return `${getKstDateString(n)} ${formatKstTimeString(n, includeSeconds)}`;
+        }
+
         window.triggerPunchOut = async function(taskId) {
             if (!checkFailClosedCanWrite()) return;
             const task = runningTasks.find(t => t.id === taskId);
             if (!task) return;
             const now = new Date().getTime();
-            const elapsedSnapshot = getSafeTaskElapsedSnapshot(task, now);
+            const immutableStartTime = getImmutableTaskStartTime(task);
+            const elapsedSnapshot = getStableTaskElapsedSnapshot(task, now);
             const elapsedMs = elapsedSnapshot.elapsedMs;
             const elapsedHours = parseFloat((elapsedMs / (1000 * 60 * 60)).toFixed(4));
             const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
@@ -1499,10 +1725,13 @@
                 workerList: task.workerList || task.worker.split(',').map(w=>w.trim()),
                 process: task.process,
                 processDetail: task.processDetail || '',
-                startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { hour12: false }),
-                endTime: new Date(now).toLocaleTimeString('ko-KR', { hour12: false }),
+                startTime: formatKstTimeString(immutableStartTime, true),
+                endTime: formatKstTimeString(now, true),
+                startDate: getKstDateString(immutableStartTime),
+                startDateTime: formatKstDateTime(immutableStartTime, true),
+                endDateTime: formatKstDateTime(now, true),
                 elapsedMinutes: elapsedMinutes, elapsedHours: elapsedHours,
-                startTimestamp: Number(task.startTime) || null,
+                startTimestamp: immutableStartTime || null,
                 endTimestamp: now,
                 totalPausedDuration: elapsedSnapshot.pausedMs,
                 timerIntegrityRecovered: elapsedSnapshot.recovered,
@@ -1572,7 +1801,7 @@
             const grid = document.getElementById('rework-defect-grid');
             if (!grid) return;
             grid.innerHTML = '';
-            REWORK_DEFECT_TYPES.forEach(defect => {
+            reworkDefectTypes.forEach(defect => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.textContent = defect;
@@ -1581,20 +1810,137 @@
                     ? 'py-2 border-2 border-rose-500 bg-rose-50 text-rose-700 rounded-xl text-[11px] font-black shadow-sm'
                     : 'py-2 border border-slate-200 bg-white text-slate-700 rounded-xl text-[11px] font-bold hover:bg-slate-50';
                 btn.onclick = () => {
-                    if (defect === '상세미확인') {
-                        reworkSelectedDefects = ['상세미확인'];
-                    } else {
-                        reworkSelectedDefects = reworkSelectedDefects.filter(d => d !== '상세미확인');
-                        if (reworkSelectedDefects.includes(defect)) reworkSelectedDefects = reworkSelectedDefects.filter(d => d !== defect);
-                        else reworkSelectedDefects.push(defect);
-                        if (reworkSelectedDefects.length === 0) reworkSelectedDefects = ['상세미확인'];
-                    }
+                    if (reworkSelectedDefects.includes(defect)) reworkSelectedDefects = reworkSelectedDefects.filter(d => d !== defect);
+                    else reworkSelectedDefects.push(defect);
                     renderReworkDefectGrid();
                 };
                 grid.appendChild(btn);
             });
             const countEl = document.getElementById('rw-defect-count');
             if (countEl) countEl.textContent = `${reworkSelectedDefects.length}개 선택`;
+        }
+
+        function normalizeDefectTypes(list) {
+            const out = [];
+            const seen = new Set();
+            (Array.isArray(list) ? list : []).forEach(v => {
+                let name = String(v || '').trim();
+                if (!name) return;
+                // [V5.22] 과거 ‘상세미확인’ 값은 ‘기타’로 통합합니다.
+                if (name === '상세미확인') name = '기타';
+                const key = name.toLocaleLowerCase('ko-KR');
+                if (seen.has(key)) return;
+                seen.add(key);
+                out.push(name);
+            });
+            return out;
+        }
+
+        function normalizeRecordedDefects(list) {
+            const normalized = normalizeDefectTypes(Array.isArray(list) && list.length ? list : ['기타']);
+            return normalized.length ? normalized : ['기타'];
+        }
+
+        function syncSelectedDefectsWithMaster() {
+            const allowed = new Set(reworkDefectTypes);
+            reworkSelectedDefects = normalizeDefectTypes(reworkSelectedDefects).filter(d => allowed.has(d));
+        }
+
+        function renderReworkDefectManageList() {
+            const list = document.getElementById('defect-manager-list');
+            const count = document.getElementById('defect-manager-count');
+            if (count) count.textContent = String(reworkDefectTypes.length);
+            if (!list) return;
+            list.innerHTML = '';
+            reworkDefectTypes.forEach((defect, idx) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2 p-2 rounded-xl border bg-white border-slate-200';
+                row.innerHTML = `<span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 inline-flex items-center justify-center text-[10px] font-black">${idx+1}</span><input type="text" maxlength="40" value="${escapeHTML(defect)}" data-defect-edit-index="${idx}" class="flex-1 min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold bg-white focus:ring-2 focus:ring-rose-500"><button type="button" data-defect-save-index="${idx}" class="px-2.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-black" title="이름 수정 저장"><i class="fa-solid fa-floppy-disk"></i></button><button type="button" data-defect-delete-index="${idx}" class="px-2.5 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-black" title="항목 삭제"><i class="fa-solid fa-trash-can"></i></button>`;
+                list.appendChild(row);
+            });
+            list.querySelectorAll('[data-defect-save-index]').forEach(btn => {
+                btn.addEventListener('click', () => saveDefectRename(Number(btn.dataset.defectSaveIndex)));
+            });
+            list.querySelectorAll('[data-defect-delete-index]').forEach(btn => {
+                btn.addEventListener('click', () => requestDeleteDefect(Number(btn.dataset.defectDeleteIndex)));
+            });
+            list.querySelectorAll('[data-defect-edit-index]').forEach(input => {
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') saveDefectRename(Number(input.dataset.defectEditIndex));
+                });
+            });
+        }
+
+        window.openDefectManager = function() {
+            if (!isAdminMode) { showToast('QC 부적합 항목 관리는 관리자 모드에서만 가능합니다.', 'fa-lock'); return; }
+            renderReworkDefectManageList();
+            const modal = document.getElementById('defect-manager-modal');
+            modal?.classList.remove('hidden');
+            setTimeout(() => document.getElementById('new-defect-input')?.focus(), 80);
+        };
+
+        window.closeDefectManager = function() {
+            document.getElementById('defect-manager-modal')?.classList.add('hidden');
+            const input = document.getElementById('new-defect-input');
+            if (input) input.value = '';
+        };
+
+        async function persistReworkDefectTypes(nextList, successMessage) {
+            if (!checkFailClosedCanWrite() || !isAdminMode) return false;
+            const normalized = normalizeDefectTypes(nextList);
+            const ok = await updateAdminDataInCloud({ reworkDefectTypes: normalized });
+            if (ok) {
+                reworkDefectTypes = normalized;
+                syncSelectedDefectsWithMaster();
+                renderReworkDefectGrid();
+                renderReworkDefectManageList();
+                if (successMessage) showToast(successMessage, 'fa-check');
+            }
+            return ok;
+        }
+
+        async function addReworkDefectType() {
+            const input = document.getElementById('new-defect-input');
+            const name = String(input?.value || '').trim();
+            if (!name) { showToast('추가할 부적합 항목명을 입력하세요.', 'fa-triangle-exclamation'); input?.focus(); return; }
+            if (reworkDefectTypes.some(v => v.toLocaleLowerCase('ko-KR') === name.toLocaleLowerCase('ko-KR'))) {
+                showToast('이미 등록된 부적합 항목입니다.', 'fa-circle-info'); input?.focus(); return;
+            }
+            const next = [...reworkDefectTypes, name];
+            if (await persistReworkDefectTypes(next, `QC 부적합 항목 ‘${name}’을 추가했습니다.`)) {
+                if (input) input.value = '';
+                input?.focus();
+            }
+        }
+
+        async function saveDefectRename(index) {
+            const oldName = reworkDefectTypes[index];
+            if (!oldName) return;
+            const input = document.querySelector(`[data-defect-edit-index="${index}"]`);
+            const newName = String(input?.value || '').trim();
+            if (!newName) { showToast('부적합 항목명은 비워둘 수 없습니다.', 'fa-triangle-exclamation'); input?.focus(); return; }
+            const duplicate = reworkDefectTypes.some((v, i) => i !== index && v.toLocaleLowerCase('ko-KR') === newName.toLocaleLowerCase('ko-KR'));
+            if (duplicate) { showToast('같은 이름의 부적합 항목이 이미 있습니다.', 'fa-circle-info'); input?.focus(); return; }
+            if (newName === oldName) { showToast('변경된 내용이 없습니다.', 'fa-circle-info'); return; }
+            const next = [...reworkDefectTypes];
+            next[index] = newName;
+            // 과거 완료 재작업 기록은 보존하고, 선택 목록만 새 이름으로 변경합니다.
+            await persistReworkDefectTypes(next, `‘${oldName}’ → ‘${newName}’으로 수정했습니다.`);
+        }
+
+        function requestDeleteDefect(index) {
+            const name = reworkDefectTypes[index];
+            if (!name) return;
+            showConfirm('QC 부적합 항목 삭제', `‘${name}’ 항목을 선택 목록에서 삭제하시겠습니까?\n기존 재작업 이력에 저장된 ‘${name}’ 기록은 그대로 유지됩니다.`, async () => {
+                const next = reworkDefectTypes.filter((_, i) => i !== index);
+                await persistReworkDefectTypes(next, `QC 부적합 항목 ‘${name}’을 삭제했습니다.`);
+            });
+        }
+
+        function resetReworkDefectTypes() {
+            showConfirm('QC 부적합 기본값 복원', 'QC 부적합 선택 목록을 기본 항목으로 복원하시겠습니까?\n기존 재작업 이력은 변경되지 않습니다.', async () => {
+                await persistReworkDefectTypes([...DEFAULT_REWORK_DEFECT_TYPES], 'QC 부적합 항목을 기본값으로 복원했습니다.');
+            });
         }
 
         window.openReworkModal = function(logId, eqIndex) {
@@ -1612,7 +1958,7 @@
             const cycleNo = reworkLogs.filter(r => !r.isDeleted && r.equipmentKey === equipmentKey).length + 1;
             reworkModalContext = { logId: log.id, eqIndex, log, eq: JSON.parse(JSON.stringify(eq)), equipmentKey, cycleNo };
             reworkSelectedWorkers = (log.workerList && log.workerList.length > 0 ? [...log.workerList] : String(log.worker || '').split(',').map(w => w.trim())).filter(Boolean);
-            reworkSelectedDefects = ['상세미확인'];
+            reworkSelectedDefects = [];
 
             const eqEl = document.getElementById('rw-modal-equipment');
             const snEl = document.getElementById('rw-modal-sn');
@@ -1630,7 +1976,7 @@
             document.getElementById('rework-modal')?.classList.add('hidden');
             reworkModalContext = null;
             reworkSelectedWorkers = [];
-            reworkSelectedDefects = ['상세미확인'];
+            reworkSelectedDefects = [];
         };
 
         async function updateReworkInCloudSecurely(actionType, payload, silent = false) {
@@ -1708,7 +2054,7 @@
         async function startReworkFromModal() {
             if (!checkFailClosedCanWrite() || !reworkModalContext) return;
             if (reworkSelectedWorkers.length === 0) { showToast('재작업자를 최소 1명 선택하세요.', 'fa-triangle-exclamation'); return; }
-            if (reworkSelectedDefects.length === 0) reworkSelectedDefects = ['상세미확인'];
+            if (reworkSelectedDefects.length === 0) { showToast('QC 부적합 항목을 최소 1개 선택하세요. 해당 항목이 없으면 ‘기타’를 선택하세요.', 'fa-triangle-exclamation'); return; }
             const now = Date.now();
             const ctx = reworkModalContext;
             const task = {
@@ -1872,8 +2218,8 @@
                 equipment: JSON.parse(JSON.stringify(task.equipment)),
                 worker: task.worker,
                 workerList: task.workerList || String(task.worker || '').split(',').map(w => w.trim()).filter(Boolean),
-                defectTypes: Array.isArray(task.defectTypes) && task.defectTypes.length ? [...task.defectTypes] : ['상세미확인'],
-                defectCount: Array.isArray(task.defectTypes) && task.defectTypes.length ? task.defectTypes.length : 1,
+                defectTypes: normalizeRecordedDefects(task.defectTypes),
+                defectCount: normalizeRecordedDefects(task.defectTypes).length,
                 startTime: new Date(task.startTime).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }),
                 endTime: new Date(now).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }),
                 elapsedMinutes,
@@ -1980,13 +2326,234 @@
             return getLogDivisions(log).includes(division);
         }
 
+        function isMeaningfulEquipmentSn(sn) {
+            const value = String(sn || '').trim();
+            return !!value && !['-', '수동입력', '하네스_일괄대수'].includes(value);
+        }
+
+        function isEphemeralEquipmentId(id) {
+            const value = String(id || '');
+            return value.startsWith('harness_') || value.startsWith('manual_');
+        }
+
+        function getReliableEquipmentIdentity(eq) {
+            if (isMeaningfulEquipmentSn(eq?.cskSn)) return `SN:${String(eq.cskSn).trim().toUpperCase()}`;
+            if (eq?.id && !isEphemeralEquipmentId(eq.id)) return `ID:${eq.id}`;
+            return null;
+        }
+
+        // [V5.19] 계획 장비/작업로그 매칭은 S/N을 최우선으로 사용합니다.
+        // 하네스/수동입력의 매번 새로 생성되는 임시 ID는 실제 장비 고유키로 취급하지 않습니다.
         function getStableEquipmentKey(eq, fallback = '') {
-            if (eq?.id) return `ID:${eq.id}`;
-            if (eq?.cskSn && !['-', '수동입력', '하네스_일괄대수'].includes(String(eq.cskSn))) return `SN:${eq.cskSn}`;
+            const reliable = getReliableEquipmentIdentity(eq);
+            if (reliable) return reliable;
             return `FB:${fallback}:${normalizeEquipmentName(eq?.equipment || '미지정')}`;
         }
 
-        // [V5.18] 생산완료 판정: 최종결선 또는 전체 결선의 완료 이력이 있어야 생산완료로 인정합니다.
+        function createKpiUnitStat() {
+            return { equipmentKeys: new Set(), maxVirtualUnits: 0, maxObservedUnits: 0 };
+        }
+
+        function addKpiUnitEvidence(stat, eqList) {
+            const list = Array.isArray(eqList) ? eqList : [];
+            let virtualCount = 0;
+            list.forEach(eq => {
+                const key = getReliableEquipmentIdentity(eq);
+                if (key) stat.equipmentKeys.add(key);
+                else virtualCount += 1;
+            });
+            stat.maxVirtualUnits = Math.max(Number(stat.maxVirtualUnits) || 0, virtualCount);
+            stat.maxObservedUnits = Math.max(Number(stat.maxObservedUnits) || 0, list.length);
+        }
+
+        function getKpiUnitCount(stat) {
+            if (!stat) return 0;
+            return Math.max(stat.equipmentKeys?.size || 0, Number(stat.maxVirtualUnits) || 0, Number(stat.maxObservedUnits) || 0);
+        }
+
+        function getKpiUnitBasis(stat) {
+            if (!stat) return '-';
+            const reliable = stat.equipmentKeys?.size || 0;
+            const virtual = Number(stat.maxVirtualUnits) || 0;
+            if (reliable > 0 && reliable >= virtual) return 'S/N·생산계획 ID 기준';
+            if (virtual > 0) return 'S/N 없음 · 최대 입력대수 기준(추정)';
+            return '식별정보 없음';
+        }
+
+        function isAmbiguousEquipmentModel(model) {
+            return /[*?]/.test(String(model || ''));
+        }
+
+        // [V5.23] KPI 장비명은 상위 플랫폼명(TDS010DC 등)이 아니라 실제 모델 코드 중심으로 묶습니다.
+        function normalizeKpiModelName(name) {
+            const norm = normalizeEquipmentName(name || '미지정');
+            if (norm.includes('02BC012')) return '02BC012';
+            if (norm.includes('3BC2')) return '3BC2';
+            if (norm.includes('KLEAA')) return 'KLEAA';
+            if (norm.includes('02BC002')) return '02BC002';
+            if (norm.includes('RCU')) return 'RCU';
+            if (norm.includes('TCT020')) return 'TCT020';
+
+            // TDS010DC_*, TDS010DC-* 처럼 세부 모델을 알 수 없는 과거 데이터는
+            // 상위 플랫폼명으로 잘못 합치지 않고 '미분류 장비'로 분리합니다.
+            if (/TDS0?10DC/.test(norm) && /[*?]/.test(norm)) return '미분류 장비';
+
+            // 흔한 상위 접두어를 제거한 뒤 마지막 유효 모델 토큰을 사용합니다.
+            const generic = new Set(['TDS010DC','TDSO10DC','TDS','DTLR','LTD040D','ACM','PANEL','ASSY']);
+            const tokens = norm.split(/[-_\/\s]+/).filter(Boolean);
+            const candidates = tokens.filter(t => !generic.has(t) && !/^[*?]+$/.test(t));
+            if (candidates.length > 0) return candidates[candidates.length - 1];
+            return norm;
+        }
+
+        function isHarnessWorkLog(log) {
+            const raw = String(log?.process || '').replace(/\s+/g, '');
+            const display = String(getProcessDisplay(log?.process, log?.processDetail)).replace(/\s+/g, '');
+            return raw === '하네스' || display.startsWith('하네스');
+        }
+
+        function getConnectionStage(log) {
+            const raw = String(log?.process || '').replace(/\s+/g, '');
+            const display = String(getProcessDisplay(log?.process, log?.processDetail)).replace(/\s+/g, '');
+            const value = `${raw}|${display}`;
+            if (value.includes('전체결선')) return '전체결선';
+            if (value.includes('최종결선')) return '최종결선';
+            if (value.includes('결선(좌면)')) return '좌면';
+            if (value.includes('결선(정면)')) return '정면';
+            if (value.includes('결선(우면)')) return '우면';
+            return null;
+        }
+
+        // [V5.23] 장비 1대 평균은 '완성된 1대분' 기준입니다.
+        // - 좌면+정면+우면+최종결선이 모두 존재하거나 전체결선이 존재해야 1대로 인정
+        // - 월을 넘겨 작업해도 완성된 달에 과거 작업시간까지 모두 합산
+        // - S/N 또는 안정적인 생산계획 ID가 없는 기록은 월간 1대 평균에서 제외
+        function buildCompletedUnitKpi(month, division = '', planBySnInput = null) {
+            const planBySn = planBySnInput || new Map();
+            if (!planBySnInput) {
+                planEquipments.forEach(p => {
+                    if (isMeaningfulEquipmentSn(p.cskSn)) planBySn.set(String(p.cskSn).trim().toUpperCase(), p);
+                });
+            }
+            const unitMap = new Map();
+            let unidentifiedRecords = 0;
+
+            completedLogs.filter(l => !l.isDeleted && logMatchesDivision(l, division)).forEach((log, logIdx) => {
+                const stage = getConnectionStage(log);
+                if (!stage || isHarnessWorkLog(log)) return;
+                const eqList = getEquipmentListFromLog(log).filter(eq => !division || (eq.division || 'ACM') === division);
+                if (!eqList.length) return;
+                const elapsed = Math.max(0, Number(log.elapsedMinutes) || 0);
+                const perUnit = elapsed / Math.max(1, eqList.length);
+                const date = String(log.date || '');
+
+                eqList.forEach((eq, eqIdx) => {
+                    const reliable = getReliableEquipmentIdentity(eq);
+                    if (!reliable) { unidentifiedRecords += 1; return; }
+                    const model = getKpiResolvedModel(eq, planBySn);
+                    if (model === '하네스 작업') return;
+                    if (!unitMap.has(reliable)) {
+                        unitMap.set(reliable, {
+                            key: reliable,
+                            model,
+                            cskSn: eq.cskSn || '-',
+                            equipmentId: eq.id || '',
+                            division: eq.division || 'ACM',
+                            firstDate: date,
+                            lastDate: date,
+                            stageMinutes: { '좌면':0, '정면':0, '우면':0, '최종결선':0, '전체결선':0 },
+                            stageDates: { '좌면':'', '정면':'', '우면':'', '최종결선':'', '전체결선':'' },
+                            logs: []
+                        });
+                    }
+                    const u = unitMap.get(reliable);
+                    u.model = model || u.model;
+                    if (date && (!u.firstDate || date < u.firstDate)) u.firstDate = date;
+                    if (date && (!u.lastDate || date > u.lastDate)) u.lastDate = date;
+                    u.stageMinutes[stage] = (u.stageMinutes[stage] || 0) + perUnit;
+                    if (date && (!u.stageDates[stage] || date > u.stageDates[stage])) u.stageDates[stage] = date;
+                    u.logs.push({ id: log.id || `LOG-${logIdx}-${eqIdx}`, date, stage, process: getProcessDisplay(log.process, log.processDetail), worker: log.worker || '-', minutes: perUnit });
+                });
+            });
+
+            const units = [];
+            const byModel = {};
+            unitMap.forEach(u => {
+                const wholeDone = u.stageMinutes['전체결선'] > 0;
+                const splitDone = ['좌면','정면','우면','최종결선'].every(x => u.stageMinutes[x] > 0);
+                if (!wholeDone && !splitDone) return;
+
+                let totalMinutes = 0;
+                let completionDate = '';
+                let basis = '';
+                if (wholeDone) {
+                    totalMinutes = u.stageMinutes['전체결선'];
+                    completionDate = u.stageDates['전체결선'];
+                    basis = '전체 결선';
+                } else {
+                    totalMinutes = ['좌면','정면','우면','최종결선'].reduce((sum,x)=>sum+(u.stageMinutes[x]||0),0);
+                    completionDate = ['좌면','정면','우면','최종결선'].map(x=>u.stageDates[x]).filter(Boolean).sort().pop() || '';
+                    basis = '좌면+정면+우면+최종결선';
+                }
+                if (!completionDate || !completionDate.startsWith(month)) return;
+
+                const row = { ...u, totalMinutes, completionDate, basis };
+                units.push(row);
+                if (!byModel[row.model]) byModel[row.model] = { units: [], totalMinutes: 0, avgMinutes: 0, avgMD: 0 };
+                byModel[row.model].units.push(row);
+                byModel[row.model].totalMinutes += totalMinutes;
+            });
+
+            Object.values(byModel).forEach(st => {
+                st.avgMinutes = st.units.length ? st.totalMinutes / st.units.length : 0;
+                st.avgMD = st.avgMinutes / 480;
+            });
+            const totalMinutes = units.reduce((sum,u)=>sum+u.totalMinutes,0);
+            const avgMinutes = units.length ? totalMinutes / units.length : 0;
+            return { units, byModel, totalMinutes, avgMinutes, avgMD: avgMinutes/480, unidentifiedRecords };
+        }
+
+        function getMonthOffset(monthStr, offset) {
+            const [y,m] = String(monthStr || '').split('-').map(Number);
+            if (!y || !m) return '';
+            const d = new Date(Date.UTC(y, m - 1 + offset, 1));
+            return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+        }
+
+        function getReworkEquipmentIdentity(rw, fallbackIndex = 0) {
+            if (rw?.equipmentKey) return String(rw.equipmentKey);
+            const reliable = getReliableEquipmentIdentity(rw?.equipment || {});
+            if (reliable) return reliable;
+            return `RW:${rw?.id || fallbackIndex}`;
+        }
+
+        // 부적합 비율 = 해당 월 QC 반려 고유 장비 수 / 해당 월 완성 장비 수 × 100
+        function buildMonthlyDefectTrend(endMonth, division = '', count = 12) {
+            const planBySn = new Map();
+            planEquipments.forEach(p => { if (isMeaningfulEquipmentSn(p.cskSn)) planBySn.set(String(p.cskSn).trim().toUpperCase(), p); });
+            const rows = [];
+            for (let i = count - 1; i >= 0; i--) {
+                const month = getMonthOffset(endMonth, -i);
+                const completed = buildCompletedUnitKpi(month, division, planBySn);
+                const monthRws = reworkLogs.filter(r => !r.isDeleted && getResolvedReworkDate(r).startsWith(month) && (!division || (r.equipment?.division || 'ACM') === division));
+                const rejected = new Set(monthRws.map((r,idx)=>getReworkEquipmentIdentity(r, idx))).size;
+                const defectItems = monthRws.reduce((sum,r)=>sum+normalizeRecordedDefects(r.defectTypes).length,0);
+                const rate = completed.units.length > 0 ? rejected / completed.units.length * 100 : null;
+                rows.push({ month, completed: completed.units.length, rejected, defectItems, cases: monthRws.length, rate });
+            }
+            return rows;
+        }
+
+        function getKpiResolvedModel(eq, planBySn = null) {
+            const sn = String(eq?.cskSn || '').trim().toUpperCase();
+            if (isMeaningfulEquipmentSn(sn) && planBySn?.has(sn)) {
+                const plan = planBySn.get(sn);
+                if (plan?.equipment) return normalizeKpiModelName(plan.equipment);
+            }
+            return normalizeKpiModelName(eq?.equipment || '미지정');
+        }
+
+        // [V5.19] 생산완료 판정: 최종결선 또는 전체 결선의 완료 이력이 있어야 생산완료로 인정합니다.
         function isProductionCompletionLog(log) {
             const process = String(log?.process || '').replace(/\s+/g, '');
             const display = String(getProcessDisplay(log?.process, log?.processDetail)).replace(/\s+/g, '');
@@ -1998,8 +2565,11 @@
             const monthLogs = validLogsAll.filter(l => String(l.date || '').startsWith(month) && logMatchesDivision(l, division));
             const monthReworks = reworkLogs.filter(l => !l.isDeleted && getResolvedReworkDate(l).startsWith(month) && (!division || (l.equipment?.division || 'ACM') === division));
             const planForMonth = planEquipments.filter(p => (!division || (p.division || 'ACM') === division) && String(p.deliveryDate || '').startsWith(month));
+            const planBySn = new Map();
+            planEquipments.forEach(p => {
+                if (isMeaningfulEquipmentSn(p.cskSn)) planBySn.set(String(p.cskSn).trim().toUpperCase(), p);
+            });
 
-            // 모든 완료로그에서 장비별 최초/최종 기록일과 생산완료일(최종결선/전체 결선)을 확보합니다.
             const equipmentLogInfo = {};
             validLogsAll.filter(l => logMatchesDivision(l, division)).forEach((log, logIdx) => {
                 const eqList = getEquipmentListFromLog(log);
@@ -2007,7 +2577,7 @@
                 eqList.forEach((eq, eqIdx) => {
                     const key = getStableEquipmentKey(eq, `${log.id || logIdx}:${eqIdx}`);
                     const date = String(log.date || '');
-                    if (!equipmentLogInfo[key]) equipmentLogInfo[key] = { firstDate: date, lastDate: date, completionDate: '', model: normalizeEquipmentName(eq.equipment || '미지정'), cskSn: eq.cskSn || '-', division: eq.division || 'ACM' };
+                    if (!equipmentLogInfo[key]) equipmentLogInfo[key] = { firstDate: date, lastDate: date, completionDate: '', model: getKpiResolvedModel(eq, planBySn), cskSn: eq.cskSn || '-', division: eq.division || 'ACM' };
                     if (date && (!equipmentLogInfo[key].firstDate || date < equipmentLogInfo[key].firstDate)) equipmentLogInfo[key].firstDate = date;
                     if (date && date > equipmentLogInfo[key].lastDate) equipmentLogInfo[key].lastDate = date;
                     if (isCompletion && date && (!equipmentLogInfo[key].completionDate || date < equipmentLogInfo[key].completionDate)) equipmentLogInfo[key].completionDate = date;
@@ -2016,78 +2586,109 @@
 
             const todayKst = getKstDateString(Date.now());
             let planTouched = 0, planCompleted = 0, deliveryChecked = 0, deliveryOnTime = 0;
-            planForMonth.forEach((p, idx) => {
+            const planStatusRows = planForMonth.map((p, idx) => {
                 const key = getStableEquipmentKey(p, `PLAN:${idx}`);
                 const info = equipmentLogInfo[key];
                 if (info) planTouched += 1;
                 if (info?.completionDate) planCompleted += 1;
-
                 const deliveryDate = String(p.deliveryDate || '');
                 const validDeliveryDate = /^\d{4}-\d{2}-\d{2}$/.test(deliveryDate);
-                // 아직 납기일이 오지 않은 미완료 장비는 납기 판정에서 제외합니다.
-                // 이미 완료된 장비는 납기일 도래 전이라도 조기 완료 여부를 판정합니다.
                 const shouldCheckDelivery = validDeliveryDate && (deliveryDate <= todayKst || !!info?.completionDate);
                 if (shouldCheckDelivery) {
                     deliveryChecked += 1;
                     if (info?.completionDate && info.completionDate <= deliveryDate) deliveryOnTime += 1;
                 }
+                return {
+                    ...p, key, info: info || null,
+                    status: info?.completionDate ? '완료' : info ? '진행중' : '미착수',
+                    firstDate: info?.firstDate || '-', lastDate: info?.lastDate || '-', completionDate: info?.completionDate || '-'
+                };
             });
 
             const equipmentStats = {};
             const processStats = {};
             const workerStats = {};
+            const modelProcessStats = {};
             let normalMinutes = 0;
             let totalAllocatedMinutes = 0;
             let stdExpected = 0, stdActual = 0, stdMatches = 0;
-            const monthEquipmentKeys = new Set();
 
             monthLogs.forEach((log, logIdx) => {
-                const elapsed = Number(log.elapsedMinutes) || 0;
+                const elapsed = Math.max(0, Number(log.elapsedMinutes) || 0);
                 normalMinutes += elapsed;
                 const eqListRaw = getEquipmentListFromLog(log);
                 const eqList = eqListRaw.filter(eq => !division || (eq.division || 'ACM') === division);
-                const unitCount = Math.max(1, eqList.length || eqListRaw.length || 1);
+                if (eqList.length === 0) return;
+                const unitCount = Math.max(1, eqList.length);
                 const perUnit = elapsed / unitCount;
                 const proc = getProcessDisplay(log.process, log.processDetail);
 
-                if (!processStats[proc]) processStats[proc] = { units: 0, minutes: 0, stdExpected: 0, stdActual: 0, stdMatches: 0 };
-                const pStat = processStats[proc];
+                const byModel = {};
+                eqList.forEach(eq => {
+                    const model = isHarnessWorkLog(log) ? '하네스 작업' : getKpiResolvedModel(eq, planBySn);
+                    if (!byModel[model]) byModel[model] = [];
+                    byModel[model].push(eq);
+                });
 
-                eqList.forEach((eq, eqIdx) => {
-                    const model = normalizeEquipmentName(eq.equipment || '미지정');
-                    const key = getStableEquipmentKey(eq, `${log.id || logIdx}:${eqIdx}`);
-                    monthEquipmentKeys.add(key);
-                    totalAllocatedMinutes += perUnit;
-                    if (!equipmentStats[model]) equipmentStats[model] = { equipmentKeys: new Set(), minutes: 0, stdExpected: 0, stdActual: 0, stdMatches: 0, deliveryChecked: 0, deliveryOnTime: 0 };
-                    const eStat = equipmentStats[model];
-                    eStat.equipmentKeys.add(key);
-                    eStat.minutes += perUnit;
-                    pStat.units += 1;
-                    pStat.minutes += perUnit;
-
-                    const std = getStandardTime(model, log.process);
-                    if (std !== null) {
-                        stdExpected += std;
-                        stdActual += perUnit;
-                        stdMatches += 1;
-                        eStat.stdExpected += std; eStat.stdActual += perUnit; eStat.stdMatches += 1;
-                        pStat.stdExpected += std; pStat.stdActual += perUnit; pStat.stdMatches += 1;
+                Object.entries(byModel).forEach(([model, modelEqs]) => {
+                    const modelMinutes = perUnit * modelEqs.length;
+                    totalAllocatedMinutes += modelMinutes;
+                    if (!equipmentStats[model]) {
+                        equipmentStats[model] = { ...createKpiUnitStat(), minutes: 0, stdExpected: 0, stdActual: 0, stdMatches: 0, deliveryChecked: 0, deliveryOnTime: 0, logs: [] };
                     }
+                    const eStat = equipmentStats[model];
+                    addKpiUnitEvidence(eStat, modelEqs);
+                    eStat.minutes += modelMinutes;
+                    eStat.logs.push({
+                        id: log.id || `LOG-${logIdx}`, date: log.date || '-', process: proc, worker: log.worker || '-',
+                        elapsedMinutes: elapsed, allocatedMinutes: modelMinutes, unitCount: modelEqs.length,
+                        sns: modelEqs.map(e => e.cskSn || '-'), rawModels: [...new Set(modelEqs.map(e => e.equipment || '미지정'))],
+                        resolvedModels: [...new Set(modelEqs.map(e => {
+                            const sn = String(e.cskSn || '').trim().toUpperCase();
+                            return isMeaningfulEquipmentSn(sn) && planBySn.has(sn) ? (planBySn.get(sn).equipment || '-') : '-';
+                        }).filter(x => x && x !== '-'))]
+                    });
+
+                    const mpKey = `${model}|||${proc}`;
+                    if (!modelProcessStats[mpKey]) modelProcessStats[mpKey] = { model, process: proc, rawProcess: log.process, ...createKpiUnitStat(), minutes: 0, stdExpected: 0, stdMatches: 0 };
+                    const mp = modelProcessStats[mpKey];
+                    addKpiUnitEvidence(mp, modelEqs);
+                    mp.minutes += modelMinutes;
+
+                    modelEqs.forEach(() => {
+                        const std = getStandardTime(model, log.process);
+                        if (std !== null) {
+                            stdExpected += std;
+                            stdActual += perUnit;
+                            stdMatches += 1;
+                            eStat.stdExpected += std; eStat.stdActual += perUnit; eStat.stdMatches += 1;
+                            mp.stdExpected += std; mp.stdMatches += 1;
+                        }
+                    });
+                });
+
+                if (!processStats[proc]) processStats[proc] = { ...createKpiUnitStat(), minutes: 0, stdExpected: 0, stdActual: 0, stdMatches: 0 };
+                const pStat = processStats[proc];
+                addKpiUnitEvidence(pStat, eqList);
+                pStat.minutes += elapsed;
+                eqList.forEach(eq => {
+                    const std = getStandardTime(getKpiResolvedModel(eq, planBySn), log.process);
+                    if (std !== null) { pStat.stdExpected += std; pStat.stdActual += perUnit; pStat.stdMatches += 1; }
                 });
 
                 const workers = (log.workerList && log.workerList.length > 0) ? log.workerList : String(log.worker || '').split(',').map(w => w.trim()).filter(Boolean);
                 const uniqueWorkers = [...new Set(workers.map(getCleanWorkerName).filter(Boolean))];
                 uniqueWorkers.forEach(worker => {
-                    if (!workerStats[worker]) workerStats[worker] = { logs: 0, minutes: 0 };
+                    if (!workerStats[worker]) workerStats[worker] = { logs: 0, minutes: 0, processes: {} };
                     workerStats[worker].logs += 1;
                     workerStats[worker].minutes += elapsed;
+                    workerStats[worker].processes[proc] = (workerStats[worker].processes[proc] || 0) + elapsed;
                 });
             });
 
-            // 장비 모델별 납기 내 작업완료 집계 (생산완료일 = 최종결선/전체 결선 완료일)
             planForMonth.forEach((p, idx) => {
-                const model = normalizeEquipmentName(p.equipment || '미지정');
-                if (!equipmentStats[model]) equipmentStats[model] = { equipmentKeys: new Set(), minutes: 0, stdExpected: 0, stdActual: 0, stdMatches: 0, deliveryChecked: 0, deliveryOnTime: 0 };
+                const model = normalizeKpiModelName(p.equipment || '미지정');
+                if (!equipmentStats[model]) equipmentStats[model] = { ...createKpiUnitStat(), minutes: 0, stdExpected: 0, stdActual: 0, stdMatches: 0, deliveryChecked: 0, deliveryOnTime: 0, logs: [] };
                 const key = getStableEquipmentKey(p, `PLAN:${idx}`);
                 const info = equipmentLogInfo[key];
                 const deliveryDate = String(p.deliveryDate || '');
@@ -2099,24 +2700,73 @@
                 }
             });
 
+            const modelUnits = {};
+            let uniqueEquipmentCount = 0;
+            Object.entries(equipmentStats).forEach(([model, st]) => {
+                const units = getKpiUnitCount(st);
+                modelUnits[model] = units;
+                if (st.minutes > 0) uniqueEquipmentCount += units;
+                st.stdExpected = 0; st.stdActual = 0; st.stdMatches = 0;
+            });
+            Object.values(processStats).forEach(st => { st.units = getKpiUnitCount(st); st.stdExpected = 0; st.stdActual = 0; st.stdMatches = 0; });
+            Object.values(modelProcessStats).forEach(st => { st.units = getKpiUnitCount(st); });
+
+            // [V5.19] 표준시간은 같은 장비/공정을 여러 로그로 나눠 기록해도 표준시간을 중복 가산하지 않습니다.
+            stdExpected = 0; stdActual = 0; stdMatches = 0;
+            Object.values(modelProcessStats).forEach(mp => {
+                const units = getKpiUnitCount(mp);
+                const stdPerUnit = getStandardTime(mp.model, mp.rawProcess);
+                mp.stdExpected = 0; mp.stdActual = 0; mp.stdMatches = 0;
+                if (stdPerUnit !== null && units > 0) {
+                    mp.stdExpected = stdPerUnit * units;
+                    mp.stdActual = mp.minutes;
+                    mp.stdMatches = units;
+                    stdExpected += mp.stdExpected; stdActual += mp.stdActual; stdMatches += units;
+                    const eStat = equipmentStats[mp.model];
+                    if (eStat) { eStat.stdExpected += mp.stdExpected; eStat.stdActual += mp.stdActual; eStat.stdMatches += units; }
+                    const pStat = processStats[mp.process];
+                    if (pStat) { pStat.stdExpected += mp.stdExpected; pStat.stdActual += mp.stdActual; pStat.stdMatches += units; }
+                }
+            });
+
+            const sourceLogMap = new Map();
+            validLogsAll.forEach(l => { if (l.id) sourceLogMap.set(l.id, l); if (l.workLogId) sourceLogMap.set(l.workLogId, l); });
+            const reworkWorkerDefects = {};
+            monthReworks.forEach(rw => {
+                const src = sourceLogMap.get(rw.sourceWorkLogId);
+                const srcWorkers = src ? ((src.workerList && src.workerList.length) ? src.workerList : String(src.worker || '').split(',').map(x=>x.trim()).filter(Boolean)) : [];
+                const fallbackWorkers = (rw.workerList && rw.workerList.length) ? rw.workerList : String(rw.worker || '미지정').split(',').map(x=>x.trim()).filter(Boolean);
+                const workers = [...new Set((srcWorkers.length ? srcWorkers : fallbackWorkers).map(getCleanWorkerName).filter(Boolean))];
+                const defects = normalizeRecordedDefects(rw.defectTypes);
+                workers.forEach(worker => {
+                    if (!reworkWorkerDefects[worker]) reworkWorkerDefects[worker] = { cases: 0, minutes: 0, defects: {}, equipments: new Set(), sourceBasis: srcWorkers.length ? '원작업자' : '재작업자(원로그 미확인)' };
+                    const st = reworkWorkerDefects[worker];
+                    st.cases += 1; st.minutes += getResolvedReworkMinutes(rw);
+                    defects.forEach(d => st.defects[d] = (st.defects[d] || 0) + 1);
+                    st.equipments.add(`${normalizeKpiModelName(rw.equipment?.equipment || '미지정')} / ${rw.equipment?.cskSn || '-'}`);
+                });
+            });
+
+            const completedUnitKpi = buildCompletedUnitKpi(month, division, planBySn);
+
             const reworkMinutes = monthReworks.reduce((sum, r) => sum + getResolvedReworkMinutes(r), 0);
             const reworkShare = (normalMinutes + reworkMinutes) > 0 ? reworkMinutes / (normalMinutes + reworkMinutes) * 100 : 0;
-            const progressRate = planForMonth.length > 0 ? planTouched / planForMonth.length * 100 : null; // 작업착수율 (기존 키 호환 유지)
+            const progressRate = planForMonth.length > 0 ? planTouched / planForMonth.length * 100 : null;
             const completionRate = planForMonth.length > 0 ? planCompleted / planForMonth.length * 100 : null;
             const standardRate = stdActual > 0 ? stdExpected / stdActual * 100 : null;
             const standardDiff = stdMatches > 0 ? stdActual - stdExpected : null;
             const deliveryRate = deliveryChecked > 0 ? deliveryOnTime / deliveryChecked * 100 : null;
-            const avgUnitMD = monthEquipmentKeys.size > 0 ? (totalAllocatedMinutes / monthEquipmentKeys.size) / 480 : 0;
+            const avgUnitMD = completedUnitKpi.avgMD;
+            uniqueEquipmentCount = completedUnitKpi.units.length;
             const normalMD = normalMinutes / 480;
-
             const laborMinutes = Object.values(workerStats).reduce((sum, w) => sum + w.minutes, 0);
 
             return {
-                month, division, monthLogs, monthReworks, planForMonth,
+                month, division, monthLogs, monthReworks, planForMonth, planStatusRows, equipmentLogInfo,
                 planTouched, progressRate, planCompleted, completionRate, deliveryChecked, deliveryOnTime, deliveryRate,
-                normalMinutes, normalMD, totalAllocatedMinutes, uniqueEquipmentCount: monthEquipmentKeys.size, avgUnitMD,
-                stdExpected, stdActual, stdMatches, standardRate, standardDiff,
-                reworkMinutes, reworkShare, equipmentStats, processStats, workerStats, laborMinutes
+                normalMinutes, normalMD, totalAllocatedMinutes, uniqueEquipmentCount, avgUnitMD, modelUnits,
+                stdExpected, stdActual, stdMatches, standardRate, standardDiff, reworkMinutes, reworkShare,
+                equipmentStats, processStats, modelProcessStats, workerStats, reworkWorkerDefects, laborMinutes, completedUnitKpi, completedUnitMinutes: completedUnitKpi.totalMinutes
             };
         }
 
@@ -2162,6 +2812,33 @@
             [...divs].filter(Boolean).sort().forEach(d => sel.appendChild(new Option(d, d, false, d === current)));
         }
 
+        function renderMonthlyDefectTrend(endMonth, division = '') {
+            const container = document.getElementById('kpi-defect-trend-chart');
+            const summary = document.getElementById('kpi-defect-trend-summary');
+            if (!container) return;
+            const rows = buildMonthlyDefectTrend(endMonth, division, 12);
+            const rates = rows.map(r=>r.rate).filter(v=>v!==null && Number.isFinite(v));
+            const maxRate = Math.max(5, ...rates, 0);
+            const selected = rows.find(r=>r.month===endMonth) || rows[rows.length-1];
+            if (summary && selected) summary.textContent = `${selected.month} · ${selected.rate===null?'-':selected.rate.toFixed(1)+'%'} (${selected.rejected}/${selected.completed}대)`;
+
+            const bars = rows.map(r => {
+                const pct = r.rate===null ? 0 : Math.max(3, Math.min(100, r.rate / maxRate * 100));
+                const label = r.month.slice(5)+'월';
+                const rateText = r.rate===null ? '-' : r.rate.toFixed(1)+'%';
+                const isSelected = r.month===endMonth;
+                return `<button type="button" onclick="openKpiDefectMonthDetail('${r.month}')" class="group w-16 shrink-0 flex flex-col items-center justify-end h-52 focus:outline-none" title="${r.month} 부적합 ${rateText} · 반려 ${r.rejected}대 / 완성 ${r.completed}대">
+                    <span class="text-[9px] font-black ${isSelected?'text-rose-700':'text-slate-500'} mb-1">${rateText}</span>
+                    <div class="w-9 h-36 bg-slate-100 rounded-t-lg flex items-end overflow-hidden border border-slate-200 relative">
+                        <div class="w-full ${isSelected?'bg-rose-500':'bg-rose-300 group-hover:bg-rose-400'} transition-all rounded-t-md" style="height:${pct}%"></div>
+                    </div>
+                    <span class="text-[9px] font-bold ${isSelected?'text-rose-700':'text-slate-500'} mt-1">${label}</span>
+                    <span class="text-[8px] text-slate-400">${r.rejected}/${r.completed}대</span>
+                </button>`;
+            }).join('');
+            container.innerHTML = `<div class="min-w-[780px]"><div class="flex items-end gap-2 border-b border-slate-200 pb-2">${bars}</div><div class="mt-2 flex items-center justify-between text-[9px] text-slate-400"><span>막대 높이: 부적합 비율</span><span>표기: QC 반려 고유장비 / 완성장비</span></div></div>`;
+        }
+
         function renderKPIDashboard() {
             const monthEl = document.getElementById('kpi-month');
             if (!monthEl) return;
@@ -2173,31 +2850,32 @@
             const prev = buildKPIData(getPreviousMonth(month), division);
             const goals = loadKpiGoals();
             const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            renderMonthlyDefectTrend(month, division);
 
             setText('kpi-plan-total', data.planForMonth.length);
             setText('kpi-plan-touched', data.planTouched);
-            setText('kpi-progress-sub', data.progressRate === null ? '선택월 생산계획 없음' : `착수율 ${data.progressRate.toFixed(1)}%`);
+            setText('kpi-progress-sub', data.progressRate === null ? '선택월 생산계획 없음' : `착수율 ${data.progressRate.toFixed(1)}% · 클릭 상세`);
             setText('kpi-plan-completed', data.planCompleted);
-            setText('kpi-completion-sub', data.completionRate === null ? '선택월 생산계획 없음' : `완료율 ${data.completionRate.toFixed(1)}%`);
+            setText('kpi-completion-sub', data.completionRate === null ? '선택월 생산계획 없음' : `완료율 ${data.completionRate.toFixed(1)}% · 클릭 상세`);
             setText('kpi-normal-md', data.normalMD.toFixed(3));
-            setText('kpi-normal-minutes', `${Math.round(data.normalMinutes)}분`);
+            setText('kpi-normal-minutes', `${Math.round(data.normalMinutes)}분 · 클릭 작업별`);
             setText('kpi-avg-unit-md', data.avgUnitMD.toFixed(3));
-            setText('kpi-avg-unit-sub', `${data.uniqueEquipmentCount}대 실적 기준`);
+            setText('kpi-avg-unit-sub', `${data.uniqueEquipmentCount}대 완성 기준 · 클릭 모델별`);
             setText('kpi-standard-rate', formatKpiRate(data.standardRate));
-            setText('kpi-standard-diff', data.standardDiff === null ? '기준 매칭 없음' : `${data.standardDiff >= 0 ? '+' : ''}${Math.round(data.standardDiff)}분 (실제-표준)`);
+            setText('kpi-standard-diff', data.standardDiff === null ? '기준 매칭 없음' : `${data.standardDiff >= 0 ? '+' : ''}${Math.round(data.standardDiff)}분 · 클릭 비교`);
             setText('kpi-delivery-rate', formatKpiRate(data.deliveryRate));
             setText('kpi-delivery-sub', data.deliveryChecked > 0 ? `${data.deliveryOnTime}/${data.deliveryChecked}대 · 최종/전체결선 완료일 기준` : '아직 납기 판정 대상 없음');
             setText('kpi-rework-share', formatReworkShare(data.reworkShare));
-            setText('kpi-rework-sub', `${data.monthReworks.length}건 · ${Math.round(data.reworkMinutes)}분 / ${(data.reworkMinutes/480).toFixed(3)} M/D`);
+            setText('kpi-rework-sub', `${data.monthReworks.length}건 · ${Math.round(data.reworkMinutes)}분 · 클릭 불량별`);
 
             if (prev.uniqueEquipmentCount > 0 && data.uniqueEquipmentCount > 0 && prev.avgUnitMD > 0) {
                 const chg = (data.avgUnitMD - prev.avgUnitMD) / prev.avgUnitMD * 100;
                 setText('kpi-mom-md', `${chg >= 0 ? '+' : ''}${chg.toFixed(1)}%`);
-                setText('kpi-mom-sub', `${prev.month} ${prev.avgUnitMD.toFixed(3)} → ${month} ${data.avgUnitMD.toFixed(3)} M/D`);
+                setText('kpi-mom-sub', `${prev.month} ${prev.avgUnitMD.toFixed(3)} → ${month} ${data.avgUnitMD.toFixed(3)} M/D · 클릭 비교`);
                 const el = document.getElementById('kpi-mom-md');
                 if (el) el.className = `text-lg font-black font-mono-num ${chg < 0 ? 'text-emerald-700' : chg > 0 ? 'text-rose-700' : 'text-slate-900'}`;
             } else {
-                setText('kpi-mom-md', '-'); setText('kpi-mom-sub', '비교 데이터 없음');
+                setText('kpi-mom-md', '-'); setText('kpi-mom-sub', '비교 데이터 없음 · 클릭 상세');
             }
 
             setText('kpi-goal-progress-text', `${goals.progress}%`);
@@ -2211,13 +2889,25 @@
 
             const eBody = document.getElementById('kpi-equipment-body');
             if (eBody) {
-                const rows = Object.entries(data.equipmentStats).filter(([, st]) => st.minutes > 0).sort((a,b) => b[1].minutes - a[1].minutes);
-                eBody.innerHTML = rows.length ? rows.map(([model, st]) => {
-                    const units = st.equipmentKeys.size || 0;
-                    const avgMin = units ? st.minutes / units : 0;
-                    const stdRate = st.stdActual > 0 ? st.stdExpected / st.stdActual * 100 : null;
-                    const delivery = st.deliveryChecked > 0 ? st.deliveryOnTime / st.deliveryChecked * 100 : null;
-                    return `<tr class="hover:bg-slate-50"><td class="px-3 py-2 font-bold text-slate-800">${escapeHTML(model)}</td><td class="px-3 py-2 text-right font-mono-num">${units}</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(st.minutes)}분</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(avgMin)}분</td><td class="px-3 py-2 text-right font-mono-num font-bold text-indigo-700">${(avgMin/480).toFixed(3)}</td><td class="px-3 py-2 text-right font-mono-num">${formatKpiRate(stdRate)}${stdRate===null?'':'%'}</td><td class="px-3 py-2 text-right font-mono-num">${formatKpiRate(delivery)}${delivery===null?'':'%'}</td></tr>`;
+                const modelNames = [...new Set([...Object.keys(data.equipmentStats), ...Object.keys(data.completedUnitKpi.byModel)])];
+                const rows = modelNames.filter(model => (data.equipmentStats[model]?.minutes||0)>0 || data.completedUnitKpi.byModel[model]).sort((a,b)=>{
+                    const am=data.completedUnitKpi.byModel[a]?.totalMinutes || data.equipmentStats[a]?.minutes || 0;
+                    const bm=data.completedUnitKpi.byModel[b]?.totalMinutes || data.equipmentStats[b]?.minutes || 0;
+                    return bm-am;
+                });
+                eBody.innerHTML = rows.length ? rows.map(model => {
+                    const monthly = data.equipmentStats[model];
+                    const completed = data.completedUnitKpi.byModel[model];
+                    const isHarness = model === '하네스 작업';
+                    const units = completed?.units.length || 0;
+                    const totalMinutes = isHarness ? (monthly?.minutes||0) : (completed?.totalMinutes||0);
+                    const avgMin = completed?.avgMinutes || 0;
+                    const stdRate = monthly && monthly.stdActual > 0 ? monthly.stdExpected / monthly.stdActual * 100 : null;
+                    const delivery = monthly && monthly.deliveryChecked > 0 ? monthly.deliveryOnTime / monthly.deliveryChecked * 100 : null;
+                    const countText = isHarness ? '-' : `${units}`;
+                    const avgText = isHarness ? '-' : `${Math.round(avgMin)}분`;
+                    const mdText = isHarness ? '-' : `${(avgMin/480).toFixed(3)}`;
+                    return `<tr class="hover:bg-indigo-50 cursor-pointer" onclick="openKpiEquipmentModelDetail('${encodeURIComponent(model)}')" title="클릭하여 상세보기"><td class="px-3 py-2 font-bold text-slate-800">${escapeHTML(model)}</td><td class="px-3 py-2 text-right font-mono-num">${countText}</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(totalMinutes)}분</td><td class="px-3 py-2 text-right font-mono-num">${avgText}</td><td class="px-3 py-2 text-right font-mono-num font-bold text-indigo-700">${mdText}</td><td class="px-3 py-2 text-right font-mono-num">${formatKpiRate(stdRate)}${stdRate===null?'':'%'}</td><td class="px-3 py-2 text-right font-mono-num">${formatKpiRate(delivery)}${delivery===null?'':'%'}</td></tr>`;
                 }).join('') : '<tr><td colspan="7" class="py-6 text-center text-slate-400">선택 조건의 장비 실적이 없습니다.</td></tr>';
             }
 
@@ -2225,11 +2915,12 @@
             if (pBody) {
                 const rows = Object.entries(data.processStats).sort((a,b) => b[1].minutes - a[1].minutes);
                 pBody.innerHTML = rows.length ? rows.map(([proc, st]) => {
-                    const avgMin = st.units ? st.minutes / st.units : 0;
+                    const units = getKpiUnitCount(st);
+                    const avgMin = units ? st.minutes / units : 0;
                     const stdAvg = st.stdMatches ? st.stdExpected / st.stdMatches : null;
                     const actualStdAvg = st.stdMatches ? st.stdActual / st.stdMatches : null;
                     const diff = stdAvg !== null ? actualStdAvg - stdAvg : null;
-                    return `<tr class="hover:bg-slate-50"><td class="px-3 py-2 font-bold text-slate-800">${escapeHTML(proc)}</td><td class="px-3 py-2 text-right font-mono-num">${st.units}</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(st.minutes)}분</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(avgMin)}분</td><td class="px-3 py-2 text-right font-mono-num font-bold text-purple-700">${(avgMin/480).toFixed(3)}</td><td class="px-3 py-2 text-right font-mono-num">${stdAvg===null?'-':stdAvg.toFixed(1)+'분'}</td><td class="px-3 py-2 text-right font-mono-num ${diff!==null && diff>5?'text-rose-600':diff!==null && diff<-5?'text-blue-600':''}">${diff===null?'-':`${diff>=0?'+':''}${diff.toFixed(1)}분`}</td></tr>`;
+                    return `<tr class="hover:bg-slate-50"><td class="px-3 py-2 font-bold text-slate-800">${escapeHTML(proc)}</td><td class="px-3 py-2 text-right font-mono-num">${units}</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(st.minutes)}분</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(avgMin)}분</td><td class="px-3 py-2 text-right font-mono-num font-bold text-purple-700">${(avgMin/480).toFixed(3)}</td><td class="px-3 py-2 text-right font-mono-num">${stdAvg===null?'-':stdAvg.toFixed(1)+'분'}</td><td class="px-3 py-2 text-right font-mono-num ${diff!==null && diff>5?'text-rose-600':diff!==null && diff<-5?'text-blue-600':''}">${diff===null?'-':`${diff>=0?'+':''}${diff.toFixed(1)}분`}</td></tr>`;
                 }).join('') : '<tr><td colspan="7" class="py-6 text-center text-slate-400">선택 조건의 공정 실적이 없습니다.</td></tr>';
             }
 
@@ -2242,6 +2933,136 @@
                 }).join('') : '<tr><td colspan="5" class="py-6 text-center text-slate-400">선택 조건의 작업자 실적이 없습니다.</td></tr>';
             }
         }
+
+        function kpiDetailCard(label, value, sub = '') {
+            return `<div class="rounded-xl border border-slate-200 bg-slate-50 p-3"><span class="text-[9px] font-bold text-slate-400 block">${escapeHTML(label)}</span><strong class="text-base font-black text-slate-900 font-mono-num">${escapeHTML(String(value))}</strong>${sub ? `<span class="text-[9px] text-slate-500 block mt-0.5">${escapeHTML(sub)}</span>` : ''}</div>`;
+        }
+
+        function kpiTable(headers, rows, emptyText = '데이터가 없습니다.') {
+            if (!rows.length) return `<div class="py-10 text-center text-slate-400">${escapeHTML(emptyText)}</div>`;
+            return `<div class="border border-slate-200 rounded-xl overflow-auto custom-scrollbar"><table class="w-full min-w-[760px] text-xs"><thead class="sticky top-0 bg-slate-100 text-[10px] text-slate-500 z-10"><tr>${headers.map(h=>`<th class="px-3 py-2 text-left whitespace-nowrap">${escapeHTML(h)}</th>`).join('')}</tr></thead><tbody class="divide-y divide-slate-100">${rows.join('')}</tbody></table></div>`;
+        }
+
+        function openKpiDetailModal(title, subtitle, summaryHtml, bodyHtml) {
+            const modal = document.getElementById('kpi-detail-modal');
+            if (!modal) return;
+            document.getElementById('kpi-detail-title').innerHTML = `<i class="fa-solid fa-chart-column text-indigo-600"></i>${escapeHTML(title)}`;
+            document.getElementById('kpi-detail-subtitle').textContent = subtitle || '';
+            document.getElementById('kpi-detail-summary').innerHTML = summaryHtml || '';
+            document.getElementById('kpi-detail-body').innerHTML = bodyHtml || '';
+            modal.classList.remove('hidden'); modal.style.display = 'flex';
+        }
+
+        window.closeKpiDetailModal = function() {
+            const modal = document.getElementById('kpi-detail-modal');
+            if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
+        };
+
+        function getCurrentKpiContext() {
+            const month = document.getElementById('kpi-month')?.value || getKstDateString(Date.now()).slice(0,7);
+            const division = document.getElementById('kpi-division-filter')?.value || '';
+            return { month, division, data: buildKPIData(month, division) };
+        }
+
+        window.openKpiDetail = function(type) {
+            const { month, division, data } = getCurrentKpiContext();
+            const scope = `${month} · ${division || '사업부 전체'}`;
+            if (type === 'plan' || type === 'touched' || type === 'completed') {
+                let list = data.planStatusRows;
+                let title = '생산계획 장비 목록';
+                if (type === 'touched') { list = list.filter(x=>x.status === '진행중'); title = '현재 작업 중인 장비'; }
+                if (type === 'completed') { list = list.filter(x=>x.status === '완료'); title = '생산완료 장비 목록'; }
+                const inProgress = data.planStatusRows.filter(x=>x.status==='진행중').length;
+                const summary = kpiDetailCard('착수 누계', `${data.planTouched}대`) + kpiDetailCard('현재 진행중', `${inProgress}대`) + kpiDetailCard('완료', `${data.planCompleted}대`) + kpiDetailCard('미착수', `${data.planStatusRows.filter(x=>x.status==='미착수').length}대`);
+                const rows = list.map((x,i)=>`<tr class="hover:bg-slate-50"><td class="px-3 py-2">${i+1}</td><td class="px-3 py-2 font-bold">${escapeHTML(x.equipment || '-')}</td><td class="px-3 py-2 font-mono-num">${escapeHTML(x.cskSn || '-')}</td><td class="px-3 py-2">${escapeHTML(x.deliveryDate || '-')}</td><td class="px-3 py-2"><span class="px-2 py-0.5 rounded-full text-[9px] font-black ${x.status==='완료'?'bg-emerald-100 text-emerald-700':x.status==='진행중'?'bg-indigo-100 text-indigo-700':'bg-slate-100 text-slate-500'}">${x.status}</span></td><td class="px-3 py-2">${escapeHTML(x.firstDate)}</td><td class="px-3 py-2">${escapeHTML(x.completionDate)}</td></tr>`);
+                let body = kpiTable(['No.','장비','S/N','납품일','상태','최초작업일','완료일'], rows, type==='touched' ? '생산계획 기준 현재 진행 중인 장비가 없습니다.' : '해당 장비가 없습니다.');
+                if (type === 'touched') {
+                    const activeRows = runningTasks.flatMap((task,ti)=>getEquipmentListFromLog(task).map((eq,ei)=>`<tr><td class="px-3 py-2">${ti+1}-${ei+1}</td><td class="px-3 py-2 font-bold">${escapeHTML(eq.equipment||'-')}</td><td class="px-3 py-2 font-mono-num">${escapeHTML(eq.cskSn||'-')}</td><td class="px-3 py-2">${escapeHTML(task.worker||'-')}</td><td class="px-3 py-2">${escapeHTML(getProcessDisplay(task.process,task.processDetail))}</td><td class="px-3 py-2 font-mono-num whitespace-nowrap">${escapeHTML(formatKstDateTime(getImmutableTaskStartTime(task),true))}</td><td class="px-3 py-2">${task.paused?'일시정지':'가동중'}</td></tr>`));
+                    body = `<h4 class="font-black text-slate-800 mb-2"><i class="fa-solid fa-play text-emerald-500 mr-1"></i>현재 타이머에 등록된 작업</h4>${kpiTable(['No.','장비','S/N','작업자','공정','작업 시작일시','상태'],activeRows,'현재 타이머에 등록된 작업이 없습니다.')}<h4 class="font-black text-slate-800 mt-5 mb-2"><i class="fa-solid fa-list-check text-indigo-500 mr-1"></i>생산계획 기준 착수 후 미완료</h4>${body}`;
+                }
+                openKpiDetailModal(title, scope, summary, body);
+                return;
+            }
+            if (type === 'normal') {
+                const procRows = Object.entries(data.processStats).sort((a,b)=>b[1].minutes-a[1].minutes).map(([proc,st])=>{
+                    const units=getKpiUnitCount(st), avg=units?st.minutes/units:0;
+                    return `<tr><td class="px-3 py-2 font-bold">${escapeHTML(proc)}</td><td class="px-3 py-2 text-right">${units}대</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(st.minutes)}분</td><td class="px-3 py-2 text-right font-mono-num">${(st.minutes/480).toFixed(3)} M/D</td><td class="px-3 py-2 text-right font-mono-num">${Math.round(avg)}분/대</td></tr>`;
+                });
+                const summary = kpiDetailCard('정상 작업시간', `${Math.round(data.normalMinutes)}분`) + kpiDetailCard('정상 작업공수', `${data.normalMD.toFixed(3)} M/D`) + kpiDetailCard('작업기록', `${data.monthLogs.length}건`) + kpiDetailCard('장비기준', `${data.uniqueEquipmentCount}대`);
+                openKpiDetailModal('정상 작업공수 · 작업별', scope, summary, kpiTable(['작업/공정','실적대수','총시간','공수','1대 평균'], procRows));
+                return;
+            }
+            if (type === 'avg') {
+                const eqRows = Object.entries(data.completedUnitKpi.byModel).sort((a,b)=>b[1].totalMinutes-a[1].totalMinutes).map(([model,st])=>{
+                    return `<tr><td class="px-3 py-2 font-bold">${escapeHTML(model)}</td><td class="px-3 py-2 text-right">${st.units.length}대</td><td class="px-3 py-2 text-right">${Math.round(st.totalMinutes)}분</td><td class="px-3 py-2 text-right font-bold text-indigo-700">${Math.round(st.avgMinutes)}분</td><td class="px-3 py-2 text-right font-bold">${st.avgMD.toFixed(3)} M/D</td><td class="px-3 py-2 text-[10px] text-slate-500">완성월 기준 · 이전달 공정 포함</td></tr>`;
+                });
+                const unitRows = data.completedUnitKpi.units.sort((a,b)=>a.model.localeCompare(b.model,'ko')||String(a.cskSn).localeCompare(String(b.cskSn))).map((u,i)=>`<tr><td class="px-3 py-2">${i+1}</td><td class="px-3 py-2 font-bold">${escapeHTML(u.model)}</td><td class="px-3 py-2 font-mono-num">${escapeHTML(u.cskSn||u.key)}</td><td class="px-3 py-2">${escapeHTML(u.basis)}</td><td class="px-3 py-2 text-right">${Math.round(u.stageMinutes['좌면']||0)}분</td><td class="px-3 py-2 text-right">${Math.round(u.stageMinutes['정면']||0)}분</td><td class="px-3 py-2 text-right">${Math.round(u.stageMinutes['우면']||0)}분</td><td class="px-3 py-2 text-right">${Math.round(u.stageMinutes['최종결선']||0)}분</td><td class="px-3 py-2 text-right">${Math.round(u.stageMinutes['전체결선']||0)}분</td><td class="px-3 py-2 text-right font-black text-indigo-700">${Math.round(u.totalMinutes)}분</td><td class="px-3 py-2">${escapeHTML(u.completionDate)}</td></tr>`);
+                const summary = kpiDetailCard('전체 평균', `${data.avgUnitMD.toFixed(3)} M/D`) + kpiDetailCard('완성 1대분 합계', `${Math.round(data.completedUnitMinutes)}분`) + kpiDetailCard('완성 장비', `${data.uniqueEquipmentCount}대`) + kpiDetailCard('산정 기준', '완성월 귀속', '이전달 작업 포함');
+                const body = `<h4 class="font-black text-slate-800 mb-2">모델별 완성 1대 평균</h4>${kpiTable(['장비 모델','완성대수','1대분 총시간','1대 평균','1대 M/D','기준'],eqRows,'이번 달 완성 장비가 없습니다.')}<h4 class="font-black text-slate-800 mt-5 mb-2">완성 장비별 공정 합계</h4>${kpiTable(['No.','모델','S/N','완성기준','좌면','정면','우면','최종','전체결선','1대분 합계','완성일'],unitRows,'이번 달 완성 장비가 없습니다.')}`;
+                openKpiDetailModal('장비별 1대 평균공수', `${scope} · 좌/정/우/최종 완성 기준`, summary, body);
+                return;
+            }
+            if (type === 'standard') {
+                const rows = Object.values(data.modelProcessStats).filter(st=>st.stdMatches>0).sort((a,b)=>a.model.localeCompare(b.model,'ko')||a.process.localeCompare(b.process,'ko')).map(st=>{
+                    const units=Math.max(1,st.units||0), actual=st.minutes/units, std=st.stdExpected/st.stdMatches, diff=actual-std, rate=actual>0?std/actual*100:null;
+                    return `<tr><td class="px-3 py-2 font-bold">${escapeHTML(st.model)}</td><td class="px-3 py-2">${escapeHTML(st.process)}</td><td class="px-3 py-2 text-right">${std.toFixed(1)}분</td><td class="px-3 py-2 text-right font-bold">${actual.toFixed(1)}분</td><td class="px-3 py-2 text-right ${diff>0?'text-rose-600':'text-emerald-700'}">${diff>=0?'+':''}${diff.toFixed(1)}분</td><td class="px-3 py-2 text-right">${rate===null?'-':rate.toFixed(1)+'%'}</td><td class="px-3 py-2 text-right">${units}대</td></tr>`;
+                });
+                const summary = kpiDetailCard('달성률', data.standardRate===null?'-':`${data.standardRate.toFixed(1)}%`) + kpiDetailCard('표준 합계', `${Math.round(data.stdExpected)}분`) + kpiDetailCard('실제 합계', `${Math.round(data.stdActual)}분`) + kpiDetailCard('비교항목', `${data.stdMatches}건`);
+                openKpiDetailModal('표준시간 vs 이번달 모델별 작업평균', scope, summary, kpiTable(['모델','작업/공정','표준시간/대','이번달 평균/대','차이','달성률','실적대수'], rows, '표준시간이 등록된 작업 실적이 없습니다.'));
+                return;
+            }
+            if (type === 'rework') {
+                const rows = Object.entries(data.reworkWorkerDefects).sort((a,b)=>b[1].cases-a[1].cases).map(([worker,st])=>{
+                    const defects=Object.entries(st.defects).sort((a,b)=>b[1]-a[1]).map(([d,c])=>`${d} ${c}건`).join(' / ');
+                    return `<tr><td class="px-3 py-2 font-bold">${escapeHTML(worker)}</td><td class="px-3 py-2 text-[10px]">${escapeHTML(st.sourceBasis)}</td><td class="px-3 py-2 text-right">${st.cases}건</td><td class="px-3 py-2">${escapeHTML(defects || '-')}</td><td class="px-3 py-2 text-right">${Math.round(st.minutes)}분</td><td class="px-3 py-2 text-right">${(st.minutes/480).toFixed(3)} M/D</td><td class="px-3 py-2 text-[10px]">${escapeHTML([...st.equipments].slice(0,5).join(' / '))}${st.equipments.size>5?' 외':''}</td></tr>`;
+                });
+                const defectTotal=data.monthReworks.reduce((sum,r)=>sum+Math.max(1,(r.defectTypes||[]).length),0);
+                const summary = kpiDetailCard('재작업 비중', `${formatReworkShare(data.reworkShare)}%`) + kpiDetailCard('재작업', `${data.monthReworks.length}건`) + kpiDetailCard('불량항목', `${defectTotal}건`) + kpiDetailCard('재작업 공수', `${(data.reworkMinutes/480).toFixed(3)} M/D`);
+                openKpiDetailModal('QC 재작업 · 작업자별 불량 집계', `${scope} · 원작업로그가 있으면 원작업자 기준`, summary, kpiTable(['작업자','집계기준','재작업 건수','불량 항목','재작업시간','공수','장비'], rows, '이번 달 QC 재작업 기록이 없습니다.'));
+                return;
+            }
+            if (type === 'mom') {
+                const prevMonth=getPreviousMonth(month), prev=buildKPIData(prevMonth,division);
+                const change=(prev.avgUnitMD>0&&data.avgUnitMD>0)?(data.avgUnitMD-prev.avgUnitMD)/prev.avgUnitMD*100:null;
+                const models=[...new Set([...Object.keys(prev.completedUnitKpi.byModel),...Object.keys(data.completedUnitKpi.byModel)])];
+                const rows=models.sort().map(model=>{
+                    const ps=prev.completedUnitKpi.byModel[model], cs=data.completedUnitKpi.byModel[model];
+                    const pu=ps?.units.length||0, cu=cs?.units.length||0;
+                    const pav=ps?.avgMD ?? null, cav=cs?.avgMD ?? null;
+                    const ch=(pav&&cav)?(cav-pav)/pav*100:null;
+                    return `<tr><td class="px-3 py-2 font-bold">${escapeHTML(model)}</td><td class="px-3 py-2 text-right">${pu}대</td><td class="px-3 py-2 text-right">${pav===null?'-':pav.toFixed(3)}</td><td class="px-3 py-2 text-right">${cu}대</td><td class="px-3 py-2 text-right font-bold">${cav===null?'-':cav.toFixed(3)}</td><td class="px-3 py-2 text-right ${ch===null?'':ch<0?'text-emerald-700':'text-rose-600'}">${ch===null?'-':`${ch>=0?'+':''}${ch.toFixed(1)}%`}</td></tr>`;
+                });
+                const summary=kpiDetailCard(`${prevMonth} 평균`, `${prev.avgUnitMD.toFixed(3)} M/D`, `${prev.uniqueEquipmentCount}대 완성`)+kpiDetailCard(`${month} 평균`, `${data.avgUnitMD.toFixed(3)} M/D`, `${data.uniqueEquipmentCount}대 완성`)+kpiDetailCard('증감', change===null?'-':`${change>=0?'+':''}${change.toFixed(1)}%`, change===null?'비교데이터 부족':change<0?'1대 평균공수 감소':'1대 평균공수 증가')+kpiDetailCard('비교 기준','완성 장비 1대분');
+                openKpiDetailModal('전월 대비 완성장비 1대 평균공수', `${prevMonth} ↔ ${month} · ${division||'사업부 전체'}`, summary, kpiTable(['장비 모델',`${prevMonth} 완성대수`,`${prevMonth} M/D`,`${month} 완성대수`,`${month} M/D`,'증감'],rows));
+            }
+        };
+
+        window.openKpiEquipmentModelDetail = function(encodedModel) {
+            const model = decodeURIComponent(encodedModel);
+            const { month, division, data } = getCurrentKpiContext();
+            const monthly = data.equipmentStats[model];
+            const completed = data.completedUnitKpi.byModel[model];
+            const unitRows = (completed?.units||[]).map((u,i)=>`<tr><td class="px-3 py-2">${i+1}</td><td class="px-3 py-2 font-mono-num">${escapeHTML(u.cskSn||u.key)}</td><td class="px-3 py-2">${escapeHTML(u.firstDate||'-')}</td><td class="px-3 py-2">${escapeHTML(u.completionDate||'-')}</td><td class="px-3 py-2">${escapeHTML(u.basis)}</td><td class="px-3 py-2 text-right">${Math.round(u.totalMinutes)}분</td><td class="px-3 py-2 text-right font-bold">${(u.totalMinutes/480).toFixed(3)} M/D</td></tr>`);
+            const rawRows=(monthly?.logs||[]).sort((a,b)=>String(a.date).localeCompare(String(b.date))).map((x,i)=>`<tr><td class="px-3 py-2">${i+1}</td><td class="px-3 py-2">${escapeHTML(x.date)}</td><td class="px-3 py-2 font-bold">${escapeHTML(x.process)}</td><td class="px-3 py-2">${escapeHTML(x.worker)}</td><td class="px-3 py-2 font-mono-num">${escapeHTML(x.sns.join(', '))}</td><td class="px-3 py-2 text-right">${Math.round(x.elapsedMinutes)}분</td></tr>`);
+            const summary = model==='하네스 작업'
+                ? kpiDetailCard('이번달 하네스 시간',`${Math.round(monthly?.minutes||0)}분`)+kpiDetailCard('작업공수',`${((monthly?.minutes||0)/480).toFixed(3)} M/D`)+kpiDetailCard('구분','하네스 작업','장비 1대 평균 제외')
+                : kpiDetailCard('완성대수',`${completed?.units.length||0}대`)+kpiDetailCard('1대 평균',`${Math.round(completed?.avgMinutes||0)}분`)+kpiDetailCard('1대 공수',`${(completed?.avgMD||0).toFixed(3)} M/D`)+kpiDetailCard('완성월',month,'이전달 공정 포함');
+            const body = `${model==='하네스 작업'?'':`<h4 class="font-black text-slate-800 mb-2">완성 장비</h4>${kpiTable(['No.','S/N','최초작업일','완성일','완성기준','1대분 시간','M/D'],unitRows,'이번 달 완성 장비가 없습니다.')}<h4 class="font-black text-slate-800 mt-5 mb-2">이번 달 작업로그</h4>`}${kpiTable(['No.','일자','작업/공정','작업자','S/N','로그시간'],rawRows,'이번 달 작업로그가 없습니다.')}`;
+            openKpiDetailModal(`${model} 상세`, `${month} · ${division||'사업부 전체'}`, summary, body);
+        };
+
+        window.openKpiDefectMonthDetail = function(targetMonth) {
+            const division = document.getElementById('kpi-division-filter')?.value || '';
+            const trend = buildMonthlyDefectTrend(targetMonth, division, 1)[0];
+            const rows = reworkLogs.filter(r => !r.isDeleted && getResolvedReworkDate(r).startsWith(targetMonth) && (!division || (r.equipment?.division || 'ACM')===division));
+            const defects = {};
+            rows.forEach(r => normalizeRecordedDefects(r.defectTypes).forEach(d => defects[d]=(defects[d]||0)+1));
+            const total = Object.values(defects).reduce((a,b)=>a+b,0);
+            const defectRows = Object.entries(defects).sort((a,b)=>b[1]-a[1]).map(([d,c])=>`<tr><td class="px-3 py-2 font-bold">${escapeHTML(d)}</td><td class="px-3 py-2 text-right">${c}건</td><td class="px-3 py-2 text-right font-black text-rose-700">${total?((c/total)*100).toFixed(1):'0.0'}%</td></tr>`);
+            const logRows = rows.map((r,i)=>`<tr><td class="px-3 py-2">${i+1}</td><td class="px-3 py-2">${escapeHTML(getResolvedReworkDate(r))}</td><td class="px-3 py-2 font-bold">${escapeHTML(normalizeKpiModelName(r.equipment?.equipment||'미지정'))}</td><td class="px-3 py-2 font-mono-num">${escapeHTML(r.equipment?.cskSn||'-')}</td><td class="px-3 py-2">${escapeHTML(normalizeRecordedDefects(r.defectTypes).join(', '))}</td><td class="px-3 py-2">${escapeHTML(r.worker||'-')}</td><td class="px-3 py-2 text-right">${getResolvedReworkMinutes(r)}분</td></tr>`);
+            const summary=kpiDetailCard('부적합 비율',trend.rate===null?'-':`${trend.rate.toFixed(1)}%`,`${trend.rejected}/${trend.completed}대`)+kpiDetailCard('완성 장비',`${trend.completed}대`)+kpiDetailCard('QC 반려 고유장비',`${trend.rejected}대`)+kpiDetailCard('부적합 항목',`${trend.defectItems}건`);
+            openKpiDetailModal(`${targetMonth} 월별 부적합 상세`, `${division||'사업부 전체'} · QC 반려 고유장비 / 완성장비`, summary, `<h4 class="font-black text-slate-800 mb-2">부적합 항목 구성</h4>${kpiTable(['부적합 항목','건수','항목 비율'],defectRows,'부적합 기록이 없습니다.')}<h4 class="font-black text-slate-800 mt-5 mb-2">QC 반려 기록</h4>${kpiTable(['No.','일자','장비','S/N','부적합','작업자','재작업시간'],logRows,'QC 반려 기록이 없습니다.')}`);
+        };
 
         function openKpiGoalModal() {
             if (!isAdminMode) {
@@ -2294,7 +3115,7 @@
                     reworkTasks.forEach(task => {
                         const card = document.createElement('div');
                         card.className = 'bg-slate-900 text-white rounded-2xl p-4 border border-slate-800 shadow-sm';
-                        const defects = (task.defectTypes || ['상세미확인']).map(d => `<span class="px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[9px] font-bold">${escapeHTML(d)}</span>`).join(' ');
+                        const defects = normalizeRecordedDefects(task.defectTypes).map(d => `<span class="px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[9px] font-bold">${escapeHTML(d)}</span>`).join(' ');
                         const rwPaused = !!task.paused;
                         card.innerHTML = `
                             <div class="flex justify-between items-start gap-2">
@@ -2323,7 +3144,7 @@
                 } else {
                     activeLogs.forEach((log, index) => {
                         const eq = log.equipment || {};
-                        const defects = (log.defectTypes || ['상세미확인']).map(d => `<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded text-[9px] font-bold">${escapeHTML(d)}</span>`).join('');
+                        const defects = normalizeRecordedDefects(log.defectTypes).map(d => `<span class="inline-block mr-1 mb-1 px-1.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded text-[9px] font-bold">${escapeHTML(d)}</span>`).join('');
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-slate-50 border-b border-slate-100';
                         tr.innerHTML = `
@@ -2567,7 +3388,7 @@
         window.clearSelectedEquipments = () => { selectedEquipments = []; renderSelectedEquipmentsList(); };
 
         function getAutoSchedulerStorageKey() {
-            return `kg-v5.18-auto-scheduler:${getRoomNormId(currentRoomId)}`;
+            return `kg-v5.23-auto-scheduler:${getRoomNormId(currentRoomId)}`;
         }
 
         function saveAutoSchedulerCheckMs(value) {
@@ -2687,7 +3508,7 @@
                     const el = document.getElementById(`span-timer-${task.id}`);
                     const delayBadge = document.getElementById(`delay-badge-${task.id}`);
                     if (!el) return;
-                    const elapsedSnapshot = getSafeTaskElapsedSnapshot(task, nowMs);
+                    const elapsedSnapshot = getStableTaskElapsedSnapshot(task, nowMs);
                     const diff = elapsedSnapshot.elapsedMs;
                     const sec = Math.floor((diff / 1000) % 60), min = Math.floor((diff / (1000 * 60)) % 60), hour = Math.floor(diff / (1000 * 60 * 60));
                     const pad = (n) => String(n).padStart(2, '0');
@@ -2773,6 +3594,7 @@
                     </div>
                 `).join('');
                 
+                const taskStartDateTime = formatKstDateTime(getImmutableTaskStartTime(task), true);
                 const holdButtonHtml = isPaused ? `
                     <button onclick="triggerToggleHold('${task.id}')" class="px-2 py-1 ${task.isHeld ? 'bg-rose-900/80 text-rose-300 border border-rose-700/50' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'} rounded-lg text-[10px] font-bold transition active:scale-95 shadow-sm">
                         ${task.isHeld ? '🔒 보류 중' : '🔓 보류 설정'}
@@ -2790,6 +3612,7 @@
                                 <button onclick="triggerEditActiveWorker('${task.id}')" class="text-slate-500 hover:text-indigo-400 transition ml-0.5" title="작업자 수정"><i class="fa-solid fa-pen-to-square text-sm"></i></button>
                                 <span class="text-[10px] px-2 py-0.5 rounded-lg border ${procBadge}">${escapeHTML(getProcessDisplay(task.process, task.processDetail))}</span>
                             </h4>
+                            <div class="mt-1.5 text-[10px] text-slate-400 flex items-center gap-1.5"><i class="fa-regular fa-clock text-indigo-400"></i><span>작업 시작</span><strong class="text-slate-200 font-mono-num">${escapeHTML(taskStartDateTime)}</strong></div>
                         </div>
                         <span class="${pulseLightClass}"></span>
                     </div>
@@ -2902,8 +3725,8 @@
                     <td class="py-3 px-4 font-black text-slate-800">${escapeHTML(item.worker)}</td>
                     <td class="py-3 px-4 min-w-[250px]">${equipmentsHtml}</td>
                     <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badgeClass}">${escapeHTML(getProcessDisplay(item.process, item.processDetail))}</span></td>
-                    <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${escapeHTML(item.startTime)}</td>
-                    <td class="py-3 px-4 text-center text-slate-500 font-mono-num">${escapeHTML(item.endTime)}</td>
+                    <td class="py-3 px-4 text-center text-slate-500 font-mono-num whitespace-nowrap">${escapeHTML(item.startDateTime || (item.startTimestamp ? formatKstDateTime(item.startTimestamp, true) : `${item.date || '-'} ${item.startTime || '-'}`))}</td>
+                    <td class="py-3 px-4 text-center text-slate-500 font-mono-num whitespace-nowrap">${escapeHTML(item.endDateTime || (item.endTimestamp ? formatKstDateTime(item.endTimestamp, true) : `${item.date || '-'} ${item.endTime || '-'}`))}</td>
                     <td class="py-3 px-4 text-right font-bold text-indigo-700 font-mono-num">
                         ${item.elapsedMinutes}분 <span class="text-[10px] text-slate-400">(${mdValue} M/D)</span>
                     </td>
@@ -3455,7 +4278,7 @@
                     const eq = log.equipment || {};
                     rwRows.push([
                         idx + 1, getResolvedReworkDate(log) || '-', normalizeEquipmentName(eq.equipment || '미지정'), eq.cskSn || '-', eq.division || 'ACM', log.sourceProcess || '-', log.cycleNo || 1,
-                        (log.defectTypes || ['상세미확인']).join(', '), Math.max(1, (log.defectTypes || []).length), getCleanWorkerName(log.worker || '-'), log.startTime || '-', log.endTime || '-',
+                        normalizeRecordedDefects(log.defectTypes).join(', '), normalizeRecordedDefects(log.defectTypes).length, getCleanWorkerName(log.worker || '-'), log.startTime || '-', log.endTime || '-',
                         getResolvedReworkMinutes(log), parseFloat((getResolvedReworkMinutes(log) / 480).toFixed(4)), log.sourceWorkLogId || '-', log.reworkCaseId || '-'
                     ]);
                 });
@@ -3473,7 +4296,7 @@
                     stat.logs.push(log);
                     stat.equipmentKeys.add(log.equipmentKey || log.equipment?.cskSn || log.id);
                     stat.minutes += getResolvedReworkMinutes(log);
-                    (log.defectTypes || ['상세미확인']).forEach(d => { stat.defects[d] = (stat.defects[d] || 0) + 1; });
+                    normalizeRecordedDefects(log.defectTypes).forEach(d => { stat.defects[d] = (stat.defects[d] || 0) + 1; });
                 });
                 const kpiHeader = ['월', 'QC 반려 장비(고유)', '재작업 발생 횟수', '부적합 항목수', '재작업 시간(분)', '재작업 공수(M/D)', '부적합 TOP3'];
                 const kpiRows = [kpiHeader];
@@ -3506,7 +4329,7 @@
                 ['생산완료 장비', kData.planCompleted, '-', '최종결선 또는 전체 결선 완료 이력'],
                 ['생산완료율(%)', kData.completionRate===null?'-':Number(kData.completionRate.toFixed(1)), '-', '생산완료 장비 / 생산계획'],
                 ['정상 작업공수(M/D)', Number(kData.normalMD.toFixed(4)), '-', `${Math.round(kData.normalMinutes)}분`],
-                ['장비 1대 평균공수(M/D)', Number(kData.avgUnitMD.toFixed(4)), '-', `${kData.uniqueEquipmentCount}대 실적 기준`],
+                ['장비 1대 평균공수(M/D)', Number(kData.avgUnitMD.toFixed(4)), '-', `${kData.uniqueEquipmentCount}대 완성 기준 · 이전달 공정 포함`],
                 ['표준시간 달성률(%)', kData.standardRate===null?'-':Number(kData.standardRate.toFixed(1)), kGoals.standard, '표준시간 등록 공정만 계산'],
                 ['표준 대비 시간차이(분)', kData.standardDiff===null?'-':Math.round(kData.standardDiff), '0에 가까울수록 기준', '실제-표준'],
                 ['납기 내 작업완료율(%)', kData.deliveryRate===null?'-':Number(kData.deliveryRate.toFixed(1)), kGoals.delivery, `${kData.deliveryOnTime}/${kData.deliveryChecked}대 · 최종/전체결선 완료일 기준`],
@@ -3516,12 +4339,15 @@
                 ['장비 모델별 생산성'],
                 ['장비 모델', '실적대수', '총시간(분)', '1대 평균시간(분)', '1대 평균공수(M/D)', '표준시간 달성률(%)', '납기 내 작업완료율(%)']
             ];
-            Object.entries(kData.equipmentStats).filter(([,st]) => st.minutes > 0).sort((a,b)=>b[1].minutes-a[1].minutes).forEach(([model, st]) => {
-                const units = st.equipmentKeys.size || 0, avg = units ? st.minutes/units : 0;
-                const sr = st.stdActual > 0 ? st.stdExpected/st.stdActual*100 : null;
-                const dr = st.deliveryChecked > 0 ? st.deliveryOnTime/st.deliveryChecked*100 : null;
-                kRows.push([model, units, Math.round(st.minutes), Math.round(avg), Number((avg/480).toFixed(4)), sr===null?'-':Number(sr.toFixed(1)), dr===null?'-':Number(dr.toFixed(1))]);
+            Object.entries(kData.completedUnitKpi.byModel).sort((a,b)=>b[1].totalMinutes-a[1].totalMinutes).forEach(([model, st]) => {
+                const monthly = kData.equipmentStats[model];
+                const sr = monthly && monthly.stdActual > 0 ? monthly.stdExpected/monthly.stdActual*100 : null;
+                const dr = monthly && monthly.deliveryChecked > 0 ? monthly.deliveryOnTime/monthly.deliveryChecked*100 : null;
+                kRows.push([model, st.units.length, Math.round(st.totalMinutes), Math.round(st.avgMinutes), Number(st.avgMD.toFixed(4)), sr===null?'-':Number(sr.toFixed(1)), dr===null?'-':Number(dr.toFixed(1))]);
             });
+            if (kData.equipmentStats['하네스 작업']?.minutes > 0) {
+                kRows.push(['하네스 작업', '-', Math.round(kData.equipmentStats['하네스 작업'].minutes), '-', '-', '-', '-']);
+            }
             kRows.push([], ['공정별 생산성'], ['공정', '실적대수', '총시간(분)', '1대 평균시간(분)', '1대 평균공수(M/D)', '표준평균(분)', '표준대비 차이(분)']);
             Object.entries(kData.processStats).sort((a,b)=>b[1].minutes-a[1].minutes).forEach(([proc, st]) => {
                 const avg = st.units ? st.minutes/st.units : 0;
@@ -3719,6 +4545,14 @@
                 });
             }
             document.getElementById('btn-confirm-action')?.addEventListener('click', () => closeConfirmModal(true));
+            document.getElementById('btn-open-defect-manager')?.addEventListener('click', window.openDefectManager);
+            document.getElementById('btn-close-defect-manager')?.addEventListener('click', window.closeDefectManager);
+            document.getElementById('btn-close-defect-manager-bottom')?.addEventListener('click', window.closeDefectManager);
+            document.getElementById('btn-add-defect')?.addEventListener('click', addReworkDefectType);
+            document.getElementById('btn-reset-defects')?.addEventListener('click', resetReworkDefectTypes);
+            document.getElementById('new-defect-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') addReworkDefectType(); });
+            const defectManagerModal = document.getElementById('defect-manager-modal');
+            defectManagerModal?.addEventListener('click', e => { if (e.target === defectManagerModal) window.closeDefectManager(); });
 
             document.getElementById('btn-toggle-fingerprint')?.addEventListener('click', () => {
                 const banner = document.getElementById('diagnostic-fingerprint-banner');
@@ -3951,11 +4785,16 @@
             document.getElementById('kpi-month')?.addEventListener('change', renderKPIDashboard);
             document.getElementById('kpi-division-filter')?.addEventListener('change', renderKPIDashboard);
             document.getElementById('btn-kpi-refresh')?.addEventListener('click', renderKPIDashboard);
+            document.querySelectorAll('[data-kpi-detail]').forEach(el => el.addEventListener('click', () => window.openKpiDetail(el.dataset.kpiDetail)));
+            document.getElementById('btn-close-kpi-detail')?.addEventListener('click', window.closeKpiDetailModal);
+            document.getElementById('btn-close-kpi-detail-bottom')?.addEventListener('click', window.closeKpiDetailModal);
+            document.getElementById('kpi-detail-modal')?.addEventListener('click', (e) => { if (e.target?.id === 'kpi-detail-modal') window.closeKpiDetailModal(); });
             document.getElementById('btn-kpi-goals')?.addEventListener('click', openKpiGoalModal);
             document.getElementById('btn-close-kpi-goals')?.addEventListener('click', closeKpiGoalModal);
             document.getElementById('btn-cancel-kpi-goals')?.addEventListener('click', closeKpiGoalModal);
             document.getElementById('btn-save-kpi-goals')?.addEventListener('click', saveKpiGoalsFromModal);
             
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.closeKpiDetailModal?.(); });
             document.getElementById('btn-pause-all')?.addEventListener('click', triggerPauseAll);
             document.getElementById('btn-resume-all')?.addEventListener('click', triggerResumeAll);
             document.getElementById('btn-rework-pause-all')?.addEventListener('click', () => triggerPauseAllRework(false));
@@ -3999,15 +4838,12 @@
                     if (task) {
                         const desiredMs = newVal * 60000;
                         const now = new Date().getTime();
-                        const elapsedSnapshot = getSafeTaskElapsedSnapshot(task, now);
-                        const endPoint = task.paused ? elapsedSnapshot.endPoint : now;
-                        const newStartTime = endPoint - desiredMs - elapsedSnapshot.pausedMs;
                         await updateTaskInCloudSecurely('EDIT_ACTIVE_TIME', {
                             id: editingActiveTaskId,
-                            newStartTime: newStartTime,
-                            newTotalPausedDuration: elapsedSnapshot.pausedMs
+                            desiredElapsedMs: desiredMs,
+                            referenceTime: now
                         });
-                        showToast("실시간 진행 시간이 수정되었습니다.", "fa-check");
+                        showToast("진행 시간만 수정되었습니다. 작업 시작 날짜/시간은 유지됩니다.", "fa-check");
                     }
                 } else if (editingReworkLogId) {
                     const success = await updateReworkInCloudSecurely('EDIT_LOG_TIME', { id: editingReworkLogId, newMinutes: newVal });
@@ -4132,11 +4968,15 @@
 
                     const kpiGoalBtn = document.getElementById('btn-kpi-goals');
                     if (kpiGoalBtn) kpiGoalBtn.classList.remove('hidden');
+                    const defectManagerBtn = document.getElementById('btn-open-defect-manager');
+                    if (defectManagerBtn) { defectManagerBtn.classList.remove('hidden'); defectManagerBtn.classList.add('inline-flex'); }
                 } else {
                     const adminPlanControls = document.getElementById('admin-plan-controls');
                     if (adminPlanControls) adminPlanControls.style.display = 'none';
                     const kpiGoalBtn = document.getElementById('btn-kpi-goals');
                     if (kpiGoalBtn) kpiGoalBtn.classList.add('hidden');
+                    const defectManagerBtn = document.getElementById('btn-open-defect-manager');
+                    if (defectManagerBtn) { defectManagerBtn.classList.add('hidden'); defectManagerBtn.classList.remove('inline-flex'); }
                 }
             } catch (e) {}
         }
@@ -4192,10 +5032,19 @@
                     if (snapshot.exists()) {
                         diagState.docExists = 'YES';
                         const data = snapshot.data() || {};
-                        runningTasks = Array.isArray(data.runningTasks) ? data.runningTasks : [];
+                        const rawRunningTasks = Array.isArray(data.runningTasks) ? data.runningTasks : [];
+                        const migrationNow = Date.now();
+                        const legacyTasks = rawRunningTasks.filter(t => Number(t?.timerVersion) < 2);
+                        runningTasks = rawRunningTasks.map(t => migrateLegacyTaskClockLocally(t, migrationNow));
+                        if (legacyTasks.length > 0) {
+                            const migratedForCloud = runningTasks.filter(t => legacyTasks.some(old => old.id === t.id));
+                            setTimeout(() => persistLegacyTaskClockMigration(roomId, migratedForCloud), 0);
+                        }
                         completedLogs = Array.isArray(data.completedLogs) ? data.completedLogs : [];
                         reworkTasks = Array.isArray(data.reworkTasks) ? data.reworkTasks : [];
                         reworkLogs = Array.isArray(data.reworkLogs) ? data.reworkLogs : [];
+                        reworkDefectTypes = normalizeDefectTypes(Array.isArray(data.reworkDefectTypes) && data.reworkDefectTypes.length > 0 ? data.reworkDefectTypes : DEFAULT_REWORK_DEFECT_TYPES);
+                        syncSelectedDefectsWithMaster();
                         activeWorkersList = Array.isArray(data.activeWorkersList) && data.activeWorkersList.length > 0 ? data.activeWorkersList : [...defaultWorkers];
                         planEquipments = Array.isArray(data.planEquipments) ? data.planEquipments : [];
                         
@@ -4218,6 +5067,8 @@
                         completedLogs = [];
                         reworkTasks = [];
                         reworkLogs = [];
+                        reworkDefectTypes = [...DEFAULT_REWORK_DEFECT_TYPES];
+                        syncSelectedDefectsWithMaster();
                         planEquipments = [];
                         activeWorkersList = [...defaultWorkers];
                         const cntEl = document.getElementById('cnt-loaded-items');
@@ -4233,6 +5084,8 @@
                     renderActiveTasks(); 
                     renderCompletedLogs();
                     renderReworkManagement();
+                    renderReworkDefectGrid();
+                    if (!document.getElementById('defect-manager-modal')?.classList.contains('hidden')) renderReworkDefectManageList();
                     renderKPIDashboard();
                     updateDivisionFilters(); 
                     renderEquipmentDropdown(); 
@@ -4251,6 +5104,8 @@
                     completedLogs = [];
                     reworkTasks = [];
                     reworkLogs = [];
+                    reworkDefectTypes = [...DEFAULT_REWORK_DEFECT_TYPES];
+                    syncSelectedDefectsWithMaster();
                     planEquipments = [];
                     activeWorkersList = [...defaultWorkers];
                     updateFingerprintUI();
